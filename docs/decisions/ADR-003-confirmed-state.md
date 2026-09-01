@@ -24,7 +24,8 @@ pauschales „unsere Integrationen sind open-loop" wäre schlicht falsch gewesen
 | --- | --- |
 | `VideohubExportDialog.handleReadState` | **Verstoß, behoben.** Der Status-Read schrieb den gelesenen Hub-Zustand in dieselbe Variable wie das geplante Routing — und seit ADR-001 wird die persistiert. Ein Klick auf „Status lesen" ersetzte damit die Planungsabsicht still durch die Beobachtung und speicherte sie. Behoben in `cable-planner#610`. |
 | `AtemDialog.pushAll` | **Erfüllt die Regel bereits.** Nach `bulkSetInputNames` wird `getState()` gelesen und angezeigt. Was in der Tabelle steht, kommt vom Gerät. |
-| `RentmanCableExportDialog.sendBucket` | **Offener Verstoß.** Nach erfolgreichem Senden wird `lastSyncedQty: bucket.built` gespeichert — der lokal gezählte Wert, nicht der von Rentman bestätigte. Der Name liest sich als *bestätigt*, der Inhalt ist *gesendet*. Und die nächste Differenz rechnet mit ihm: Weicht Rentman ab, ist jede folgende Menge falsch, still und kumulativ. |
+| `RentmanCableExportDialog.sendBucket` | **Teilweise erfüllt — und dort, wo es zählt, richtig.** Gespeichert wird `lastSyncedQty: bucket.built`, also der lokal gezählte, nicht der von Rentman bestätigte Wert. Die Oberfläche sagt darüber aber bereits die Wahrheit: die Spalte heißt „Bereits gesendet", die Zusammenfassung „bereits gesendet", das EN-Dict „Already sent". Nur der persistierte Feldname behauptet mehr, als der Inhalt hergibt — für den nächsten Entwickler, nicht für den Nutzer. |
+| `RentmanImportDialog` (Kabelplan übernehmen) | **Verstoß, und ein anderer als erwartet.** `lastSyncedQty: existingMap?.lastSyncedQty ?? qty` — `qty` ist `cablePlanQty[key] ?? bucket.totalQty`, also die vom Nutzer im Dialog *editierbare Planmenge*, nicht `bucket.totalQty` (die Menge, die Rentman tatsächlich führt). Wer die Zahl beim Import anfasst, schreibt eine **geplante** Menge in das Feld, das der Export-Dialog als **gesendet** liest. Die nächste Differenz ist dann um genau diese Korrektur zu klein — still und kumulativ. |
 | `exportGreengo` / `.gg5` | **Grenze, kein Verstoß.** Ein Datei-Export hat keinen Rückkanal; es gibt nichts zu bestätigen. Das gehört benannt, damit niemand es später für eine Lücke hält. |
 | `checkState` / Mobile-Rückkanal | **Das gute Muster.** Der Aufbau-Status kommt vom Feld zurück ins Projekt — eine echte Bestätigung, keine Wiederholung des Befehls. |
 
@@ -39,9 +40,11 @@ nicht als Zustand gezeigt.** Drei Herkünfte, dieselben wie im `.avsourcemap`:
 
 Daraus folgen drei Regeln, die jede für sich prüfbar sind:
 
-1. **Beobachtung und Absicht teilen sich niemals eine Variable.** Ein Status-Read darf den Plan
-   nicht verändern. Die Differenz wird gezeigt; das Übernehmen ist eine Entscheidung. (So jetzt im
-   Videohub-Dialog.)
+1. **Zwei Herkünfte teilen sich niemals eine Variable.** Ein Status-Read darf den Plan nicht
+   verändern — die Differenz wird gezeigt, das Übernehmen ist eine Entscheidung (so jetzt im
+   Videohub-Dialog). Und umgekehrt: In ein Feld, das „gesendet" bedeutet, gehört kein geplanter
+   Wert, auch nicht als Startwert. Ein Zähler wird mit dem initialisiert, was die Gegenstelle
+   führt, oder mit null — nie mit dem, was jemand vorhat.
 2. **Ein Feldname darf nicht mehr behaupten, als der Inhalt hergibt.** `lastSyncedQty` ist keine
    Bestätigung, solange niemand zurückgelesen hat. Entweder zurücklesen oder ehrlich benennen.
 3. **Wo es keinen Rückkanal gibt, wird das gesagt statt verschwiegen.** Ein `.gg5`-Export ist eine
@@ -62,9 +65,37 @@ ausgegebener Wert, der es nicht ist, ist der Schaden.
 | # | Inkrement | Warum hier |
 | --- | --- | --- |
 | 0 | Videohub-Status-Read entkoppeln | War ein aktiver Datenverlust — erledigt in `cable-planner#610` |
-| 1 | Rentman-Sync-Menge ehrlich benennen und in der Oberfläche als *gesendet* ausweisen | Kleinster offener Verstoß, betrifft eine Zahl, die weiterrechnet |
+| 1 | Rentman-Zähler: Startwert aus Rentmans eigener Menge statt aus der Planmenge, Feld zu `lastSentQty` umbenennen (mit Migration) — erledigt in `cable-planner#611` | Der Startwert ist der eigentliche Fehler; die Umbenennung macht ihn für den nächsten Entwickler unwiederholbar |
 | 2 | Provenienz-Anzeige als geteiltes UI-Element | Erst wenn zwei Stellen sie brauchen, lohnt die Verallgemeinerung |
 | 3 | `sony-camera-bridge`: `BridgeTallyState` gegen die Regel prüfen | Anderes Repo, eigener Rhythmus |
 
 Inkrement 2 bewusst nicht zuerst: Ein gemeinsames Provenienz-Badge zu bauen, bevor der zweite
 Anwendungsfall existiert, wäre eine Abstraktion auf Verdacht.
+
+## Was dieser ADR ausdrücklich nicht behauptet
+
+Nach dem Videohub-Fix hat der `cable-planner` **keinen großen offenen Verstoß mehr** gegen diese
+Regel. Was bleibt, ist ein falscher Startwert in einem Zähler und ein Feldname. Das ist die ehrliche
+Bilanz, und sie gehört hierhin, weil die Versuchung groß ist, aus einem starken Marktbefund eine
+lange Mängelliste im eigenen Code abzuleiten. Der Marktbefund bleibt trotzdem wertvoll — er sagt,
+welche Regel beim *nächsten* Feature nicht gebrochen werden darf, nicht dass sie hier schon
+flächendeckend gebrochen wäre.
+
+## Was die Umsetzung gelehrt hat
+
+**Der Feldname war nicht das Problem.** Der ADR stand zuerst mit „`lastSyncedQty` behauptet eine
+Bestätigung" als Hauptbefund. Beim Nachsehen in der Oberfläche stellte sich heraus: die Spalte heißt
+seit jeher „Bereits gesendet", die Zusammenfassung ebenso, das EN-Dict „Already sent". Der Nutzer
+wurde nie belogen. Aus einem vermeintlich offenen Verstoß wurde eine Namenskosmetik — und beim
+Weitersuchen, unter genau der Prämisse „wo kommt der Wert eigentlich her", der echte Fehler: der
+**Startwert** beim Import stammte aus der editierbaren Planmenge. Die Regel hat also nicht dort
+gegriffen, wo sie zuerst zu greifen schien.
+
+**Die Provenienz-Frage stellt man an den Schreibern, nicht an den Lesern.** `sendBucket` war der
+offensichtliche Kandidat, weil dort „gesendet" draufsteht. Der Fehler saß im zweiten Schreiber,
+`RentmanImportDialog`, den niemand als Zustands-Schreiber liest — er heißt Import. Wer ein Feld auf
+seine Herkunft prüft, muss **jede** Zuweisung ansehen, nicht die naheliegende.
+
+**Eine Migration darf nicht auf null heilen.** Ein Eintrag ohne Menge bleibt mengenlos. `0` hieße
+„nichts gesendet" und stellte die nächste Differenz auf die volle Menge — eine erfundene
+Bestätigung, also genau der Schaden, gegen den dieser ADR geschrieben ist.
