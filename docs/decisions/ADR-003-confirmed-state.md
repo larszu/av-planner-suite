@@ -67,7 +67,7 @@ ausgegebener Wert, der es nicht ist, ist der Schaden.
 | 0 | Videohub-Status-Read entkoppeln | War ein aktiver Datenverlust — erledigt in `cable-planner#610` |
 | 1 | Rentman-Zähler: Startwert aus Rentmans eigener Menge statt aus der Planmenge, Feld zu `lastSentQty` umbenennen (mit Migration) — erledigt in `cable-planner#611` | Der Startwert ist der eigentliche Fehler; die Umbenennung macht ihn für den nächsten Entwickler unwiederholbar |
 | 2 | Provenienz-Anzeige als geteiltes UI-Element | Erst wenn zwei Stellen sie brauchen, lohnt die Verallgemeinerung |
-| 3 | `sony-camera-bridge`: `BridgeTallyState` gegen die Regel prüfen | Anderes Repo, eigener Rhythmus |
+| 3 | `sony-camera-bridge`: `BridgeTallyState` gegen die Regel prüfen — geprüft, Ergebnis unten | Anderes Repo, eigener Rhythmus |
 
 Inkrement 2 bewusst nicht zuerst: Ein gemeinsames Provenienz-Badge zu bauen, bevor der zweite
 Anwendungsfall existiert, wäre eine Abstraktion auf Verdacht.
@@ -99,3 +99,31 @@ seine Herkunft prüft, muss **jede** Zuweisung ansehen, nicht die naheliegende.
 **Eine Migration darf nicht auf null heilen.** Ein Eintrag ohne Menge bleibt mengenlos. `0` hieße
 „nichts gesendet" und stellte die nächste Differenz auf die volle Menge — eine erfundene
 Bestätigung, also genau der Schaden, gegen den dieser ADR geschrieben ist.
+
+## Nachtrag: `sony-camera-bridge` (Inkrement 3)
+
+Geprüft wurden `BridgeTallyState` im Companion-Modul und das Tally-Register der Bridge selbst.
+
+**Die Regel ist erfüllt, und aus einem Grund, der benannt gehört: die Bridge ist der *Ursprung*
+dieses Werts, kein Spiegel eines fremden Zustands.** Kein Switcher speist das Register (es gibt
+keine ATEM-/TSL-Anbindung im Repo), also gibt es nichts zurückzulesen — die Bridge ist die Quelle.
+Wo ein Wert entsteht, ist die Frage nach der Bestätigung gegenstandslos. Die Regel gilt für
+angezeigten **fremden** Zustand, nicht für ein Register, das das System selbst führt.
+
+Das Companion-Modul macht es zudem ausdrücklich richtig: `tallyState` wird **ausschließlich** in
+`onTally` geschrieben — also nur aus dem, was die Bridge zurücksendet — nie optimistisch aus dem
+Tastendruck. `sendTally` postet und ruft danach `refreshAll()`. Das kostet einen Round-Trip und
+sieht wie eine überflüssige Anfrage aus; es ist die Regel in Codeform, und wer sie später
+„optimiert", baut genau den open-loop-Zustand ein, den fünf Marktsegmente beklagen.
+
+**Eine Stelle bleibt offen** (`bridge.ts`, `fetchTally`): antwortet die Bridge ohne `tally`-Feld,
+setzt das Modul `{program: false, preview: false, isoRec: false}` — es *erfindet* also „alle Lampen
+dunkel". Das ist die gefährliche Richtung: eine Kamera, die auf Sendung ist, erschiene als nicht auf
+Sendung. Ehrlich wäre, die Antwort ohne Nutzlast wie die anderen Fehlerpfade zu behandeln (werfen →
+`ConnectionFailure`), damit der Operator „Bridge antwortet nicht" sieht statt einer falschen
+Gewissheit.
+
+Nicht gebaut, und der Grund gehört dazu: der Entwicklungszweig dieses Repos trägt derzeit den noch
+offenen Lizenz-PR (`sony-camera-bridge#8`), der eine Entscheidung des Eigentümers braucht. Einen
+sachfremden Fix daraufzusetzen würde diese Entscheidung mit fremdem Inhalt vermengen. Der Fix wartet
+darauf, dass der Zweig frei ist — er ist klein und hängt an nichts anderem.
