@@ -182,19 +182,33 @@ Heilungsschritte sind aber **nicht** blind anzuschliessen — erst ist je Schrit
 überhaupt etwas verwirft. Ein Kanal, der Meldungen über Nicht-Verluste trägt, ist so schädlich wie
 gar keiner: er gewöhnt den Nutzer daran, das Banner wegzuklicken.
 
-**Cable-Planner ist die einzige der drei Apps ohne opakes Durchreichen fremder `.avplan`-Domänen.**
-Nachgelesen, aber noch nicht gebaut: `types/project.ts` deklariert
-`avForeign?: { venue?; cameras?; lighting? }` — drei feste Schlüssel. `MenuBar` baut das Feld beim
-Import aus genau diesen dreien, `cableToAvPlan` exportiert nur sie, und `parseAvPlan` nimmt eine
-Datei mit einer vierten Domäne an, statt sie abzulehnen. Eine `.avplan` mit einem Slot, den diese
-Version nicht kennt, verliert ihn also beim Round-Trip.
+**Keine der drei Apps reicht eine unbekannte `.avplan`-Domäne durch.** Nachgelesen und nachgezählt:
 
-Das ist kein neues Problem, sondern dasselbe, das Inkrement 1 für MultiCam (`#78`) und Inkrement 2
-für Light (`#44`) bereits gelöst hat — nur an der dritten App. Das Muster liegt vor, es ist zu
-übertragen. Danach gilt die Zusage „verlustfrei" im Modulkopf von `avplan.ts` zum ersten Mal für
-alle drei Richtungen.
+| App | `avForeign` |
+| --- | --- |
+| cable-planner | `{ venue?, cameras?, lighting? }` |
+| light-planner | `{ cameras?, cabling? }` |
+| multicam-planner | `{ lighting?, cabling? }` |
 
-**Drei Design-Entscheidungen, die dem Eigentümer gehören** und die hier ausdrücklich *nicht*
+Jede Fassung zählt genau die Slots auf, die sie kennt, und baut `domains` beim Export daraus neu.
+Eine `.avplan` mit einem vierten Slot — eine künftige Audio- oder Rigging-Domäne, eine App, die es
+noch nicht gibt — verliert ihn in **jeder** der drei Richtungen. Und `parseAvPlan` nimmt eine solche
+Datei überall an, statt sie abzulehnen: der Slot wird also weder bewahrt noch verweigert noch
+gemeldet — alle drei Auswege aus Regel 3 verfehlt.
+
+Eine frühere Fassung dieses Absatzes behauptete, cable-planner sei die einzige App ohne dieses
+Durchreichen und Inkrement 1 und 2 hätten es für die beiden anderen bereits gelöst. **Das war
+falsch.** Inkrement 1 (`multicam#78`) und Inkrement 2 (`light#44`) haben dafür gesorgt, dass die
+*bekannten* Fremd-Domänen ein natives Speichern überleben — nicht, dass eine *unbekannte* überlebt.
+Der Fehler ist derselbe, den dieses Protokoll den Audit-Hinweisen vorwirft: eine plausible
+Kausalkette, am Code nicht zu Ende geprüft.
+
+Damit ist das keine Nachzügler-Arbeit an einer App, sondern eine Lücke im geteilten Format. Und
+weil `AVPLAN_VERSION = 1` ein eingefrorener Draht-Vertrag ist, ist „unbekannte Slots müssen
+überleben" eine Zusage auf Vertragsebene — sie gehört entschieden, nicht in drei Repos nebenbei
+eingebaut. Siehe Design-Frage 4.
+
+**Vier Design-Entscheidungen, die dem Eigentümer gehören** und die hier ausdrücklich *nicht*
 nebenbei getroffen werden:
 
 1. Bleibt `exportGreengo` ein **Generator** (erzeugt eine frische Konfiguration aus dem Plan) oder
@@ -210,6 +224,12 @@ nebenbei getroffen werden:
    brauchen. Mit dem `.avsourcemap`-Fund liegt die zweite Stelle vor. Das ist die Voraussetzung
    dafür, dass aus der Meldung Bewahrung wird — aber es erweitert das Plan-Modell und gehört als
    solches entschieden, nicht als Nebenwirkung eines Verlust-Audits.
+4. Soll `.avplan` zusagen, **unbekannte Domänen-Slots verlustfrei durchzureichen**? Heute tut es
+   keine der drei Apps (siehe oben). Die Zusage wäre billig umzusetzen — ein opakes Fach je App —
+   aber sie bindet alle drei Implementierungen an eine Eigenschaft, die `AVPLAN_VERSION = 1` bisher
+   nicht verspricht. Die Alternative ist ehrlicher Widerspruch: `parseAvPlan` lehnt eine Datei mit
+   unbekanntem Slot ab, statt sie stillschweigend zu beschneiden. Beides ist vertretbar, das
+   heutige Verhalten — annehmen und wegwerfen — ist es nicht.
 
 **Was das über abgebrochene Audits lehrt.** Über alle dreizehn Nachlesen hält dasselbe Muster: von
 den neun bestätigten Hinweisen traf **kein einziger** den richtigen Ort mit der richtigen Begründung.
