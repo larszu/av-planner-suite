@@ -655,7 +655,22 @@ ist selbst ein Ergebnis.
 
 ### B-28 · Die Rolle besitzt die Mischer- und Router-Labels nicht
 
-* **Status:** offen
+* **Status:** erledigt (`cable#682`) — `roleLabelsByPort` in
+  `labelDerivation.ts` liefert je Eingangsport eines Routers/Mischers den
+  Namen der gebundenen Rolle, durch Router-Kreuzpunkte hindurch. `deriveLabels`
+  und **beide** Exporter (ATEM-Long/Short, Videohub-Labels über .txt,
+  Protokoll-Dump, Label-PDF, TCP-Push und die Tabelle im Dialog) lesen
+  dieselbe Auflösung — getrennte Kopien hätten die TREUE-REGEL am Kopf von
+  `labelDerivation.ts` gebrochen und den Plan-Check Kollisionen auf Texten
+  melden lassen, die nie ein Gerät erreichen.
+  Router- und ATEM-**Ausgänge** bleiben bewusst beim Portnamen: dort trägt der
+  Kreuzpunkt zur Laufzeit das Ziel, nicht die Verkabelung. Der ATEM-Fall ist
+  mit einer Marke an der Stelle begründet, und die Marke wird **gezählt**,
+  damit der Guard nicht mit Marken zugeschüttet wird.
+  Ein bestehender Test (`sourceMap.test.ts`) ist dabei gefallen und wurde
+  angefasst statt umgangen — er hatte den Fall im eigenen Kommentar
+  vorhergesagt.
+* **Vorher:** offen
 * **Befund (gemessen 2026-09-04, Runde 10):** Ein Umbenennen der
   `SourceIdentity` ändert den UMD-Text, die `.avsourcemap` und die Tally-CSV —
   aber **nicht** den ATEM-Lang-/Kurznamen und **nicht** die Videohub-Labels.
@@ -718,7 +733,7 @@ ist selbst ein Ergebnis.
 
 ### B-31 · Bedarf, der außerhalb von `project.equipment` liegt
 
-* **Status:** Rack-Hälfte erledigt (`cable#677`); `drumKit`/`wirelessRig` offen
+* **Status:** erledigt — Rack-Hälfte (`cable#677`), `drumKit`/`wirelessRig` (`cable#678`)
 * **Befund (2026-09-04, Gegenrunde):** `groupPresetSpawnSlice.ts:197-236` legt
   für ein eingefügtes Rack **genau ein** `EquipmentItem` an (Kategorie `Rack`,
   ohne `deviceTypeId`); die enthaltenen Geräte leben nur im
@@ -921,6 +936,30 @@ ist selbst ein Ergebnis.
 
 ---
 
+### B-36 · Der Defektformen-Sweep über die fünf Nicht-cable-Repos ist NICHT abgeschlossen
+
+* **Status:** offen — und ausdrücklich **ohne verwertbares Ergebnis**.
+* **Was lief (2026-09-04):** ein Sweep über fünf wiederkehrende Defektformen
+  dieser Sitzung (`guard-umgangen`, `zwei-rechnungen`, `vertrag-nur-feldnamen`,
+  `fixture-erreicht-grenze-nicht`, `zustand-nach-fehler`) in
+  `light-planner`, `multicam-planner`, `Broadcast-intercom`, `tally-pi`,
+  `pi-media-station`, mit einer adversarialen Gegenprobe je Befund.
+* **Wie er endete:** **11 von 62 Läufen fertig, 51 abgebrochen** (Sitzungslimit).
+  Fertig wurde ausschließlich die **Suchphase**; **keine einzige Gegenprobe**
+  ist zurückgekommen.
+* **Warum hier trotzdem keine Liste der neun Roh-Befunde steht.** Genau das
+  wäre der Fehler, den diese Sitzung zehn Runden lang gemessen hat: In der
+  letzten vollständigen Gegenrunde hielten **10 von 12** Erstbefunden der
+  Prüfung *nicht* stand. Eine unbelegte Liste im Backlog liest sich nach zwei
+  Wochen wie Arbeitsvorrat, und niemand sieht ihr an, dass sie nie geprüft
+  wurde. Ein leerer Eintrag mit dem Grund ist ehrlicher als neun Zeilen, die
+  aussehen wie Befunde.
+* **Was der Sweep an Substanz ergeben hat:** nichts Bestätigtes. Er ist zu
+  wiederholen, nicht auszuwerten.
+* **Aufwand:** mittel (Wiederholung, sobald Kontingent da ist)
+
+---
+
 ## Nicht zu entscheiden ohne den Eigentümer
 
 Diese Punkte sind **bewusst offen** und werden nicht nebenbei entschieden. Sie
@@ -1013,3 +1052,5 @@ gehalten, nicht als Versäumnis:
 | Vendoring cable#677-#680 + light#64 | `suite#80` |
 | Guard meldete fehlenden Workflow als ENOENT statt als Befund | `light#65` |
 | `powerWatts`/`weightKg`-Typ-Doku nannte erfundene Konsumenten (B-15, Doku-Teil) | `cable#681` |
+| Rolle besitzt Mischer-/Router-Labels (B-28) | `cable#682` |
+| Topbar/Statusleiste/Bibliothek/Versionen gewickelt (B-13) | `light#66` |
