@@ -880,7 +880,27 @@ ist selbst ein Ergebnis.
 
 ### B-13 · `light-planner`: Sprachschalter ist upstream nicht erreichbar
 
-* **Status:** offen
+* **Status:** **erledigt 2026-09-04** (`light#61`, `#62`, `#63`, `#66`, `#67`)
+  — die dreistufige Reihenfolge ist zu Ende gegangen: erst wickeln, dann
+  übersetzen, dann der Schalter.
+
+  | | vor der Runde | jetzt |
+  | --- | --- | --- |
+  | gerenderte Komponenten ganz ohne `t()` | 10 (~365 Textstellen) | **0** |
+  | erreichbare Schlüssel mit englischer Fassung | 42 | **670** |
+  | Sprachschalter erreichbar | nein | **ja** (Topbar-Menü) |
+
+  Der Schalter war das kleinste Stück und musste das letzte sein: vorher
+  freigelegt hätte er eine zu ~85 % deutsche Oberfläche auf Englisch gestellt,
+  und ein Nutzer hätte die Funktion zu Recht für kaputt gehalten.
+  **Ein Guard hält den Zustand fest** (`i18n-reachable-check.ts`, Abschnitt 3):
+  geprüft wird nicht, ob `setLanguage` existiert — das war nie das Problem —,
+  sondern ob es aus einer *gerenderten* Datei aufgerufen wird. Gegengeprobt in
+  beide Richtungen.
+  **Nicht erledigt und ausdrücklich offen:** `MenuBar.tsx` / `Toolbar.tsx`,
+  36 übersetzte Aufrufe in Dateien, die niemand rendert. Verdrahten oder
+  löschen ist eine Eigentümer-Entscheidung (verwandt mit E-16).
+* **Vorher:** offen
 * **Befund:** Die i18n-Infrastruktur existiert, aber `setLanguage` wird nur in
   `src/components/MenuBar.tsx:77` aufgerufen — und **diese Datei importiert
   niemand**; `App.tsx` rendert `TopBar` + `ToolRail`. Das Drift-Skript der Suite
@@ -1054,3 +1074,4 @@ gehalten, nicht als Versäumnis:
 | `powerWatts`/`weightKg`-Typ-Doku nannte erfundene Konsumenten (B-15, Doku-Teil) | `cable#681` |
 | Rolle besitzt Mischer-/Router-Labels (B-28) | `cable#682` |
 | Topbar/Statusleiste/Bibliothek/Versionen gewickelt (B-13) | `light#66` |
+| Gerenderte Oberfläche vollständig gewickelt + Sprachschalter (B-13) | `light#67` |
