@@ -296,4 +296,25 @@ export const dialogs: Record<string, string> = {
   'dlg.scale.enlarged': 'up',
   'dlg.scale.reduced': 'down',
   'dlg.scale.apply': 'Apply',
+
+  // ── Onboarding: Willkommen + Tour (suite-eigen) ──
+  //
+  // Der Rahmen dieser Dialoge kommt aus `@avplan/onboarding-core` und war
+  // laengst uebersetzt (`lang` geht hinein). Nur der Inhalt war fest deutsch —
+  // englische Knoepfe um deutschen Text.
+  'onb.welcome.title': 'Welcome to Light Planner',
+  'onb.welcome.intro': 'Start from your floor plan, or go straight to an empty plan.',
+  'onb.action.floorplan': 'Import floor plan',
+  'onb.action.floorplanDesc': 'Load a JPG, PNG or PDF, calibrate the scale, then place fixtures.',
+  'onb.action.empty': 'Start empty',
+  'onb.action.emptyDesc': 'Plan straight on the grid – a floor plan can be added at any time later.',
+  'onb.tour1.title': 'Welcome to Light Planner',
+  'onb.tour1.body': 'A short tour shows you where the main functions are. Import a floor plan, calibrate the scale, place fixtures – your first plan is a few minutes away.',
+  'onb.tour2.title': 'Library on the left',
+  'onb.tour2.body': 'The left column holds the fixture library – from profile spots to moving heads, by drag and drop or by clicking onto the plan. Below it you can create your own fixtures; the "Layers" and "Scenes" tabs organise the plan.',
+  'onb.tour3.title': '2D plan, 3D and render at the top',
+  'onb.tour3.body': 'At the top you switch between the 2D plan, the 3D preview and render mode. Next to them sit the instrument schedule, export and save.',
+  'onb.tour3.hint': 'Space pans the view, the mouse wheel zooms.',
+  'onb.tour4.title': 'Inventory, bottom left',
+  'onb.tour4.body': 'The inventory button opens the cross-project stock (items, locations, sets, individual units). Through export/import it shares its format with Cable Planner and MultiCam Planner – one inventory for the whole suite.',
 };
