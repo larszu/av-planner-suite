@@ -311,7 +311,20 @@ ist selbst ein Ergebnis.
   benannten Test — nicht aus Versehen.
 * **Was auf jeden Fall falsch ist:** die Typ-Doku. Sie nennt Konsumenten, die
   es nicht gibt — unabhängig davon, wie E-8 ausgeht.
-* **Aufwand:** klein (Doku) + Entscheidung
+* **Doku-Teil erledigt (`cable#681`, 2026-09-04).** Der Satz ist durch den
+  gemessenen Stand ersetzt: `weightKg` wird über `categorySchemas.ts`
+  („Eigengewicht"), `AnalysisDialog`, `LocationBomDialog`, `InventoryDialog`
+  und CSV-Import gelesen, `powerWatts` von nichts; `components/Rack/` nennt
+  keines von beiden, die Tiefe kommt aus `depthMm`.
+  Festgehalten als **berechnete** Prüfung, nicht als Prosa
+  (`tests/effektiveLeistung.test.ts`): eine fällt, sobald `Rack/` eines der
+  Felder benutzt — nicht um das zu verbieten, sondern damit die Doku
+  mitwandert —, die zweite, wenn der widerlegte Satz zurückkehrt. Beide
+  einzeln rot gemacht und wieder zurückgenommen.
+  **Die Entscheidung selbst (E-8) bleibt offen**, und dieser Eintrag bleibt es
+  deshalb auch. Der Reiz, ihn jetzt abzuhaken, ist genau die Falle, die B-15
+  beschreibt: es sähe erledigt aus, und das stumme Feld bliebe stumm.
+* **Aufwand:** Doku erledigt; Rest = Entscheidung
 
 ---
 
@@ -992,3 +1005,11 @@ gehalten, nicht als Versäumnis:
 | Umsortierung löschte den Port-Herkunftsbeleg (B-33) | `cable#677` |
 | Geräte in Reparatur zählten als gedeckt (B-30) | `cable#677` |
 | Rack-Inhalte fehlten in der Stückliste (B-31, Rack-Hälfte) | `cable#677` |
+| `drumKit`/`wirelessRig` fehlten in der Stückliste (B-31, Rest) | `cable#678` |
+| Arbeitsweise-Direktive in `cable-planner/CLAUDE.md` | `cable#678` |
+| `READS_DEVICE` traf nur Lese-Verben, `TOUCHES_PLAN` zu eng | `cable#679` |
+| Inline-Typ-Import liess einen Test als Suite-Abweichung dastehen | `cable#680` |
+| `mvr:check` lief bei keinem Merge; berechneter Guard dagegen | `light#64` |
+| Vendoring cable#677-#680 + light#64 | `suite#80` |
+| Guard meldete fehlenden Workflow als ENOENT statt als Befund | `light#65` |
+| `powerWatts`/`weightKg`-Typ-Doku nannte erfundene Konsumenten (B-15, Doku-Teil) | `cable#681` |
