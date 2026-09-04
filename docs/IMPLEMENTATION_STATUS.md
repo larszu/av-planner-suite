@@ -144,6 +144,8 @@ Der Kern ist also **nicht** Gerüst. Was fehlt, ist nicht Funktion, sondern
 | `Broadcast-intercom` Kern | `IMPLEMENTED` | 38 Smoke-Prüfungen grün gegen laufenden Server |
 | `Broadcast-intercom` CI | `COMPLETE` | `ci.yml` baut, startet den Kern mit `MOCK_DEVICES=1` und fährt die 38 Smoke-Prüfungen (`#6`, erster Lauf grün) |
 | `sony-camera-bridge` | `IMPLEMENTED` | 15 Tests grün in zwei Workspaces, ganz auf ADR-003 ausgerichtet |
+| `Broadcast-intercom` i18n | `COMPLETE` | 165 Schluessel, EN und DE vollstaendig — und zwar **vom Typ erzwungen** (`const DE: typeof EN`), ein fehlender Schluessel waere ein Compile-Fehler. Die 29 wertgleichen Eintraege sind echte Gleichwoerter (Monitor, Signal, Sidetone, VOX) |
+| `sony-camera-bridge` Oberflaechen-Sprache | `PARTIAL` | 172 sichtbare Textstellen ohne jede i18n, davon **32 deutsch** und der Rest englisch — in denselben Dialogen nebeneinander (B-26) |
 | `sony-camera-bridge` CI | `COMPLETE` | `ci.yml` mit `npm ci` + `npm test` (`#11`, grün) |
 | `tally-pi` | `IMPLEMENTED` | 5 Python-Module, systemd-Units, `bootstrap.sh`; seit `#7` **46 Tests** in CI (ATEM-Offset, ME-Zählung, `offline` wird nie `safe`) |
 | `pi-media-station` | `IMPLEMENTED` | `main.py`/`sensor.py`/`web_ui.py` + Electron-Manager; seit `#3` erste CI (`verify.yml`) und **21 Tests** (Schema-Heilung, Filterfenster, Dummy-Rückfall ohne `gpiozero`) |

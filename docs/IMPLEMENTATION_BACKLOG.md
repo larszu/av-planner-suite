@@ -536,6 +536,26 @@ ist selbst ein Ergebnis.
   deshalb kein Kopieren.
 * **Aufwand:** groß
 
+### B-26 · `sony-camera-bridge`: eine Oberfläche, zwei Sprachen
+
+* **Status:** offen (Entscheidung beim Eigentümer, siehe E-17)
+* **Befund (gemessen 2026-09-04):** Die Web-RCP (`packages/web-rcp/src`) hat
+  **172** sichtbare Textstellen und **keine i18n** — kein `useTranslation`,
+  kein Wörterbuch. Davon sind **32 deutsch**, der Rest englisch, in denselben
+  Dialogen nebeneinander: `ConnectionPanel` beschriftet „Kamera IP
+  (WiFi/LAN)", „– Gerät wählen –" und „Kamera-Nr." zwischen englischen
+  Feldern; der `FirstStartWizard` fragt „Welche Kamera möchtest du als erstes
+  einrichten?" und listet darunter englische Beschreibungen.
+* **Warum das zählt:** Das ist kein Übersetzungsrückstand, sondern ein
+  uneinheitliches Produkt. Ein Nutzer kann sich auf keine Sprache verlassen,
+  und es gibt keinen Schalter, mit dem er etwas daran ändern könnte.
+* **Warum es nicht nebenbei entschieden wird:** Welche Sprache die
+  Quellsprache dieses Repos ist, steht nirgends. Die übrigen Planer sind
+  deutsch-quellig, `multicam-planner` in der Suite englisch-quellig, die
+  Intercom-Web-App zweisprachig per Typ. Erst die Antwort entscheidet, ob
+  32 Stellen übersetzt oder 140 umgeschrieben werden.
+* **Aufwand:** klein (vereinheitlichen) / mittel (i18n einziehen)
+
 ---
 
 ## Niedrig
@@ -639,6 +659,7 @@ gehalten, nicht als Versäumnis:
 | E-14 | Welche Kategorien soll der Versions-Vergleich zeigen, und welche Felder machen darin eine Änderung aus? | B-21 — betrifft acht heute unsichtbare Kategorien; `layers`/`floor`/`sun` sind keine Listen und brauchen eine eigene Vergleichsform |
 | E-15 | Wie sieht das **Abbrechen** eines Lager-Imports aus — Drei-Wege-Dialog, Vorschau-Schritt oder Undo für den Lager-Store? | B-22 — heute importieren Escape und Backdrop-Klick still zusammenführend, und der Schreibvorgang ist nicht rücknehmbar |
 | E-16 | Werden `PrintDialog` und `TitleBlock` **verdrahtet** oder **gelöscht**? | B-24 — 21 KB Code und 48 übersetzte Zeichenketten, deren Funktion es woanders schon gibt |
+| E-17 | Welche Sprache ist die Quellsprache von `sony-camera-bridge`? | B-26 — davon hängt ab, ob 32 Stellen übersetzt oder 140 umgeschrieben werden |
 
 ---
 
