@@ -1245,6 +1245,18 @@ const App: React.FC = () => {
       meta, fixtures, shapes, persons, stageElements, customFixtures, fixtureGroups,
       trusses, walls, ceilings, scenes, cameras, layers, floor, sun,
       floorPlan: floorPlan ? serializeFloorPlan(floorPlan) : undefined,
+      // ADR-005 — dritter Bauplatz fuer ein vollstaendiges ProjectData, und
+      // der einzige, dem die Felder fehlten. Was hier gebaut wird, geht in den
+      // Versions-Schnappschuss; beim Wiederherstellen setzt handleLoadProject
+      // die Refs aus GENAU diesen Feldern zurueck. Ohne sie verlor jedes
+      // Zurueckholen einer Version die Kamera-, Kabel- und Raum-Daten.
+      ...foreignDomainsField(preservedDomainsRef.current),
+      ...(Object.keys(preservedVenueRef.current).length > 0
+        ? { venueForeign: preservedVenueRef.current }
+        : {}),
+      ...(Object.keys(preservedPersonsRef.current).length > 0
+        ? { personForeign: preservedPersonsRef.current }
+        : {}),
     };
   }, [projectMeta, fixtures, shapes, persons, stageElements, customFixtures, fixtureGroups, trusses, walls, ceilings, scenes, cameras, layers, floor, sun, floorPlan]);
 
@@ -1706,7 +1718,19 @@ const App: React.FC = () => {
           currentDoc={buildCurrentDoc()}
           // Dieselbe Projekt-Identitaet behalten: eine Version des Projekts
           // wiederherzustellen macht daraus kein anderes Projekt.
-          onRestore={(doc) => { handleLoadProject(doc, projectId); setVersionOpen(false); }}
+          // Und den Grundriss mitgeben: `versionStore.saveVersion` laesst ihn
+          // BEWUSST aus dem Schnappschuss weg. `handleLoadProject` liest ein
+          // fehlendes `floorPlan` aber als "keiner vorhanden" und setzt auf
+          // null. Beide Entscheidungen sind fuer sich richtig; zusammen
+          // loeschten sie bei jedem Wiederherstellen den importierten und
+          // kalibrierten Gebaeudeplan.
+          onRestore={(doc) => {
+            handleLoadProject(
+              { ...doc, floorPlan: floorPlan ? serializeFloorPlan(floorPlan) : undefined },
+              projectId,
+            )
+            setVersionOpen(false)
+          }}
           onClose={() => setVersionOpen(false)}
         />
       )}
