@@ -248,6 +248,51 @@ ist selbst ein Ergebnis.
 
 ---
 
+### B-15 · `EquipmentItem.powerWatts` ist ein Schreib-nur-Feld
+
+* **Status:** offen (Entscheidung beim Eigentümer, siehe E-8)
+* **Befund (gemessen 2026-09-04, cable-planner):** `cable-planner` hat **zwei**
+  Leistungsfelder am Gerät. `powerConsumptionWatts` (#76) ist laut eigener
+  Typ-Doku „Fed into the Power-Consumption calculator and the equipment BOM
+  totals row" — das stimmt. `powerWatts` (#167, Rentman-Engineering-Daten) hat
+  **8 Fundstellen und keinen einzigen Konsumenten**:
+
+  | | |
+  | --- | --- |
+  | geschrieben | Rentman-Import (`RentmanImportDialog.tsx:594`, Quelle `rentmanImportHelpers.ts:160` aus `power_consumption`/`power`/`wattage`), Template-Merge (`equipmentSlice.ts:429`) |
+  | persistiert / gediffed / gecacht | `projectStore.ts:840`, `planDiff.ts:216` (als `substantive`), `rentmanTemplateCache.ts:68`, `modelFields.ts:86` |
+  | gelesen | **nur** `equipmentSelectors.ts:64` — und dessen `powerWatts`-Ergebnis konsumiert niemand; alle vier Aufrufer nehmen ausschließlich `.weightKg` |
+  | angezeigt | **nirgends** |
+  | summiert | **nirgends** |
+
+* **Die Typ-Doku nennt zwei Konsumenten, die es nicht gibt.** Sie behauptet
+  „Werden in den Properties angezeigt und vom 3D-Rack-Builder (#170) für die
+  Tiefen-Visualisierung genutzt". Gemessen: keine Properties-Section liest
+  `powerWatts` (`PowerConsumptionSection.tsx:22` liest
+  `powerConsumptionWatts`), und in `components/Rack/` kommt `powerWatts`
+  **kein einziges Mal** vor.
+* **Gegenprobe am Zwillingsfeld:** `weightKg` steht im selben Typ-Block, mit
+  derselben Herkunft — und hat **34** Fundstellen mit echten Konsumenten. Die
+  Asymmetrie ist der Beleg, dass hier etwas liegengeblieben ist und nicht,
+  dass das Feld absichtlich stumm wäre.
+* **Warum das nicht nebenbei entschieden wird:** `item.powerWatts` in die
+  Leistungskette aufzunehmen würde die **Zahlen bestehender Projekte
+  verändern** — bei jedem Plan mit Rentman-Import springt die Gesamtlast von
+  0 W auf einen echten Wert. Das kann richtig sein (die Daten liegen ja vor)
+  oder falsch (die Felder sind bewusst getrennt: Katalogwert vs. gemessene
+  Aufnahme). Beides ist vertretbar, und die Entscheidung gehört nicht in einen
+  Refactoring-PR.
+* **Sichtbar gehalten statt vergessen:** `cable#668` nimmt das Feld
+  ausdrücklich **nicht** in die Kette auf und hält das mit einem Test fest
+  (`effektiveLeistung.test.ts`: „nimmt `powerWatts` des GERAETS bewusst NICHT
+  auf"), plus Begründung am Helfer. Wer die Entscheidung kippt, kippt einen
+  benannten Test — nicht aus Versehen.
+* **Was auf jeden Fall falsch ist:** die Typ-Doku. Sie nennt Konsumenten, die
+  es nicht gibt — unabhängig davon, wie E-8 ausgeht.
+* **Aufwand:** klein (Doku) + Entscheidung
+
+---
+
 ## Niedrig
 
 ### B-12 · `pi-media-station` und `tally-pi` ohne Tests
@@ -310,6 +355,7 @@ gehalten, nicht als Versäumnis:
 | E-5 | Woher kommen **Subnetze** — abgeleitet oder projektweiter Pool? | Initiative 8 |
 | E-6 | Was zählt als **Beleg** für einen Steckertyp / eine Funkkomponente? | B-11 |
 | E-7 | Liefert der Planer den Pi **direkt** oder bleibt die Datei der Weg? | B-6 |
+| E-8 | Soll importierte Rentman-Leistung (`powerWatts`) in die Stromrechnung eingehen? | B-15 — ändert die Gesamtlast bestehender Pläne von 0 W auf einen echten Wert |
 
 ---
 
