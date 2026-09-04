@@ -457,14 +457,20 @@ ist selbst ein Ergebnis.
 
 ### B-23 · Zwölf Dialoge der Suite sind gar nicht erst gewickelt
 
-* **Status:** offen
+* **Status:** **weitgehend erledigt** (`light#62` + dieser PR) — von zwölf
+  Komponenten sind noch **drei** übrig, von ~110 Stellen noch **~12**.
 * **Befund (gemessen 2026-09-04, `i18n:check`):** Die Suite-Kopie ist weit
   gewickelt — `PropertyPanel` 272 `t()`-Aufrufe, `ScheduleDialog` 95,
-  `FixtureEditor` 66. **Zwölf** gerenderte Komponenten haben trotzdem
+  `FixtureEditor` 66. **Zwölf** gerenderte Komponenten hatten trotzdem
   **keinen einzigen**: `AreaLightDialog` (~21 sichtbare Stellen),
   `CanvasActions` (~18), `ProjectDialog` (~14), `ThreePointDialog` (~14),
   `ChangesDialog` (~13), `FloorPlanPanel` (~7), `Scene3D` (~7), `ScaleDialog`
   (~5) und vier weitere — zusammen ~110 Stellen.
+* **Was noch offen ist:** `Scene3D` (~7), `PlanCanvas` (~4) und
+  `Onboarding` (~1). Die ersten beiden liegen upstream **zweiseitig
+  abweichend** vor (Overlay), `Onboarding` gibt es nur in der Suite — sie
+  gehen deshalb nicht als Kopie mit, sondern brauchen von Hand gesetzte
+  Hunks bzw. eine eigene Runde upstream.
 * **Warum das hier schwerer wiegt als upstream:** Der Sprachschalter ist in
   der Suite **erreichbar** (`SettingsModal` → `App.tsx:450` → `PlannerFrame` →
   `shellSettings.ts:51` → `uiStore`). Wer auf Englisch stellt, bekommt diese
@@ -477,7 +483,7 @@ ist selbst ein Ergebnis.
   andere nachvollziehbar geblieben.
 * **DoD:** `i18n:check` meldet für die Suite-Kopie **0** gerenderte
   Komponenten ohne `t()`; die neuen Schlüssel haben englische Fassungen.
-* **Aufwand:** mittel
+* **Aufwand:** war mittel, Rest klein
 
 ---
 
@@ -613,5 +619,7 @@ gehalten, nicht als Versäumnis:
 | `i18n:check` las nur eine der beiden Wörterbuch-Formen | `light#60` |
 | Lager-Dialog + Beleg-Marken der Suite englisch (563/563) | `suite#71` |
 | `identity:check` war vendoriert, lief aber in keiner Suite-CI | `suite#71` |
+| Neun Dialoge/Panels ohne `t()` gewickelt (B-23) | `light#62`, `suite#72` |
+| `i18n:check` meldet ungewickelte Komponenten (B-13) | `light#61` |
 | Tests + CI für `tally-pi` (B-12) | `tally-pi#7` |
 | Erste CI + Tests für `pi-media-station` (B-12) | `pi-media-station#3` |
