@@ -47,7 +47,9 @@ ist selbst ein Ergebnis.
 
 ### B-2 · `Broadcast-intercom` hat 38 grüne Prüfungen und keine CI
 
-* **Status:** offen
+* **Status:** ~~offen~~ **erledigt 2026-09-04** (`Broadcast-intercom#6`) — CI
+  startet den gebauten Server mit `MOCK_DEVICES=1`, wartet auf Bereitschaft
+  (und bricht ab, sobald der Prozess stirbt) und fährt den Smoke-Test.
 * **Befund:** `scripts/smoke-test.mjs` fährt REST, Companion-Control und
   WebSocket gegen einen laufenden Kern — **38 Prüfungen, alle grün** (heute
   gemessen). Es gibt **keine** Workflow-Datei; die Prüfung läuft nur, wenn
@@ -61,9 +63,11 @@ ist selbst ein Ergebnis.
 * **Randnotiz:** `CLAUDE.md` führt Broadcast-intercom unter „Repos ohne CI",
   bei denen „CI grün" nicht erfüllbar ist. Mit B-2 entfällt diese Ausnahme.
 
-### B-3 · `sony-camera-bridge`: 7 Tests, keine CI
+### B-3 · `sony-camera-bridge`: 15 Tests, keine CI
 
-* **Status:** offen
+* **Status:** ~~offen~~ **erledigt 2026-09-04** (`sony-camera-bridge#11`)
+* **Korrektur:** zunächst als „7 Tests" notiert — das war die Zusammenfassung
+  des *letzten* Workspaces, nicht die Summe über beide (8 + 7).
 * **Befund:** `npm test` grün (7 Tests, `node:test`), darunter die
   ADR-003-Zusicherung „unbestätigt ist nicht aus" im Companion-Modul. Keine
   Workflow-Datei.
@@ -241,4 +245,6 @@ gehalten, nicht als Versäumnis:
 | `--write-baseline` verweigert das Begraben offener Änderungen | `suite#61` |
 | Native-Dialoge-Guard über alle vier Apps | `suite#62` |
 | Suite-Guard traf nur `window.alert(` (B-1) | `suite#63` |
+| CI für `Broadcast-intercom` (B-2) | `Broadcast-intercom#6` |
+| CI für `sony-camera-bridge` (B-3) | `sony-camera-bridge#11` |
 | Vier zu pessimistische Roadmap-Zeilen berichtigt | `suite#60` |

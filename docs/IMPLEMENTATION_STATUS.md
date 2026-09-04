@@ -64,7 +64,7 @@ Fehlerzeile gar nicht treffen konnte.)
 | `light-planner` | **0** | in `build` enthalten | **0 Fehler** (49 Warnungen) | **0** — 12 Tests + 4 Format-Checks (`avplan`, `venue`, `mvr`, `spec`) |
 | `av-planner-suite` | **0** | in `build` enthalten | — | **0** — 35 Shell + 45 Pakete |
 | `Broadcast-intercom` | **0** (nach `npm install`, 224 Pakete) | — | — | **0** — **38 Smoke-Tests gegen einen laufenden Kern** |
-| `sony-camera-bridge` | — | — | — | **0** — 7 Tests (node:test) |
+| `sony-camera-bridge` | — | — | — | **0** — 15 Tests (node:test) in zwei Workspaces: `bridge` 8, Companion-Modul 7 |
 | `tally-pi` | `py_compile` OK für alle 5 Module | — | — | keine |
 | `pi-media-station` | `py_compile` OK für alle 3 Module | — | — | keine |
 
@@ -129,7 +129,7 @@ Der Kern ist also **nicht** Gerüst. Was fehlt, ist nicht Funktion, sondern
 | --- | --- | --- |
 | `Broadcast-intercom` Kern | `IMPLEMENTED` | 38 Smoke-Prüfungen grün gegen laufenden Server |
 | `Broadcast-intercom` CI | `MISSING` | keine Workflow-Datei; die vorhandene Prüfung läuft nie automatisch |
-| `sony-camera-bridge` | `IMPLEMENTED` | 7 Tests grün, darunter ADR-003 („unbestätigt ist nicht aus") im Companion-Modul |
+| `sony-camera-bridge` | `IMPLEMENTED` | 15 Tests grün in zwei Workspaces, ganz auf ADR-003 ausgerichtet |
 | `sony-camera-bridge` CI | `MISSING` | keine Workflow-Datei |
 | `tally-pi` | `IMPLEMENTED` | 5 Python-Module, systemd-Units, `bootstrap.sh`; CI prüft nur Syntax |
 | `pi-media-station` | `IMPLEMENTED` | `main.py`/`sensor.py`/`web_ui.py` + Electron-Manager; keine CI, keine Tests |
@@ -168,7 +168,7 @@ gelesen wird:
 ## 5. Zusammenfassung
 
 Die vier JavaScript-Hauptprojekte sind **grün über Build, Typecheck, Lint und
-Tests** — 1.249 automatisierte Tests plus 38 Smoke-Prüfungen. Der Zustand ist
+Tests** — 1.257 automatisierte Tests plus 38 Smoke-Prüfungen. Der Zustand ist
 nicht „halbfertiges Produkt", sondern **reifer Kern mit benannten Lücken**.
 
 Die Lücken sind nicht gleichmäßig verteilt: sie sitzen fast alle an den
