@@ -424,6 +424,37 @@ ist selbst ein Ergebnis.
   verlustfrei-oder-laut gilt auch für eine Aussage über einen Vergleich.
 * **Aufwand:** klein (Aussage eingrenzen) / mittel (Kategorien ergänzen)
 
+### B-22 · Der Lager-Import kennt kein Abbrechen
+
+* **Status:** offen (Entscheidung beim Eigentümer, siehe E-15)
+* **Befund (nachgeprüft 2026-09-04, beide Kopien):** `doImport`
+  (`apps/light-planner/src/inventory/InventoryDialog.tsx:69-81`) fragt nach dem
+  Einlesen der Datei genau **eine** Ja/Nein-Frage. `true` heißt ersetzen,
+  `false` heißt **zusammenführen** — importiert wird in beiden Fällen. Einen
+  Weg, den Import an dieser Stelle noch abzubrechen, gibt es nicht.
+* **Schadensweg:** In der Suite ist die Frage ein `confirmDialog`; dessen
+  `false` kommt nicht nur vom Zweit-Knopf, sondern auch von **Escape** und vom
+  **Klick neben den Dialog** (`packages/ui/src/dialog.tsx:113-133`). Beide
+  Gesten heißen überall sonst „nichts tun"; hier schreiben sie fremde Artikel
+  in den Bestand. `importSnapshot` (`inventory/store.ts:82-101`) ruft
+  `persist` sofort, und ein Undo für den Lager-Store existiert nicht — der
+  Stand ist danach nicht wiederherstellbar.
+* **Warum das nicht neu ist, aber schlimmer wurde:** Upstream fragt mit
+  `window.confirm`, und der deutsche Text sagte dort ausdrücklich „Abbrechen =
+  zusammenführen". Die Aussage stimmte — die Suite hat den Aufruf durch
+  `confirmDialog` mit eigenen Beschriftungen ersetzt, womit der Satz einen
+  Knopf beschrieb, den es nicht mehr gibt. Dieser PR zieht den Text nach
+  (`Bestehenden Bestand ersetzen?`), die fehlende dritte Möglichkeit bleibt.
+* **Warum das nicht nebenbei entschieden wird:** Ein dritter Ausgang passt
+  nicht in `confirmDialog` (`Promise<boolean>`). Ob die Antwort ein eigener
+  Drei-Wege-Dialog ist, ein vorgeschalteter Vorschau-Schritt („X Artikel, Y
+  Lagerorte — übernehmen?") oder ein Undo für den Lager-Store, ist eine
+  Produktentscheidung mit sehr unterschiedlichem Aufwand.
+* **Ehrliches Zwischenmaß, falls die Entscheidung wartet:** Escape und
+  Hintergrund-Klick dürfen nicht importieren. Solange es keinen dritten
+  Ausgang gibt, ist „nichts tun" die richtige Bedeutung für beide Gesten.
+* **Aufwand:** klein (Escape/Backdrop entschärfen) / mittel (dritter Ausgang)
+
 ---
 
 ## Niedrig
@@ -470,6 +501,20 @@ ist selbst ein Ergebnis.
   die Weitergabe in `i18n/index.ts:69`), und `grep` findet in `src/` **keinen
   einzigen** Import von `MenuBar` oder `Toolbar`.
 * **Aufwand:** mittel (Abdeckung) **vor** klein (Schalter) — nicht umgekehrt.
+* **Teilerledigt 2026-09-04 (`light#59`, `light#60`, dieser PR):** Die
+  Abdeckungs-Hälfte ist in **beiden** Kopien fertig — upstream 34 von 34
+  erreichbaren Schlüsseln, in der Suite 563 von 563, geprüft von `i18n:check`
+  in beiden CIs. Offen bleibt nur noch der Schalter, und zwar **nur
+  upstream**.
+* **Und in der Suite war es kein latenter, sondern ein sichtbarer Schaden.**
+  Dort ist der Schalter längst erreichbar: `apps/shell/.../SettingsModal.tsx:124`
+  bietet die Sprache an, `App.tsx:450` reicht sie als `{ …, language }` in den
+  iframe, `PlannerFrame` sendet sie, und `shellSettings.ts:51` setzt sie im
+  `uiStore` des Planers. Ein Nutzer, der in der Suite auf Englisch stellte,
+  bekam den kompletten Lager-Dialog und die Beleg-Marken auf Deutsch — und
+  `t('common.edit', 'Edit')` zeigte umgekehrt einem deutschen Nutzer Englisch.
+  Standalone (`npm run dev:light`) ist der Schalter auch in der Suite-Kopie
+  nicht erreichbar; `connectShellSettings` ist dort ein No-op.
 
 ---
 
@@ -495,6 +540,7 @@ gehalten, nicht als Versäumnis:
 | E-12 | Wo wohnt Lexware architektonisch — Shell oder Planer? | B-19 — eigene Shell-Domäne (dann braucht Cable es nicht mehr) vs. Preload für den eingebetteten Planer |
 | E-13 | Bleibt die Shell-Vorschau ein eigenständiges Übersichtsmodell? | B-20 — wenn ja, fehlt eine sichtbare Kennzeichnung; wenn nein, müssen die Modelle zusammengeführt werden |
 | E-14 | Welche Kategorien soll der Versions-Vergleich zeigen, und welche Felder machen darin eine Änderung aus? | B-21 — betrifft acht heute unsichtbare Kategorien; `layers`/`floor`/`sun` sind keine Listen und brauchen eine eigene Vergleichsform |
+| E-15 | Wie sieht das **Abbrechen** eines Lager-Imports aus — Drei-Wege-Dialog, Vorschau-Schritt oder Undo für den Lager-Store? | B-22 — heute importieren Escape und Backdrop-Klick still zusammenführend, und der Schreibvorgang ist nicht rücknehmbar |
 
 ---
 
@@ -523,3 +569,7 @@ gehalten, nicht als Versäumnis:
 | `Strg+P`/`Strg+A` ohne Handler; `selectAll`/`jumpToPatches` gebunden | `cable#669` |
 | Custom-Palette: folgenloser Akzent-Regler entfernt | `cable#669` |
 | ADR-005: „Speichern (Gerät)" verlor die Fremd-Domänen | `light#56` |
+| i18n: 40 von 42 englischen Schlüsseln bedienten toten Code | `light#59` |
+| `i18n:check` las nur eine der beiden Wörterbuch-Formen | `light#60` |
+| Lager-Dialog + Beleg-Marken der Suite englisch (563/563) | `suite#71` |
+| `identity:check` war vendoriert, lief aber in keiner Suite-CI | `suite#71` |
