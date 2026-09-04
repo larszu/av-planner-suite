@@ -461,13 +461,20 @@ ist selbst ein Ergebnis.
 
 ### B-12 · `pi-media-station` und `tally-pi` ohne Tests
 
-* **Status:** offen
-* **Befund:** Beide Python-Repos haben keine Tests; `tally-pi` prüft in CI nur
-  die Syntax. Die reinen Funktionen darin (Adress-Ableitung, Zustandslogik)
-  wären ohne Hardware testbar.
-* **Nachgeprüft 2026-09-04:** weiterhin offen. `find` nach `test_*.py`,
-  `*_test.py` und einem `tests/`-Verzeichnis findet in **beiden** Repos nichts.
-* **Aufwand:** mittel
+* **Status:** ~~offen~~ **erledigt 2026-09-04** (`tally-pi#7`,
+  `pi-media-station#3`) — 46 + 21 Tests, beide in CI.
+* **Befund:** Beide Python-Repos hatten keine Tests; `tally-pi` prüfte in CI
+  nur die Syntax. Die reinen Funktionen darin (Adress-Ableitung,
+  Zustandslogik) waren ohne Hardware testbar — genau das ist jetzt geprüft.
+* **Was die Tests festhalten:** in `tally-pi` das dokumentierte Offset im
+  ATEM-Protokoll und die Umrechnung der 0- gegen 1-basierten ME-Zählung, dazu
+  die Zusicherung, dass `offline` niemals zu `safe` wird; in
+  `pi-media-station` die Schema-Heilung der Konfiguration (`setdefault` statt
+  `update`, Tiefkopie der Vorgaben) und das Fünf-Werte-Filterfenster des
+  Sensors. `pi-media-station` hat damit überhaupt zum ersten Mal CI
+  (`verify.yml`); `gpiozero` wird dort bewusst **nicht** installiert, damit
+  der Dummy-Rückfall mitgeprüft ist.
+* **Aufwand:** war mittel
 
 ### B-13 · `light-planner`: Sprachschalter ist upstream nicht erreichbar
 
@@ -573,3 +580,5 @@ gehalten, nicht als Versäumnis:
 | `i18n:check` las nur eine der beiden Wörterbuch-Formen | `light#60` |
 | Lager-Dialog + Beleg-Marken der Suite englisch (563/563) | `suite#71` |
 | `identity:check` war vendoriert, lief aber in keiner Suite-CI | `suite#71` |
+| Tests + CI für `tally-pi` (B-12) | `tally-pi#7` |
+| Erste CI + Tests für `pi-media-station` (B-12) | `pi-media-station#3` |
