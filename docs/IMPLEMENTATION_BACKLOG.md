@@ -76,13 +76,27 @@ ist selbst ein Ergebnis.
 
 ### B-4 · `cable-planner`: CRDT- und Signaling-Prüfung laufen nicht in CI
 
-* **Status:** offen
+* **Status:** ~~offen~~ **erledigt** (`cable#658`, Commit `a1fa277`) — beide
+  Schritte stehen im `verify`-Job, mit Laufzeit im Workflow-Kopf (`test:crdt`
+  ~0,4 s, `test:signaling` ~2,6 s) und der Begründung, warum `ui:smoke` und
+  `test:drag` dort **nicht** stehen (die brauchen wirklich einen laufenden
+  Renderer).
 * **Befund:** `npm run test:crdt` (Konvergenz) und `npm run test:signaling`
-  existieren, sind aber nicht Teil des `verify`-Jobs. Kollaboration ist damit
+  existierten, waren aber nicht Teil des `verify`-Jobs. Kollaboration war damit
   die am schlechtesten abgesicherte Funktion des größten Repos.
 * **DoD:** beide im CI-Job, oder eine belegte Begründung im Workflow, warum
   nicht (Laufzeit, Flakiness) — dann aber mit Messwert.
 * **Aufwand:** klein
+
+> **Wie dieser Eintrag falsch stehen konnte.** Er stand als „offen" hier,
+> während der Fix in derselben Sitzung bereits auf `main` lag. Geschrieben
+> wurde er aus einer älteren Lesung des Workflows, nicht aus einer Messung zum
+> Zeitpunkt des Schreibens — genau der Fehler, den dieses Audit an anderen
+> Stellen misst. Nachgeprüft wurde er erst, als er abgearbeitet werden sollte:
+> `git show origin/main:.github/workflows/ci.yml | grep test:crdt` liefert zwei
+> Treffer. **Ein Backlog-Eintrag ist eine Behauptung über den Code und altert
+> genauso wie eine.** Vor dem Abhaken jeder Punkt neu am Code prüfen, nicht am
+> eigenen Text.
 
 ---
 
@@ -121,6 +135,34 @@ ist selbst ein Ergebnis.
 * **Wichtig:** Ein Guard, der automatisch urteilt, wäre falsch. Gemessen sind
   41 von 50 untersuchten Dateien bewusste Überlagerung (`@avplan/*`,
   Shell-Einbettung, Theme). Die Liste ist eine Vorlage, kein Urteil.
+
+### B-14 · Der Drift-Bericht sah nur `src/` und `tests/`
+
+* **Status:** ~~offen~~ **erledigt 2026-09-04** — `ROOT_FILES` neben `ROOTS`;
+  `analyseApp` stuft Einzeldateien der App-Wurzel genauso ein, `uncarried`
+  bekommt denselben Pfadfilter.
+* **Befund:** `ROOTS = ['src', 'tests']`. `apps/cable-planner/CLAUDE.md` ist
+  genauso vendoriert wie der Quelltext, liegt aber in keiner der beiden
+  Wurzeln — und driftete deshalb **unbeobachtet**. Gemessen an dem Tag: **39
+  Zeilen hinter upstream.**
+* **Warum ausgerechnet diese Datei zählt:** Ihr fehlten die Regel „keine
+  Trailer in Commit-Messages" und die gesamte **Merge-Berechtigung**. Das ist
+  die nächstliegende `CLAUDE.md` für jeden, der unter `apps/cable-planner/`
+  arbeitet — die Arbeitsanweisung selbst war veraltet, während der Bericht
+  „OK" meldete.
+* **Dieselbe Form wie die anderen Befunde dieser Sitzung:** eine Prüfung
+  existiert, ist begründet, und lässt genau den einen Eingang aus, für den man
+  sie am ehesten bräuchte. Der Kommentar über `ROOTS` erklärte sogar, dass
+  `src` allein zu wenig war (`tests/` kam deshalb dazu) — und blieb bei der
+  nächsten Lücke stehen.
+* **Gegengeprüft:** mit der alten Fassung der Datei meldet der Bericht
+  `CLAUDE.md | 4 | 34` und „13 neue Zeile(n) fehlen"; mit der aktuellen keinen
+  Befund. `multicam-planner` und `light-planner` haben **weder** in der Suite
+  **noch** upstream eine `CLAUDE.md` — ihre unveränderten Zahlen sind also
+  korrekt und kein zweiter blinder Fleck.
+* **Weiterhin bewusst draußen:** `scripts/` und `package.json` — Monorepo und
+  Standalone haben zwangsläufig verschiedene Abhängigkeiten und Build-Skripte.
+* **Aufwand:** klein
 
 ### B-6 · Plan → Tally-Pi: der Transport ist ein Medienbruch
 
@@ -198,6 +240,10 @@ ist selbst ein Ergebnis.
   Steckertypen, `wirelessCatalog` hält `WirelessDevice`; das Feld sitzt an
   `EquipmentTemplate`). Echte Recherche brauchen: `blackmagic`, `camera`,
   `greengo`, `misc`, `monitor`, `ubiquiti`.
+* **Nachgeprüft 2026-09-04:** weiterhin offen. `grep -c manufacturerUrl` über
+  `blackmagicCatalog.ts`, `cameraCatalog.ts`, `greengoCatalog.ts`,
+  `miscCatalog.ts`, `monitorCatalog.ts`, `ubiquitiCatalog.ts` liefert
+  **sechsmal 0**.
 * **Aufwand:** mittel (Recherche, kein Code)
 
 ---
@@ -210,6 +256,8 @@ ist selbst ein Ergebnis.
 * **Befund:** Beide Python-Repos haben keine Tests; `tally-pi` prüft in CI nur
   die Syntax. Die reinen Funktionen darin (Adress-Ableitung, Zustandslogik)
   wären ohne Hardware testbar.
+* **Nachgeprüft 2026-09-04:** weiterhin offen. `find` nach `test_*.py`,
+  `*_test.py` und einem `tests/`-Verzeichnis findet in **beiden** Repos nichts.
 * **Aufwand:** mittel
 
 ### B-13 · `light-planner`: Sprachschalter ist upstream nicht erreichbar
@@ -219,10 +267,31 @@ ist selbst ein Ergebnis.
   `src/components/MenuBar.tsx:77` aufgerufen — und **diese Datei importiert
   niemand**; `App.tsx` rendert `TopBar` + `ToolRail`. Das Drift-Skript der Suite
   führt `components/MenuBar.tsx` selbst unter `DEAD_UPSTREAM`.
-* **Folge:** Weitere Strings zu übersetzen ändert nichts, was ein Nutzer sehen
-  kann. **Erst den Schalter erreichbar machen, dann übersetzen** — die
-  umgekehrte Reihenfolge wäre Arbeit ohne Wirkung.
-* **Aufwand:** klein (Schalter), mittel (Abdeckung)
+* **Korrektur der Reihenfolge (gemessen 2026-09-04):** Ich hatte hier „erst den
+  Schalter erreichbar machen, dann übersetzen" stehen. Nachgemessen ist das
+  **falsch herum**:
+
+  | | |
+  | --- | --- |
+  | EN-Wörterbuch | 42 Schlüssel: **24 `menu.*`**, 16 `tool.*`, 2 `about.*` |
+  | Tatsächliche `t()`-Aufrufe | 86 Stellen: **32 `inventory.*`**, 24 `menu.*`, 12 `tool.*`, dazu `2d`, `canvas`, `common`, `png`, `pdf`, `jpg` |
+
+  Die 24 `menu.*`-Übersetzungen bedienen **ausschließlich** das nicht
+  gerenderte `MenuBar.tsx`. Die größte Gruppe lebendiger Strings — 32
+  `inventory.*` — hat **gar keine** englische Fassung.
+
+  Wer jetzt den Schalter freilegt, liefert einen sichtbar halb übersetzten
+  Zustand aus: Lager-Dialog komplett deutsch, Werkzeugleiste teils englisch,
+  das übersetzte Menü unsichtbar. Das ist **schlechter als kein Schalter** —
+  ein Nutzer, der Englisch wählt und Deutsch bekommt, hält die Funktion für
+  kaputt, und zwar zu Recht.
+* **Richtige Reihenfolge:** erst die erreichbaren Strings übersetzen
+  (`inventory`, `canvas`, `2d`, `common`), dann den Schalter freilegen.
+* **Nachgeprüft 2026-09-04:** weiterhin offen. `setLanguage` steht unverändert
+  nur an `MenuBar.tsx:33/77` (dazu die Definition in `store/uiStore.ts:64` und
+  die Weitergabe in `i18n/index.ts:69`), und `grep` findet in `src/` **keinen
+  einzigen** Import von `MenuBar` oder `Toolbar`.
+* **Aufwand:** mittel (Abdeckung) **vor** klein (Schalter) — nicht umgekehrt.
 
 ---
 
