@@ -455,6 +455,30 @@ ist selbst ein Ergebnis.
   Ausgang gibt, ist „nichts tun" die richtige Bedeutung für beide Gesten.
 * **Aufwand:** klein (Escape/Backdrop entschärfen) / mittel (dritter Ausgang)
 
+### B-23 · Zwölf Dialoge der Suite sind gar nicht erst gewickelt
+
+* **Status:** offen
+* **Befund (gemessen 2026-09-04, `i18n:check`):** Die Suite-Kopie ist weit
+  gewickelt — `PropertyPanel` 272 `t()`-Aufrufe, `ScheduleDialog` 95,
+  `FixtureEditor` 66. **Zwölf** gerenderte Komponenten haben trotzdem
+  **keinen einzigen**: `AreaLightDialog` (~21 sichtbare Stellen),
+  `CanvasActions` (~18), `ProjectDialog` (~14), `ThreePointDialog` (~14),
+  `ChangesDialog` (~13), `FloorPlanPanel` (~7), `Scene3D` (~7), `ScaleDialog`
+  (~5) und vier weitere — zusammen ~110 Stellen.
+* **Warum das hier schwerer wiegt als upstream:** Der Sprachschalter ist in
+  der Suite **erreichbar** (`SettingsModal` → `App.tsx:450` → `PlannerFrame` →
+  `shellSettings.ts:51` → `uiStore`). Wer auf Englisch stellt, bekommt diese
+  zwölf Dialoge auf Deutsch — kein latenter, sondern ein sichtbarer Zustand.
+  Upstream ist derselbe Befund folgenlos, weil der Schalter zu ist (B-13).
+* **Warum es kein Beiwerk dieses PRs war:** Wickeln heißt, für jede Stelle
+  einen Schlüssel zu vergeben und die deutsche Quellform als Fallback zu
+  setzen. Über ~110 Stellen ist das eine eigene, prüfbare Arbeit — mit dem
+  Vendoring der englischen Schlüssel vermischt wäre weder das eine noch das
+  andere nachvollziehbar geblieben.
+* **DoD:** `i18n:check` meldet für die Suite-Kopie **0** gerenderte
+  Komponenten ohne `t()`; die neuen Schlüssel haben englische Fassungen.
+* **Aufwand:** mittel
+
 ---
 
 ## Niedrig
@@ -508,11 +532,20 @@ ist selbst ein Ergebnis.
   die Weitergabe in `i18n/index.ts:69`), und `grep` findet in `src/` **keinen
   einzigen** Import von `MenuBar` oder `Toolbar`.
 * **Aufwand:** mittel (Abdeckung) **vor** klein (Schalter) — nicht umgekehrt.
-* **Teilerledigt 2026-09-04 (`light#59`, `light#60`, dieser PR):** Die
-  Abdeckungs-Hälfte ist in **beiden** Kopien fertig — upstream 34 von 34
-  erreichbaren Schlüsseln, in der Suite 563 von 563, geprüft von `i18n:check`
-  in beiden CIs. Offen bleibt nur noch der Schalter, und zwar **nur
-  upstream**.
+* **Teilschritt 2026-09-04 (`light#59`, `light#60`, dieser PR):** Jeder
+  Schlüssel, den es **gibt**, hat jetzt eine englische Fassung — upstream 34
+  von 34, in der Suite 563 von 563, geprüft von `i18n:check` in beiden CIs.
+* **Und die Korrektur dazu, noch am selben Tag (`light#61`):** Das ist
+  **nicht** dasselbe wie „die Oberfläche ist übersetzt", und ich hatte es hier
+  zuerst so notiert. Gemessen sitzen upstream **~496 von ~497** sichtbaren
+  Textstellen in Komponenten mit **null** `t()`-Aufrufen — `PropertyPanel`
+  (~163), `FixtureEditor` (~67), `TopBar` (~65), `ScheduleDialog` (~60).
+  Gewickelt ist im Wesentlichen ein Dialog. Die Abdeckungszahl misst die
+  Schlüssel, die existieren, nicht den Text, den der Nutzer sieht; seit
+  `light#61` steht die zweite Zahl unter jedem Lauf daneben.
+* **Damit bleibt die Reihenfolge, wie sie war:** erst wickeln, dann
+  übersetzen, dann den Schalter. Der Schalter ist der kleinste der drei
+  Schritte und weiterhin der letzte.
 * **Und in der Suite war es kein latenter, sondern ein sichtbarer Schaden.**
   Dort ist der Schalter längst erreichbar: `apps/shell/.../SettingsModal.tsx:124`
   bietet die Sprache an, `App.tsx:450` reicht sie als `{ …, language }` in den
