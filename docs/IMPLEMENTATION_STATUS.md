@@ -97,6 +97,22 @@ Dabei fiel auf, dass `ci:complete` sich von einem **Kommentar** besänftigen
 ließ, der `npm run <lauf>` bloß erwähnte — der Lauf wäre bei keinem Merge
 gefahren. Der Text wird jetzt ohne reine Kommentarzeilen gelesen.
 
+Zwei weitere Funde kamen aus dem Vendoring selbst, und beide sind der Grund,
+warum die Guards mitwandern:
+
+- Der mitvendorierte `macUniversalBuild`-Test bildete den Paketpfad über
+  `relative(ROOT/node_modules, …)`. Im Monorepo sind die Abhängigkeiten an die
+  Wurzel gehoistet — der Pfad begann mit `../../..`, und der Guard meldete am
+  **selben** Code etwas anderes als upstream. Behoben upstream
+  (`cable-planner#696`) und nachvendoriert: der Pfad kommt jetzt vom letzten
+  `node_modules`-Segment an.
+- Die vendorierten `.github/workflows/` der drei Planer standen still. Sie
+  laufen im Monorepo nicht, und der Drift-Guard sieht `.github/` überhaupt
+  nicht an — deshalb hat es nie jemand gemerkt: `mac-build.yml` lag hier noch,
+  obwohl `cable#694` sie gelöscht hat, und alle drei `release.yml` waren auf
+  node20. Der erste Lauf des mitvendorierten `actions:check` hat genau das
+  gemeldet. Jetzt eins zu eins von upstream, `mac-build.yml` entfernt.
+
 `release:check` ist am 2026-09-05 aus einem Schaden entstanden, nicht aus einer
 Vermutung: Tag `v0.1.0` hat **nichts** ans Release gehängt. Der
 macOS-Universal-Merge brach an einer in beiden Teil-Builds identischen
