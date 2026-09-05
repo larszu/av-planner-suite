@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Icon } from '@avplan/ui'
 import type { RuntimeDef } from '../modules/runtimes'
 import { useT, format } from '../i18n'
@@ -31,41 +31,44 @@ export function RuntimeFrame({
   onOpenSettings?: () => void
 }) {
   const t = useT()
-  const [state, setState] = useState<'pruefen' | 'da' | 'weg'>('pruefen')
   const [versuch, setVersuch] = useState(0)
-  const abbruch = useRef<AbortController | null>(null)
+  // Der Zustand wird ABGELEITET, nicht zu Beginn des Effekts gesetzt.
+  //
+  // Die erste Fassung rief `setState('pruefen')` synchron im Effekt-Rumpf --
+  // `react-hooks/set-state-in-effect`, und in diesem Workspace ein Fehler,
+  // kein Hinweis. Der Regel ist nicht mit einem Kommentar beizukommen: sie
+  // beschreibt genau die Kaskade, die hier entstuende. Stattdessen merkt sich
+  // die Komponente nur, WOFUER ein Ergebnis vorliegt; solange es zur aktuellen
+  // Adresse und zum aktuellen Versuch nicht passt, wird gesucht. Der Effekt
+  // schreibt damit nur noch aus seinen asynchronen Rueckwegen.
+  const [ergebnis, setErgebnis] = useState<{ fuer: string; erreichbar: boolean } | null>(null)
+  const schluessel = `${url}#${versuch}`
+  const state: 'pruefen' | 'da' | 'weg' =
+    ergebnis?.fuer !== schluessel ? 'pruefen' : ergebnis.erreichbar ? 'da' : 'weg'
 
-  const pruefen = useCallback(() => {
-    abbruch.current?.abort()
+  useEffect(() => {
     const ctrl = new AbortController()
-    abbruch.current = ctrl
-    setState('pruefen')
     // `verworfen` trennt die beiden Gruende fuer einen Abbruch: eine
     // abgelaufene Frist ist ein BEFUND („nicht erreichbar"), ein Wechsel des
     // Moduls oder der Adresse ist keiner. Ohne die Unterscheidung schriebe der
-    // Aufraeum-Pfad noch in einen Zustand, den niemand mehr anzeigt.
+    // Aufraeum-Pfad noch ein Ergebnis, das niemand mehr anzeigt.
     let verworfen = false
     const frist = window.setTimeout(() => ctrl.abort(), 4000)
     fetch(url, { mode: 'no-cors', signal: ctrl.signal, cache: 'no-store' })
       .then(() => {
         window.clearTimeout(frist)
-        if (!verworfen) setState('da')
+        if (!verworfen) setErgebnis({ fuer: schluessel, erreichbar: true })
       })
       .catch(() => {
         window.clearTimeout(frist)
-        if (!verworfen) setState('weg')
+        if (!verworfen) setErgebnis({ fuer: schluessel, erreichbar: false })
       })
     return () => {
       verworfen = true
       window.clearTimeout(frist)
       ctrl.abort()
     }
-  }, [url])
-
-  useEffect(() => {
-    const auf = pruefen()
-    return auf
-  }, [pruefen, versuch])
+  }, [url, schluessel])
 
   const erneut = () => setVersuch((v) => v + 1)
 
