@@ -67,6 +67,7 @@ Alle IPC-Channels sind nach Domäne präfixiert. Definitionen in
 | `signaling:*` | `signalingIpc.ts` | LAN-Signaling-Relay für die Yjs/WebRTC-Kollaboration (#413) |
 | `collabDiscovery:*` | `collabDiscoveryIpc.ts` | Bonjour/mDNS-Discovery von Kollaborations-Peers im LAN |
 | `documentLog:*` | `documentLogIpc.ts` | `append`, `read`, `clear` — das Register der ausgegebenen Dokumente (ADR-004). Es überdauert die Sitzung und gehört damit auf die Platte. |
+| `lexware:*` | `lexwareIpc.ts` | **Nur in der Suite-Kopie** (`av-planner-suite/apps/cable-planner`): Brücke zwischen Renderer/Shell und dem Lexware-Office-Client. Der API-Key bleibt in `main` (keytar), der Renderer sieht ihn nie. Diese Domäne gibt es upstream nicht — sie ist Teil des Suite-Overlays. |
 
 **Invarianten**:
 1. **Ein Channel = eine Domäne**. Niemals einen Channel quer durch Domänen
