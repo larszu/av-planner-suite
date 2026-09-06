@@ -162,6 +162,9 @@ staende in der Roadmap weiter nichts davon, und der naechste Leser baute sie noc
 | 68 | Schaden mit Zuordnung — „wo geht immer wieder etwas kaputt", aus dem Beleg abgeleitet (P2) | `cable#717` |
 | 66 | Inventur mit „am falschen Ort" als eigenem Ergebnis, nicht als Fehlbestand (P2) | `cable#718` |
 | 64 | Die Kommissionier-Liste nennt den Grund der Fehlmenge — „which job holds it" (P2) | `cable#719` |
+| 76 | Nachschlagen mitten in der Show — Adresse rein, ganze Antwort raus (P2, `widespread`) | `cable#720` |
+| 85 | Die Antwort des Hauses neben der Frage, mit dem Haus dazu (P2, zweite Haelfte) | `cable#720` |
+| 70 | Etiketten mit lesbarem Code, acht Geometrien, Tippen als Hauptweg (P2) | frueher gebaut, nachgewiesen |
 
 **Zwei Berichtigungen an dieser Tabelle.** Die Zeile zu `cable#703` fuehrte
 „28 · 29 · 34". Gebaut wurden dort das Ziel-Register, die Paritaetspruefung und

@@ -1417,6 +1417,9 @@ gehalten, nicht als Versäumnis:
 | Bedarf 68: Schaden mit Zuordnung, aus dem Ausgabe-Beleg abgeleitet | `cable#717` |
 | Bedarf 66: Inventur mit „am falschen Ort" als eigenem Ergebnis | `cable#718` |
 | Bedarf 64: die Kommissionier-Liste nennt den Grund der Fehlmenge | `cable#719` |
+| Bedarf 76: die Suche findet Adressen und antwortet, statt nur zu springen | `cable#720` |
+| Bedarf 85 (2. Haelfte): die Antwort des Hauses steht neben der Frage | `cable#720` |
+| Bedarf 70: Etiketten mit lesbarem Code, acht Geometrien, Tippen als Hauptweg | frueher gebaut, 2026-09-06 nachgewiesen |
 | Kundenname im vendorten `miscCatalog.ts`, upstream laengst anonymisiert | `suite#104` |
 | Drei Stempel-Kopien nur per Ankerwert gesichert; Verhaltens-Guard fehlte | `suite#101` |
 | Inline-Typ-Import liess einen Test als Suite-Abweichung dastehen | `cable#680` |
