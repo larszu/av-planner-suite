@@ -268,6 +268,7 @@ staende in der Roadmap weiter nichts davon, und der naechste Leser baute sie noc
 | 81 | Kundenbericht, der aggregiert — und ein Export, den der Kunde lesen kann (P2) | `cable#729` (`lib/clientSummary.ts`) |
 | 87 | Ein Uebertragungs-Protokoll, das nach der Show erklaert, was passiert ist (P2) | `cable#729` (`lib/transmissionRecord.ts`) |
 | 88 | Event-Metadaten einmal eingegeben und an die Ausspielziele abgeglichen (P2) | `cable#729` (`lib/eventMetadata.ts`) |
+| 35 | Uebertragungszustand als Show-Control-Signal (P1) | **offen, E-23** — die Massnahme steht unter einer Bedingung, die dieses Repo nicht erfuellt |
 
 **Nachtrag 2026-09-07 — diese Tabelle war neunundzwanzig Zeilen im Rueckstand.**
 Sie endete bei `cable#727` und `light#72`, obwohl seither in drei Repos
