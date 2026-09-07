@@ -261,6 +261,7 @@ staende in der Roadmap weiter nichts davon, und der naechste Leser baute sie noc
 | 46 | Kommandiert ist nicht bestaetigt: Herkunft je Paint-Wert, aus den Backends nachgelesen (P2) | `sony-camera-bridge#17` |
 | 47 | Platz am Geraet, Body-Nummer und Abgleich-Gruppen — gegen das gerechnet, was gemeinsam geht (P2) | `multicam#101` |
 | 51 | Cine- und Camcorder-Bodies als Positionen mit TEILWEISER Paint statt zweiter Klasse (P2) | `multicam#100` (mit Bedarf 48 erledigt) |
+| 43 | Geraetekonfigurationen tragen ihre Herkunft — Blatt daneben, Datei unberuehrt (P2, halb) | `cable#749` |
 
 **Nachtrag 2026-09-07 — diese Tabelle war neunundzwanzig Zeilen im Rueckstand.**
 Sie endete bei `cable#727` und `light#72`, obwohl seither in drei Repos
