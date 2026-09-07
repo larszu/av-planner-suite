@@ -216,10 +216,29 @@ jobs:
           # dem sie etwas findet (nachgemessen 2026-09-04).
           fetch-depth: 0
 
+      # Bedarf 48: der multicam-planner traegt eine KOPIE des Paint-Teils von
+      # `packages/web-rcp/src/capabilities.ts`. Kein flacher/tiefer
+      # Unterschied noetig — geprueft wird der Kopf des Default-Branches gegen
+      # die vendorte Tabelle, keine Historie.
+      - name: Checkout sony-camera-bridge
+        uses: actions/checkout@v5
+        continue-on-error: true
+        with:
+          repository: larszu/sony-camera-bridge
+          path: upstream/sony-camera-bridge
+
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: 22
+
+      # Laeuft in DIESEM Job und nicht im Haupt-Job: er ist der einzige mit
+      # Nachbar-Checkouts. Im multicam-planner selbst gaebe es keinen — der
+      # Guard haette sich dort immer uebersprungen und saehe trotzdem aus wie
+      # eine Pruefung.
+      - name: Faehigkeits-Tabelle stimmt mit sony-camera-bridge ueberein
+        working-directory: suite
+        run: npm run caps:parity -- --upstream ../upstream
 
       - name: Check drift against baseline
         working-directory: suite
