@@ -216,29 +216,22 @@ jobs:
           # dem sie etwas findet (nachgemessen 2026-09-04).
           fetch-depth: 0
 
-      # Bedarf 48: der multicam-planner traegt eine KOPIE des Paint-Teils von
-      # `packages/web-rcp/src/capabilities.ts`. Kein flacher/tiefer
-      # Unterschied noetig — geprueft wird der Kopf des Default-Branches gegen
-      # die vendorte Tabelle, keine Historie.
-      - name: Checkout sony-camera-bridge
-        uses: actions/checkout@v5
-        continue-on-error: true
-        with:
-          repository: larszu/sony-camera-bridge
-          path: upstream/sony-camera-bridge
-
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: 22
 
-      # Laeuft in DIESEM Job und nicht im Haupt-Job: er ist der einzige mit
-      # Nachbar-Checkouts. Im multicam-planner selbst gaebe es keinen — der
-      # Guard haette sich dort immer uebersprungen und saehe trotzdem aus wie
-      # eine Pruefung.
-      - name: Faehigkeits-Tabelle stimmt mit sony-camera-bridge ueberein
-        working-directory: suite
-        run: npm run caps:parity -- --upstream ../upstream
+      # Die Paritaet der Faehigkeits-Tabelle (Bedarf 48) wird NICHT hier
+      # geprueft, sondern in `sony-camera-bridge` selbst. Hier stand sie kurz
+      # und war wertlos: der Checkout jenes Repos scheitert mit dem
+      # GITHUB_TOKEN der Suite an „Not Found" — es ist privat (nachgemessen,
+      # Lauf 34092050711). Der Guard hat sich uebersprungen und der Job blieb
+      # gruen; das sieht im Log aus wie eine bestandene Pruefung.
+      #
+      # Dort herum geht es auf: die Quelle ist lokal, und
+      # `larszu/multicam-planner` ist oeffentlich. Was hier bleibt, ist der
+      # Drift-Guard — er haelt die vendorte Kopie an ihrem Upstream, und der
+      # Upstream haengt an der Bridge.
 
       - name: Check drift against baseline
         working-directory: suite
