@@ -258,6 +258,8 @@ staende in der Roadmap weiter nichts davon, und der naechste Leser baute sie noc
 | 63 | Der Bildzustand gehoert zur Position — Szenendatei, Datum, Urheber, Referenz (P2) | `multicam#98` |
 | 50 | Das Blatt fuer die Schicht: Bildzustand, Bedienfeld, Fehler und Befunde je Position (P2) | `multicam#99` |
 | 48 | Fernsteuerweg je Position; Paint-Luecken und der Flotten-Schnitt zur Planungszeit statt in der Probe (P2) | `multicam#100` |
+| 46 | Kommandiert ist nicht bestaetigt: Herkunft je Paint-Wert, aus den Backends nachgelesen (P2) | `sony-camera-bridge#17` |
+| 47 | Platz am Geraet, Body-Nummer und Abgleich-Gruppen — gegen das gerechnet, was gemeinsam geht (P2) | `multicam#101` |
 
 **Nachtrag 2026-09-07 — diese Tabelle war neunundzwanzig Zeilen im Rueckstand.**
 Sie endete bei `cable#727` und `light#72`, obwohl seither in drei Repos
