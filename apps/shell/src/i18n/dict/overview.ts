@@ -88,6 +88,12 @@ export const overview: Record<string, string> = {
   'rundown.field.refs': 'Equipment',
   'rundown.skip.no-title': 'no title',
   'rundown.skip.empty-row': 'empty row',
+  // Bedarf 7 — dieselbe Quelle, jedes Empfaenger-Format.
+  'rundown.audience.client': 'Client',
+  'rundown.audience.crew': 'Crew',
+  'rundown.audience.department': 'Department',
+  'rundown.audience.signage': 'Signage',
+  'rundown.audience.showcaller': 'Show caller',
   'overview.card.crew.title': 'Crew',
   'overview.card.crew.complete': 'complete',
   'overview.card.budget.title': 'Budget',

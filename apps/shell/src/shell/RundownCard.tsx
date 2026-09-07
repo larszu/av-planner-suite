@@ -8,11 +8,15 @@ import {
   rundownCoverage,
   rundownFindings,
   rundownFromPreview,
+  rundownView,
+  rundownViewCsv,
   suggestMapping,
+  RUNDOWN_AUDIENCES,
   RUNDOWN_FIELDS,
   type ColumnMapping,
   type Rundown,
   type RundownField,
+  type RundownAudience,
   type RundownPreview,
   type SuiteSeed,
 } from '@avplan/ui'
@@ -100,6 +104,10 @@ export function RundownCard({
             setDialog(false)
           }}
         />
+      )}
+
+      {rundown && (
+        <RundownExports rundown={rundown} seed={seed} />
       )}
 
       {!rundown ? (
@@ -340,5 +348,56 @@ function RundownImportDialog({
         </div>
       </div>
     </Modal>
+  )
+}
+
+/**
+ * BEDARF 7 — dieselbe Quelle, jedes Empfaenger-Format.
+ *
+ *   > Each rendering is made by hand from the same rows and forks the moment
+ *   > it is exported.
+ *
+ * Fuenf Knoepfe, EINE Quelle. Die Sichten sind Spalten-Auswahlen aus
+ * `rundownViews.ts`, keine eigenen Datensaetze — deshalb kann sich hier
+ * nichts gabeln. Diese Datei rechnet nichts aus; sie waehlt einen Empfaenger
+ * und laedt herunter.
+ *
+ * Die Legende und die Stand-Zeile stehen IM Blatt, nicht daneben: ein
+ * Beiblatt geht auf dem Weg zum Empfaenger verloren, und der Bedarf verlangt
+ * „self-explaining" als Eigenschaft der Datei.
+ */
+const AUDIENCE_LABEL: Record<RundownAudience, string> = {
+  client: 'Kunde',
+  crew: 'Crew',
+  department: 'Gewerk',
+  signage: 'Foyer',
+  showcaller: 'Show-Caller',
+}
+
+function RundownExports({ rundown, seed }: { rundown: Rundown; seed: SuiteSeed }) {
+  const t = useT()
+  const lade = (audience: RundownAudience) => {
+    const view = rundownView(rundown, seed, audience)
+    const blob = new Blob([rundownViewCsv(view)], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `ablauf-${audience}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+  return (
+    <div className="mb-2 flex flex-wrap gap-1">
+      {RUNDOWN_AUDIENCES.map((a) => (
+        <button
+          key={a}
+          type="button"
+          className="av-focus rounded-av-control border border-av-border px-1.5 py-0.5 text-[11px] text-av-text-secondary hover:bg-av-surface-2 hover:text-av-text"
+          onClick={() => lade(a)}
+        >
+          {t(`rundown.audience.${a}`, AUDIENCE_LABEL[a])}
+        </button>
+      ))}
+    </div>
   )
 }

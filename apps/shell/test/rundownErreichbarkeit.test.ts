@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { RUNDOWN_AUDIENCES } from '@avplan/ui'
 import { ALL_WIDGETS, DEFAULT_CARD_ORDER, WIDGET_LABEL } from '../src/shell/dashboardPrefs'
 import { translate } from '../src/i18n'
 
@@ -67,6 +68,26 @@ describe('Ablauf-Karte — erreichbar von der Uebersicht', () => {
     // Und die Herkunft steht auf der Karte, damit niemand sie fuer die
     // Quelle haelt.
     expect(karte).toContain('rundown.source.filename')
+  })
+
+  it('bietet jedes Empfaenger-Format an, das es gibt (Bedarf 7)', () => {
+    // Fuenf Sichten im Modell und vier Knoepfe waeren dieselbe Luecke wie
+    // eine Karte ohne Widget-Id: gebaut und nicht geliefert. Die Liste kommt
+    // deshalb AUS dem Modell und wird nicht in der Oberflaeche wiederholt.
+    const karte = lies('shell/RundownCard.tsx')
+    // Die Knopf-Leiste haengt wirklich an der Karte — eine Komponente, die
+    // niemand mountet, ist gebaut und nicht geliefert.
+    expect(karte).toContain('<RundownExports rundown={rundown} seed={seed} />')
+    expect(karte).toContain('RUNDOWN_AUDIENCES.map')
+    for (const a of RUNDOWN_AUDIENCES) {
+      expect(translate('en', `rundown.audience.${a}`, 'DEUTSCHER FALLBACK'), a).not.toBe(
+        'DEUTSCHER FALLBACK',
+      )
+      expect(karte, `deutsche Beschriftung fuer ${a}`).toMatch(new RegExp(`${a}: '`))
+    }
+    // Die Blaetter werden nicht hier gerechnet, sondern geholt.
+    expect(karte).toContain('rundownView(')
+    expect(karte).toContain('rundownViewCsv(')
   })
 
   it('nimmt die Uhrzeit in der Oberflaeche und nicht im Modell', () => {
