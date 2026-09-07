@@ -18,8 +18,11 @@ import {
   type RundownField,
   type RundownAudience,
   type RundownPreview,
-  type SuiteSeed,
 } from '@avplan/ui'
+// `SuiteSeed` kommt aus dem Bruecken-Eintrag und nicht aus dem Haupt-Eintrag:
+// dort ist es zuhause (`@avplan/ui/embed` re-exportiert `seed.ts`), und es
+// zweimal zu exportieren gaebe zwei Namen fuer denselben Typ.
+import type { SuiteSeed } from '@avplan/ui/embed'
 import { Card } from './dashboard'
 import { useT, format } from '../i18n'
 
