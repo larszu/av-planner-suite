@@ -24,6 +24,10 @@ import {
   CIRCUIT_HEADERS, PHASE_HEADERS, PHASE_LABEL, TEMPLATE_LABEL, circuitLabel, circuitTable,
   distributionFor, phaseTable, type PhaseTemplate,
 } from '../core/powerDistribution';
+import { fieldContext } from '../core/reportFields';
+import {
+  REPORTS, renderReport, reportGaps, reportTable, findReport,
+} from '../core/reportEngine';
 import { groupNotes, staleNotes } from '../core/workNotes';
 import { getFixtureCCT, cctToRgb } from '../core/colorTemp';
 import Icon from './Icon';
@@ -73,13 +77,14 @@ interface Props {
   onClose: () => void;
 }
 
-type Tab = 'list' | 'magic' | 'focus' | 'notes' | 'check' | 'return' | 'photo' | 'load' | 'export';
+type Tab = 'list' | 'magic' | 'focus' | 'notes' | 'papers' | 'check' | 'return' | 'photo' | 'load' | 'export';
 type T = (key: string, de: string) => string;
 const buildTabs = (t: T): { id: Tab; label: string; icon: IconName }[] => [
   { id: 'list', label: t('dlg.sch.tab.list', 'Geräteliste & Patch'), icon: 'schedule' },
   { id: 'magic', label: t('dlg.sch.tab.magic', 'Magic Sheet'), icon: 'grid' },
   { id: 'focus', label: t('dlg.sch.tab.focus', 'Fokus'), icon: 'autolight' },
   { id: 'notes', label: t('dlg.sch.tab.notes', 'Notizen'), icon: 'tag' },
+  { id: 'papers', label: t('dlg.sch.tab.papers', 'Papiere'), icon: 'schedule' },
   { id: 'check', label: t('dlg.sch.tab.check', 'Prüfung'), icon: 'check' },
   { id: 'return', label: t('dlg.sch.tab.return', 'Rückweg vom Pult'), icon: 'import' },
   { id: 'photo', label: t('dlg.sch.tab.photo', 'Photometrie'), icon: 'heatmap' },
@@ -156,6 +161,12 @@ const ScheduleDialog: React.FC<Props> = ({ fixtures, trusses, walls, ceilings, a
   // Zuordnung, die niemand getroffen hat.
   const [noteTarget, setNoteTarget] = useState<WorkNoteTarget>({ kind: 'plan' });
 
+  // BEDARF 143 — welches der Blaetter gerade offen ist. Lokal: die Wahl ist
+  // eine Ansicht und keine Projekt-Angabe; sie in die Datei zu schreiben
+  // hiesse, dass zwei Leute mit derselben Datei streiten, welches Blatt „das"
+  // Blatt ist.
+  const [reportId, setReportId] = useState<string>(REPORTS[0].id);
+
   const counts = fixtureCounts(fixtures);
   const power = computePower(fixtures);
   const totalWeight = fixtures.reduce((s, f) => s + (f.fixture.weight || 0), 0);
@@ -183,6 +194,13 @@ const ScheduleDialog: React.FC<Props> = ({ fixtures, trusses, walls, ceilings, a
   // Universe, sortiert nach der Zahl und nicht nach der Reihenfolge der
   // Leuchten: sonst saehe dasselbe Blatt zweimal anders aus.
   const lesarten = universeReadings(fixtures.map((f) => f.universe), dmxProtocol);
+
+  // BEDARF 143 — der Zusammenhang fuer die Felder, EINMAL gebaut und nicht je
+  // Zeile: `distributionFor` teilt den ganzen Bestand in Kreise auf, und wer
+  // das je Zeile taete, bekaeme bei n Leuchten n Verteilungen.
+  const feldKontext = fieldContext(fixtures, trusses, dmxProtocol, phaseTemplate);
+  const bericht143 = renderReport(findReport(reportId) ?? REPORTS[0], fixtures, feldKontext);
+  const luecken = reportGaps();
 
   const ordered = scheduleOrder(fixtures);
   const safe = (projectName || 'lichtplan').replace(/[^\w.-]+/g, '_');
@@ -255,6 +273,18 @@ const ScheduleDialog: React.FC<Props> = ({ fixtures, trusses, walls, ceilings, a
   // Bedarf 147 — das Universe-Blatt geht denselben Weg wie die anderen Listen
   // und traegt damit denselben Stempel (ADR-004): wer es ausdruckt und ans
   // Gateway mitnimmt, sieht, aus welchem Stand es stammt.
+  // Bedarf 143 — jedes Blatt geht denselben Weg und traegt denselben Stempel.
+  // Der Dateiname folgt der Blatt-Kennung, damit zwei Blaetter nicht dieselbe
+  // Datei ueberschreiben.
+  const exportReport = () => {
+    const def = findReport(reportId) ?? REPORTS[0];
+    const tb = reportTable(bericht143);
+    exportTable(`${def.id}.csv`, { header: tb.header, rows: tb.rows },
+      (fs: PlacedFixture[]) => reportTable(
+        renderReport(def, fs, fieldContext(fs, trusses, dmxProtocol, phaseTemplate)),
+      ));
+  };
+
   const exportUniverses = () => exportTable('universes.csv', {
     header: [UNIVERSE_HEADERS[0], UNIVERSE_HEADERS[1], UNIVERSE_HEADERS[2], t('dlg.sch.uni.note', 'Hinweis')],
     rows: universeTable(lesarten).rows,
@@ -819,6 +849,78 @@ const ScheduleDialog: React.FC<Props> = ({ fixtures, trusses, walls, ceilings, a
     );
   })();
 
+  // ── BEDARF 143 — zwoelf Blaetter, ein Modell ─────────────────────────────
+  //
+  // „all sorts and groupings of the same fields" (jkarp7/showstack#48). Die
+  // Blaetter sind BESCHREIBUNGEN in `core/reportEngine.ts`; hier wird nur
+  // gezeigt, was `renderReport` liefert. Wer hier Zeilen selbst zusammenbaut,
+  // hat das dreizehnte handgepflegte Dokument angelegt — und genau das ist
+  // der Zustand, den dieser Bedarf abschafft.
+  const papersPanel = (
+    <>
+      <div className="schedule-actions">
+        <label>
+          {t('dlg.sch.rep.pick', 'Blatt')}{' '}
+          <select value={reportId} onChange={(e) => setReportId(e.target.value)}>
+            {REPORTS.map((r) => (
+              <option key={r.id} value={r.id}>{r.label}</option>
+            ))}
+          </select>
+        </label>
+        <button className="btn-secondary" onClick={exportReport}>
+          &#8595; {t('dlg.sch.rep.csv', 'Dieses Blatt (CSV)')}
+        </button>
+      </div>
+      <div className="prop-derived">{bericht143.def.purpose}</div>
+      <table className="schedule-table">
+        <thead>
+          <tr>{bericht143.header.map((h, i) => <th key={i}>{h}</th>)}</tr>
+        </thead>
+        <tbody>
+          {bericht143.groups.map((g) => (
+            <React.Fragment key={g.key}>
+              {/* Die Gruppen-Ueberschrift steht als eigene Zeile — und zwar
+                  auch in der CSV. Ein Ausdruck, der anders gruppiert als der
+                  Bildschirm, ist genau das Auseinanderlaufen, um das es geht. */}
+              {bericht143.def.groupBy && (
+                <tr className="row-muted">
+                  <td colSpan={bericht143.header.length}>
+                    <strong>{g.key}</strong> · {g.rows.length}
+                  </td>
+                </tr>
+              )}
+              {g.rows.map((row, i) => (
+                <tr key={`${g.key}-${i}`}>
+                  {row.map((c, j) => <td key={j}>{c}</td>)}
+                </tr>
+              ))}
+            </React.Fragment>
+          ))}
+          {bericht143.rows.length === 0 && (
+            <tr><td colSpan={bericht143.header.length} className="row-muted">
+              {t('dlg.sch.rep.empty', 'Keine Zeilen.')}
+            </td></tr>
+          )}
+        </tbody>
+      </table>
+      {/* Was dieses Modell NICHT schreiben kann — berechnet aus dem
+          Feld-Katalog, nicht aufgezaehlt. Eine Aufzaehlung waere der
+          Kenntnisstand ihres Autors, und das naechste fehlende Feld fiele
+          niemandem auf. */}
+      {luecken.length > 0 && (
+        <div className="prop-derived">
+          {t('dlg.sch.rep.gaps', 'Aus diesem Modell nicht schreibbar:')}
+          <ul>
+            {luecken.map((g) => <li key={g.label}>{g.message}</li>)}
+          </ul>
+        </div>
+      )}
+      <div className="prop-derived">
+        {t('dlg.sch.rep.hint', 'Alle Blätter lesen dieselben Felder. Wer eine Spalte ändert, ändert sie einmal — nicht zwölfmal.')}
+      </div>
+    </>
+  );
+
   const checkPanel = (
     <>
       <div className="rig-pills">
@@ -1103,7 +1205,7 @@ const ScheduleDialog: React.FC<Props> = ({ fixtures, trusses, walls, ceilings, a
     </div>
   );
 
-  const panels: Record<Tab, React.ReactNode> = { list: listPanel, magic: magicPanel, focus: focusPanel, notes: notesPanel, check: checkPanel, return: returnPanel, photo: photoPanel, load: loadPanel, export: exportPanel };
+  const panels: Record<Tab, React.ReactNode> = { list: listPanel, magic: magicPanel, focus: focusPanel, notes: notesPanel, papers: papersPanel, check: checkPanel, return: returnPanel, photo: photoPanel, load: loadPanel, export: exportPanel };
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>

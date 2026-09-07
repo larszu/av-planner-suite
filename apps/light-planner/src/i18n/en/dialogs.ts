@@ -121,6 +121,14 @@ export const dialogs: Record<string, string> = {
     'From here Art-Net and sACN read differently \u2014 at the node, Net and Sub-Net are no longer 0.',
   'dlg.sch.uni.hint':
     'The setting belongs to the project and travels with the file: the number on the fixture was never wrong, it was undetermined.',
+  // Bedarf 143 - zwoelf Blaetter, ein Modell.
+  'dlg.sch.tab.papers': 'Paperwork',
+  'dlg.sch.rep.pick': 'Sheet',
+  'dlg.sch.rep.csv': 'This sheet (CSV)',
+  'dlg.sch.rep.empty': 'No rows.',
+  'dlg.sch.rep.gaps': 'Not producible from this model:',
+  'dlg.sch.rep.hint':
+    'Every sheet reads the same fields. Change a column once \u2014 not twelve times.',
   // Bedarf 141 - Kreise, Phasen und Steckreihenfolge.
   'dlg.sch.pwr.peak': 'heaviest phase',
   'dlg.sch.pwr.assumed': 'assumed balanced',
