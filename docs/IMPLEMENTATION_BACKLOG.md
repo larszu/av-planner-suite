@@ -1924,28 +1924,45 @@ belegbar, dort sind sie erprobt.
 
 ### B-44 · Touch, Schliessen, Umbruch — die Bedienung selbst
 
-* **Status:** offen. **Wunsch des Eigentümers, 2026-09-08:** „Die ganze
-  Anwendung ist auch noch nicht touch optimiert. Menüs schließen ist auch
-  nicht immer intuitiv. Oft muss man auf ein x klicken und nicht auch in eine
-  leere Fläche. Und auch nicht alles ist responsive."
+* **Status:** Teil 1 (Schliessen) und Teil 2 (Touch) GEBAUT — `cable#780`.
+  Teil 3 (Umbruch) offen, jetzt gemessen (siehe Befund 3). **Wunsch des
+  Eigentümers, 2026-09-08:** „Die ganze Anwendung ist auch noch nicht touch
+  optimiert. Menüs schließen ist auch nicht immer intuitiv. Oft muss man auf
+  ein x klicken und nicht auch in eine leere Fläche. Und auch nicht alles ist
+  responsive."
 
 * **Befund 1 — Schliessen (GEMESSEN 2026-09-08, cable-planner).** Es gibt
   `components/shared/ModalShell.tsx`, und der kann es: `closeOnBackdrop`
   steht dort auf `true` als Vorgabe, dazu Escape, Focus-Trap und
   Fokus-Rückgabe über `useDialogA11y`. Benutzt wird er von den grossen
   Dialogen aber nicht — **24 Dateien bauen ihr Overlay selbst** (`fixed
-  inset-0`), und **15 davon haben keinerlei Klick-Behandlung auf dem
-  Hintergrund**: `SettingsDialog`, `LibraryPanel`, `CableLibraryPanel`,
-  `RackBuilderDialog`, `RackEditorDialog`, `RackImageCropDialog`,
-  `CableDialog`, `DeliveryDialog`, `DrumMicingDialog`, `WirelessRigDialog`,
-  `ReconcileDialog`, `GraphmlImportDialog`, `NewRentmanDeviceWizard`,
-  `AtemMvConfigDialog`, `CommandPalette`. Acht andere haben es
-  (`ExportDialog`, `VideohubExportDialog`, `GreenGoExportDialog`,
-  `HubSwitchDialog`, `AtemAudioRouterDialog`, `MultiviewerLayoutView`,
-  `RackInternalWireOverlay`, `RentmanImportDialog`).
+  inset-0`), und **sechs davon hatten keinerlei Behandlung des
+  Hintergrund-Drucks**: `LibraryPanel` (zwei Unter-Dialoge),
+  `CableLibraryPanel`, `CableDialog`, `RackBuilderDialog`,
+  `RackImageCropDialog`, `NewRentmanDeviceWizard`.
+* **KORREKTUR zur ersten Fassung dieses Eintrags (2026-09-08).** Hier stand
+  **15**, und die Zahl war falsch: das Suchmuster verlangte den Bezeichner
+  `onClose`, und die Hälfte der Dialoge nennt ihre Schliessfunktion `close`,
+  `onCancel` oder `setOpen(false)`. Sie steht hier trotzdem, weil sie beinahe
+  zu einem Rasenmäher-Umbau geführt hätte — und weil die Berichtigung den
+  Befund erst scharf macht: **die sechs, die wirklich fehlten, sind ausnahmslos
+  Dialoge mit Entwurf.** Genau dort ist ein „schliesst einfach" am
+  gefährlichsten, und genau deshalb ist der Schutz unten keine Kür.
   Das ist also **kein fehlendes Bauteil, sondern ein nicht benutztes** — und
   damit die billigste Sorte Reparatur, solange man sie nicht mit dem
   Rasenmäher macht.
+* **GEBAUT (`cable#780`).** `hooks/useBackdropClose.ts` ist die eine Stelle,
+  an der die Regel steht; `ModalShell` gibt seine eigene Fassung der Bedingung
+  dafür auf, sonst wären es `zwei-rechnungen`. Die Entscheidung selbst ist
+  eine reine Funktion (`backdropEntscheidung`), damit sie ohne
+  Render-Umgebung prüfbar ist. Gehorcht wird auf **`mousedown`, nicht
+  `click`** — sonst schliesst eine Textmarkierung, die man über den Rand
+  hinauszieht, den Dialog. Ergebnis: alle **26 Overlays in 24 Dateien**
+  schliessen auf dem Hintergrund, **sieben** fragen vorher, weil sie einen
+  Entwurf halten. Der Wächter (`tests/dialogSchliessen.test.ts`) hält **keine
+  Zahl** fest, sondern die Frage — trägt das Element mit `fixed inset-0`
+  selbst eine Behandlung? Eine Zahl wäre nach dem nächsten neuen Dialog
+  falsch, ohne dass jemand es merkt.
 * **Und der Grund, warum ein Rasenmäher hier falsch wäre:** ein Dialog, der
   eine begonnene Eingabe hält, darf bei einem Fehlklick daneben NICHT
   zumachen. Wer im `RackBuilderDialog` zwanzig Höheneinheiten bestückt hat
@@ -1963,15 +1980,64 @@ belegbar, dort sind sie erprobt.
   unter der 44-px-Marke liegen und wo eine Funktion NUR über Hover oder
   Rechtsklick erreichbar ist — eine Funktion ohne Touch-Weg ist auf einem
   Tablet nicht vorhanden.
-* **Befund 3 — Umbruch.** Zu erheben. Der Verdacht: die Dialoge haben feste
-  `max-w-*`-Breiten und mehrspaltige Raster ohne Umbruchpunkt, und die
-  Eigenschaften-Leiste ist auf Desktop-Breite gebaut. Die Mobile-Ansicht
-  (`src/mobile/`) ist davon nicht betroffen — sie ist eigenständig gebaut.
-* **Reihenfolge (Vorschlag):** (1) Schliessen — die Regel als EIN Bauteil,
-  dann die fünfzehn Dialoge darauf; (2) die Messung für Touch und Umbruch,
-  als Wächter, damit die nächste neue Komponente nicht wieder darunter fällt;
-  (3) die Reparaturen, geordnet nach dem, was die Messung findet.
-* **Aufwand:** (1) mittel, (2) klein, (3) gross.
+* **GEMESSEN, dann GEBAUT (`cable#780`).** Die Messung fand **drei**
+  Bedienreihen, die nur per `group-hover` erschienen (Bibliotheks-Eintrag,
+  Rack-Karte, Gruppen-Karte — dort sitzen „Bearbeiten" und „Löschen"), und
+  **drei** Funktionen, die ausschliesslich am Rechtsklick hingen
+  (Kabel-Wegpunkt, Ebenen-Chip, Seitenverweis-Knoten). **Ersatz: null.** Diese
+  sechs Funktionen waren auf einem Tablet nicht schwer erreichbar, sondern
+  nicht vorhanden.
+  * `.cp-hover-actions` in `index.css` mit `@media (pointer: coarse)` — die
+    Regel steht dort, weil die Abfrage genau die Frage beantwortet, um die es
+    geht: *kann dieses Gerät überhaupt schweben?* `:focus-within` bleibt,
+    sonst entstünde dieselbe Lücke für die Tastatur.
+  * `hooks/useLongPress.ts` — der Rechtsklick für Geräte, die keinen haben.
+    Auf `pointerdown` statt `touchstart`, weil ein Stift auf einem
+    Grafiktablett genau der Fall ist, in dem jemand zeichnet und kein Menü
+    bekommt; die Maus ist ausgenommen, sie hat ihren Rechtsklick. **Zwei
+    Bedingungen, beide müssen halten:** ≥ 500 ms gedrückt UND dabei < 10 px
+    gewandert — auf einem Canvas ist „gedrückt halten" der Anfang von fast
+    allem, und ein Menü, das bei jedem begonnenen Zug aufgeht, ist schlimmer
+    als keines. Gemessen wird **schräg** (`Math.hypot`), nicht je Achse: 8 und
+    8 sind einzeln unter 10, zusammen 11,3.
+  * **Die eine Stelle, die es nicht bekommt,** ist der Kabel-Wegpunkt: dort
+    sitzt auf demselben `pointerdown` schon das Ziehen, ein langer Druck
+    daneben hiesse „wer zögert, hat gelöscht". Sie steht im Wächter als
+    benannte Ausnahme, samt einer Zusicherung, die verlangt, dass die Ausnahme
+    gestrichen wird, sobald sie gelöst ist — sonst hält der Nächste eine
+    erledigte Sache für offen. Der Weg dorthin ist ein sichtbarer kleiner
+    Löschgriff auf grobem Zeiger, und der ist **offen**.
+  * **Was die 44-px-Marke angeht:** sie ist NICHT gemessen worden. Eine
+    Trefferfläche misst man am gerenderten Element, nicht an Klassennamen —
+    `px-1 py-0.5` sagt nichts über die Fläche, solange Zeilenhöhe, Icon-Grösse
+    und `gap` mitreden. Hier eine Zahl aus dem Quelltext zu erfinden wäre
+    schlimmer als keine: sie sähe aus wie eine Messung. Der Weg dafür ist der
+    laufende Renderer (`ui:smoke` treibt ihn ohnehin), und er ist offen.
+* **Befund 3 — Umbruch (GEMESSEN 2026-09-08, cable-planner/src/renderer).**
+  Der Verdacht stimmt, und in einem Punkt ist es schärfer als vermutet:
+  * **63 feste `max-w-*`-Breiten — und KEINE EINZIGE Breakpoint-Fassung
+    davon.** `sm:max-w-`, `md:max-w-`, `lg:max-w-`, `xl:max-w-` kommen im
+    ganzen Renderer **null** mal vor. Keine dieser Breiten ändert sich also
+    jemals mit der Fensterbreite; auf einem schmalen Gerät steht der Dialog
+    genau so breit da wie auf dem Desktop.
+  * **19 Raster mit `grid-cols-3` bis `-9`**, davon **14 in 13 Dateien ohne
+    jede Breakpoint-Fassung**. Die übrigen 17 Dateien haben Umbruchpunkte —
+    das Werkzeug ist also da und wird nur nicht durchgehend benutzt, was die
+    Reparatur billig macht.
+  * Die Mobile-Ansicht (`src/mobile/`) ist davon nicht betroffen — sie ist
+    eigenständig gebaut.
+  * **KORREKTUR zu einer Zwischenzahl.** In der Sitzung standen zuerst „52
+    feste Breiten und 18 Raster". Das war ein anderes Muster (es zählte auch
+    `max-w-full`/`-none` nicht mit und griff Dateien statt Vorkommen ab). Die
+    Zahlen oben sind die nachgezählten; die alte steht hier, damit niemand die
+    Differenz für eine Veränderung am Code hält.
+* **Reihenfolge:** (1) Schliessen — ERLEDIGT; (2) Touch — ERLEDIGT bis auf
+  den Löschgriff am Kabel-Wegpunkt und die 44-px-Messung am gerenderten
+  Element; (3) Umbruch — OFFEN, und zwar als Regel und nicht als Sweep: eine
+  Breite ohne Breakpoint ist kein Fehler an sich (ein Bestätigungsdialog darf
+  schmal bleiben), ein **Dialog mit Eingabefeldern** ohne einen ist einer. Der
+  Wächter muss also fragen, was der Dialog enthält, nicht bloss zählen.
+* **Aufwand:** (1) mittel — erledigt, (2) klein — erledigt, (3) gross.
 
 ### B-45 · Stromplanung, die diesen Namen verdient
 

@@ -3436,6 +3436,10 @@ export const en: Dict = {
   'canvas.hubSwitch.title': 'Switch path',
   'canvas.hubSwitch.warning':
     'This is an intervention in the live installation, not a display. Only the crosspoints listed below are sent; every other output stays untouched. The plan does not change.',
+  'canvas.hubSwitch.warningSimulator':
+    'The target is a test rig, not an installation. The emulator acknowledges like a switcher, but there is no signal behind the switched output \u2014 the trial shows that the command is built correctly, and nothing beyond that. The record notes that it was the test rig.',
+  'canvas.hubSwitch.warningMixed':
+    'CAUTION: this path runs across devices with different targets \u2014 one of them is the live installation.',
   'canvas.hubSwitch.nothing':
     'No path from this source runs through a router — there is nothing to switch.',
   'canvas.hubSwitch.pick': 'Where should the image go?',
@@ -3456,7 +3460,20 @@ export const en: Dict = {
   'switching.summaryCount': '{n} of {total} outputs',
   'switching.summaryNone': 'cannot switch',
   'switching.unset': 'not planned',
+  // B-44 — der Hintergrund schliesst, und wo ein Entwurf liegt, wird gefragt.
+  'common.closeUnsaved': 'Close dialog and discard your input?',
+  'common.closeUnsavedBody': 'Anything not yet applied here will be lost.',
+  'common.closeDiscard': 'Discard',
+  'common.closeKeep': 'Keep editing',
+  'cableDialog.closeUnsaved': 'Discard cable settings?',
+  'graphml.closeUnsaved': 'Discard import?',
+  'greengo.importOverlay.close': 'Discard import?',
+  'library.closeUnsaved': 'Cancel creating and discard your input?',
+  'rackBuilder.closeUnsaved': 'Discard rack draft?',
+  'rackCrop.closeUnsaved': 'Discard image crop?',
+  'rentmanWizard.closeUnsaved': 'Cancel the wizard and discard your input?',
   'switching.protocol': 'Control protocol',
+  'switching.target': 'Target',
   'switching.protocolNone': 'none \u2014 nothing will be sent',
   'switching.protocolHint':
     'Without a protocol nothing is sent to this device. Which one a device speaks cannot be read off its name \u2014 a device called \u201cVideohub spare\u201d would otherwise get a Videohub command, and nobody knows what is really listening there.',
