@@ -1662,7 +1662,7 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
 
 ### B-42 · „Wo kommt was an?" — Prüfbild, Erwartung, Rückmeldung
 
-* **Status:** Inkrement 1 gebaut (`cable#772`), Inkrement 2 und 3 offen. Der Schaltbild-Teil aus `cable#771` (Strom) ist gebaut und vendoriert.
+* **Status:** Inkrement 1 gebaut und vendoriert (`cable#772`), Inkrement 2 und 3 offen. Der Schaltbild-Teil aus `cable#771` (Strom) ist ebenfalls gebaut und vendoriert.
 * **Der Wunsch (Eigentümer, 2026-09-08):** „Kann man auch als Quelle
   Testpattern generieren mit dem Namen der Quelle und ner SMPTE bar und dann
   an Displays nen Mini Monitor Feld einfügen, sodass man auch den
