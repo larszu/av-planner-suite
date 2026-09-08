@@ -1471,21 +1471,56 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
 
 ### B-39 · Was der Projekt-Fluss noch nicht trägt
 
-* **Status:** offen (Punkte 1 und 5; 2, 3 und 4 erledigt) — **die Sperre ist weg:**
-  E-21 ist am 2026-09-08 entschieden (Eigentum je Feld; geteilte Felder melden
-  den Widerspruch als Befund, statt still zu überschreiben). Punkt 1 ist damit
-  Bauarbeit
+* **Status:** offen (nur noch Punkt 5; 1, 2, 3 und 4 erledigt) — **Punkt 1 ist
+  am 2026-09-08 gebaut** (`suite#169`): der Raum geht zurück, und zwar durch
+  die Konfliktregel aus E-21 (Eigentum je Feld; geteilte Felder melden den
+  Widerspruch als Befund, statt still zu überschreiben)
 * **Woher der Eintrag kommt:** `suite#98` hat den Weg Shell → Planer → Shell
   gebaut (siehe B-20). Damit ist der Befund „die Suite ist eine Hülle" erledigt,
   aber nicht alles, was daran hing. Diese Liste steht hier, damit die Reste
   nicht als erledigt durchgehen — nachgezogen am Stand vom 2026-09-05:
 
-  1. **Der Raum geht nur hin, nicht zurück.** `seedToVenue` setzt Maße und
-     Bühne im MultiCam-Planer; wer sie dort ändert, ändert sie nicht in der
-     Shell. Der Seed hat kein `venue`-Feld im Rückweg, weil zwei Planer
-     (MultiCam und Licht) denselben Raum bearbeiten und die Zusammenführung
-     eine Entscheidung braucht: wer gewinnt (E-21). **Entschieden 2026-09-08** —
-     Eigentum je Feld, geteilte Felder tragen Herkunft und melden den Widerspruch.
+  1. ~~**Der Raum geht nur hin, nicht zurück.**~~ **Erledigt (`suite#169`,
+     2026-09-08).** Der Befund war zweiteilig, und die zweite Hälfte war die
+     wichtigere: `seedToVenue` setzte Maße und Bühne im MultiCam-Planer, wer
+     sie dort änderte, änderte sie nicht in der Shell — und der Rückweg fehlte
+     nicht aus Versehen, sondern **weil die Regel fehlte**. Zwei Planer
+     bearbeiten denselben Raum; ohne Konfliktregel wäre jeder Rückweg ein
+     stilles „letzter gewinnt" gewesen. Der Widerspruch war vermieden, indem
+     eine Hälfte der Verbindung nicht gebaut wurde.
+
+     Gebaut ist jetzt beides: `SeedPatch` trägt `venue` (jede Domäne darf ihn
+     mitschicken), und `mergeSeedPatch`
+     (`packages/ui/src/seedOwnership.ts`) entscheidet nach **Eigentum je
+     Feld** — `SEED_VENUE_OWNER` als `satisfies Record<keyof SeedVenue, …>`,
+     damit ein neues Raum-Feld ohne Regel ein Typfehler ist und keine stille
+     Lücke. Wer ein geteiltes Feld zuerst setzt, **hält** es (`SuiteSeed.holds`
+     mit Herkunft und Zeitpunkt); eine abweichende Setzung einer anderen Stelle
+     wird zu einem **Befund** am Projekt (`SuiteProject.seedConflicts`) und
+     nicht zu einer Überschreibung. Der Zeitstempel steht IM Befund und
+     entscheidet ihn nicht — „letzter gewinnt" wäre ein Rennen, dessen Ausgang
+     von der Netzlaufzeit abhängt.
+
+     Sichtbar wird der Befund als **Streifen** über der Statusleiste
+     (`SeedConflictBar`) und nicht nur als Toast: wer einen Widerspruch nur
+     3,2 Sekunden lang sieht, hat danach denselben Wissensstand wie beim
+     stillen Überschreiben. Zwei Knöpfe — „Übernehmen" verschiebt den Halter
+     ausdrücklich, „Verwerfen" nimmt nur die Meldung weg. Ein Hinweis, den man
+     nur durch Nachgeben los wird, wäre keine Meldung, sondern eine Erpressung.
+
+     `applySeedPatch` ist dabei **ersetzt und nicht daneben stehen geblieben**:
+     ein zweiter, stiller Weg ins selbe Ziel ist genau die Form, an der E-21
+     hängt. `mergeSeedPatch` gibt Seed und Befunde als EIN Ergebnis zurück.
+
+     **Damit ist auch Bedarf 49 entblockt** — die Zuordnung aus E-22, die laut
+     jener Entscheidung ausdrücklich alle schreiben, hat jetzt die Regel, ohne
+     die sie nicht anfangen konnte.
+
+     Gegengeprobt (alle fünf rot, zurückgebaut grün): geteiltes Feld wird
+     still überschrieben · `gleich()` über `JSON.stringify` (meldet zwei
+     gleiche Bühnen als verschieden, je nach Schlüssel-Reihenfolge) · die
+     Shell schickt die Halter nicht mit · die Befunde landen nicht am Projekt ·
+     ein Feld fehlt in `SEED_VENUE_OWNER` (Typfehler).
   2. ~~**Das Demo-Projekt ist weiter hartkodiert.**~~ **Erledigt (`suite#105`).**
      Der Befund war zweiteilig: das Demo-Projekt ist der einzige Weg zu
      befülltem Inhalt, und ein neues Projekt startet leer — ein leerer Seed
@@ -1652,7 +1687,7 @@ Anzeige-Regel — sie steht in E-23 und ist dort schärfer formuliert als vorher
 | ~~E-8~~ | ~~Soll importierte Rentman-Leistung (`powerWatts`) in die Stromrechnung eingehen?~~ | **entschieden 2026-09-08: JA — aber mit genannter Herkunft je Zeile, und `powerConsumptionWatts` behält den Vorrang.** Eine Lastrechnung, die eine bekannte Zahl ignoriert, ist nicht vorsichtig, sondern falsch: sie zeigt 0 W für ein Gerät, dessen Leistung im Projekt steht. Die Sorge dieser Zeile („ändert die Gesamtlast bestehender Pläne von 0 W auf einen echten Wert") beschreibt eine BERICHTIGUNG, keinen Schaden. Zwei Bedingungen gehören dazu, und sie sind der eigentliche Inhalt der Entscheidung: (1) wo beide Felder gefüllt sind, gewinnt `powerConsumptionWatts` — es ist die geplante Angabe, `powerWatts` die importierte; (2) das Stromblatt nennt je Zeile, woher die Zahl kommt (geplant / importiert / Katalog), weil eine Summe aus zwei Quellen ohne Herkunft genau die Zahl ist, an der jemand eine Verteilung zusagt |
 | ~~E-9~~ | ~~Werden die acht wirkungslosen Tabs **entfernt** oder **ausgebaut**?~~ | **entschieden 2026-09-05** (`suite#100`): entfernt. Es waren dreizehn von dreizehn; die drei Planer bringen ihre Ansichtsleiste selbst mit, und für die übrigen hätte Ausbauen geheißen, Ansichten zu erfinden |
 | ~~E-10~~ | ~~Auf welcher Seite werden die Dev-Ports angeglichen?~~ | **entschieden 2026-09-08: die PLANER werden auf 4181–4183 festgenagelt.** Die andere Seite ist nicht wählbar, und das steht in der Zeile selbst: die Shell umzustellen scheitert an der 5173-Kollision zweier Planer — zwei Vite-Instanzen auf demselben Port sind kein Konfigurationsproblem, sondern ein Widerspruch. Der Preis (cable-planners `dev:electron`, lights Screenshot-Skripte) ist mechanisch und einmalig. Ein fester Port je Planer ist zusätzlich die Voraussetzung dafür, dass `devports:check` überhaupt etwas prüfen kann |
-| ~~E-21~~ | ~~Wer gewinnt, wenn **MultiCam und Licht denselben Raum** ändern?~~ | **entschieden 2026-09-08: NIEMAND gewinnt still — und die Regel hat zwei Stufen.** (1) **Eigentum je Feld.** Jedes Seed-Feld bekommt genau eine schreibende App; die Schreibung einer anderen ist ein VORSCHLAG, keine Änderung. Damit verschwindet der Konflikt für den grössten Teil der Felder, statt gelöst zu werden — der Raum gehört dem Planer, der ihn vermisst hat, und die anderen lesen ihn. (2) **Für die wenigen echt geteilten Felder** — allen voran die Zuordnung aus E-22, die laut jener Entscheidung ausdrücklich alle schreiben — trägt jeder Eintrag Herkunft und Zeitpunkt, und eine widersprechende Schreibung wird zu einem BEFUND, nicht zu einer Überschreibung. Das ist ADR-003 an dieser Stelle: der zuletzt zurückmeldende Planer „gewinnt" sonst still, und beide Seiten sehen für sich vollständig aus. Ein „letzter gewinnt" mit Zeitstempel wäre die scheinbar einfachste Regel und die schlechteste: sie macht aus einem Widerspruch ein Rennen, dessen Ausgang von der Netzlaufzeit abhängt. **Damit ist Bedarf 49 entblockt** |
+| ~~E-21~~ | ~~Wer gewinnt, wenn **MultiCam und Licht denselben Raum** ändern?~~ | **entschieden 2026-09-08: NIEMAND gewinnt still — und die Regel hat zwei Stufen.** (1) **Eigentum je Feld.** Jedes Seed-Feld bekommt genau eine schreibende App; die Schreibung einer anderen ist ein VORSCHLAG, keine Änderung. Damit verschwindet der Konflikt für den grössten Teil der Felder, statt gelöst zu werden — der Raum gehört dem Planer, der ihn vermisst hat, und die anderen lesen ihn. (2) **Für die wenigen echt geteilten Felder** — allen voran die Zuordnung aus E-22, die laut jener Entscheidung ausdrücklich alle schreiben — trägt jeder Eintrag Herkunft und Zeitpunkt, und eine widersprechende Schreibung wird zu einem BEFUND, nicht zu einer Überschreibung. Das ist ADR-003 an dieser Stelle: der zuletzt zurückmeldende Planer „gewinnt" sonst still, und beide Seiten sehen für sich vollständig aus. Ein „letzter gewinnt" mit Zeitstempel wäre die scheinbar einfachste Regel und die schlechteste: sie macht aus einem Widerspruch ein Rennen, dessen Ausgang von der Netzlaufzeit abhängt. **Damit ist Bedarf 49 entblockt** — und **gebaut ist die Regel seit 2026-09-08** (`suite#169`, siehe B-39, Punkt 1): `SEED_VENUE_OWNER` als `satisfies`-Tabelle, `SuiteSeed.holds` mit Herkunft und Zeitpunkt, `SeedConflict` als Ausgabe von `mergeSeedPatch`, Streifen statt Toast. Der Eigentümer hat die Entscheidung am selben Tag ausdrücklich bestätigt |
 | ~~E-11~~ | ~~Soll der Cross-Link bis **in** die eingebetteten Planer reichen?~~ | **entschieden 2026-09-08: JA — und der gemeinsame Id-Raum wird nicht neu erfunden, sondern ist der des Seed-Protokolls.** Der Einwand dieser Zeile („braucht einen gemeinsamen Id-Raum") ist seit E-22 gegenstandslos: `suite-seed` fährt bereits Objekte mit Ids zwischen Shell und eingebettetem Planer, und jede App bildet sie auf ihr natives Modell ab. Der Sprung benutzt dieselben Ids wie der Seed; wo eine App ein Objekt nicht kennt, wechselt sie das Modul und sagt, dass sie es nicht gefunden hat — sichtbar, statt stumm irgendwo zu landen. Ein zweiter Id-Raum wäre die zweite Wahrheit, gegen die ADR-001 geschrieben ist |
 | ~~E-12~~ | ~~Wo wohnt Lexware architektonisch — Shell oder Planer?~~ | **entschieden 2026-09-08: eigene Shell-Domäne.** Buchhaltung ist keine Aufgabe eines Verkabelungsplaners — sie hängt am Projekt, nicht am Signalfluss, und sie ist für alle Module dieselbe. In der Shell gibt es sie einmal; im Planer gäbe es sie dreimal oder nur in einem, und die anderen zwei Module hätten keinen Beleg-Weg. Das löst zugleich B-19: die beiden Bedingungen, die sich heute gegenseitig ausschliessen (`connectShellLexware` hält sich im Nicht-Embedded-Fall heraus, der Handler braucht `window.cablePlanner`), verschwinden mitsamt dem Handler — der Beleg-Weg läuft dann im Hauptprozess der Shell, wo der Schlüssel ohnehin liegt |
 | ~~E-13~~ | ~~Bleibt die Shell-Vorschau ein eigenständiges Übersichtsmodell?~~ | **entschieden 2026-09-08: JA, sie bleibt eigenständig — und wird als Vorschau KENNTLICH.** Die Modelle zusammenzuführen hiesse, der Shell das vollständige Planer-Modell zu geben, damit sie ein Vorschaubild zeichnen kann; das ist der teuerste Weg zum kleinsten Nutzen und macht die Shell von jeder Modelländerung abhängig. Was die Vorschau falsch macht, ist nicht ihre Eigenständigkeit, sondern ihr Schweigen darüber: sie zeigt echte Daten in einem anderen Modell und sieht aus wie der Plan. Also bekommt sie, was ADR-003 in solchen Fällen verlangt — eine sichtbare Kennzeichnung samt Stand, und einen Weg ins Modul für alles, was sie nicht zeigen kann |
