@@ -1516,11 +1516,31 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
      jener Entscheidung ausdrücklich alle schreiben, hat jetzt die Regel, ohne
      die sie nicht anfangen konnte.
 
-     Gegengeprobt (alle fünf rot, zurückgebaut grün): geteiltes Feld wird
-     still überschrieben · `gleich()` über `JSON.stringify` (meldet zwei
-     gleiche Bühnen als verschieden, je nach Schlüssel-Reihenfolge) · die
-     Shell schickt die Halter nicht mit · die Befunde landen nicht am Projekt ·
-     ein Feld fehlt in `SEED_VENUE_OWNER` (Typfehler).
+     Auf der Planer-Seite meldet **MultiCam** den Raum jetzt zurück
+     (`venueToSeedPatch`, im Overlay `apps/multicam-planner/src/utils/`) —
+     Maße und die erste Bühne, den Namen unverändert, weil er der Shell gehört
+     und ein geänderter Name ein Vorschlag zu einem fremden Feld wäre. Ein Test
+     hält fest, dass Hin- und Rückweg einander umkehren; ohne das meldete jeder
+     übernommene Seed sofort einen Widerspruch gegen sich selbst.
+
+     **Was ausdrücklich NOCH NICHT gebaut ist: die Licht-Seite.** Der
+     Licht-Planer liest den Raum aus dem Seed heute gar nicht — sein
+     `shellSeed.ts` kennt nur Scheinwerfer, und sein eigenes Raum-Modell
+     (Boden, Wände, Fenster, Podeste) bildet `venue.widthM/heightM/stage` nicht
+     eins zu eins ab. Die Regel trägt ihn bereits (er ist als Schreiber
+     `fixtures` vorgesehen, und die Tests decken ihn ab); was fehlt, ist die
+     Abbildung in dieser App. Das steht hier als benannter Rest und nicht als
+     stille Lücke — sonst liest der nächste Durchgang „Punkt 1 erledigt" und
+     wundert sich, warum das Licht den Raum nicht meldet.
+
+     Gegengeprobt (alle acht rot, zurückgebaut grün) — Regel und Shell:
+     geteiltes Feld wird still überschrieben · `gleich()` über
+     `JSON.stringify` (meldet zwei gleiche Bühnen als verschieden, je nach
+     Schlüssel-Reihenfolge) · die Shell schickt die Halter nicht mit · die
+     Befunde landen nicht am Projekt · ein Feld fehlt in `SEED_VENUE_OWNER`
+     (Typfehler). MultiCam: die letzte statt der ersten Bühne gemeldet ·
+     Breite und Höhe vertauscht (Hin-und-Zurück bricht) · Maße gar nicht
+     gemeldet.
   2. ~~**Das Demo-Projekt ist weiter hartkodiert.**~~ **Erledigt (`suite#105`).**
      Der Befund war zweiteilig: das Demo-Projekt ist der einzige Weg zu
      befülltem Inhalt, und ein neues Projekt startet leer — ein leerer Seed
