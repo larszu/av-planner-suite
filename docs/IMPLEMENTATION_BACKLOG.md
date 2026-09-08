@@ -1922,6 +1922,182 @@ belegbar, dort sind sie erprobt.
   Beleg festgehalten, auch der gescheiterte; und der Plan wird dabei nicht
   nachgezogen, weil sonst die Abweichung unsichtbar wird.
 
+### B-44 · Touch, Schliessen, Umbruch — die Bedienung selbst
+
+* **Status:** offen. **Wunsch des Eigentümers, 2026-09-08:** „Die ganze
+  Anwendung ist auch noch nicht touch optimiert. Menüs schließen ist auch
+  nicht immer intuitiv. Oft muss man auf ein x klicken und nicht auch in eine
+  leere Fläche. Und auch nicht alles ist responsive."
+
+* **Befund 1 — Schliessen (GEMESSEN 2026-09-08, cable-planner).** Es gibt
+  `components/shared/ModalShell.tsx`, und der kann es: `closeOnBackdrop`
+  steht dort auf `true` als Vorgabe, dazu Escape, Focus-Trap und
+  Fokus-Rückgabe über `useDialogA11y`. Benutzt wird er von den grossen
+  Dialogen aber nicht — **24 Dateien bauen ihr Overlay selbst** (`fixed
+  inset-0`), und **15 davon haben keinerlei Klick-Behandlung auf dem
+  Hintergrund**: `SettingsDialog`, `LibraryPanel`, `CableLibraryPanel`,
+  `RackBuilderDialog`, `RackEditorDialog`, `RackImageCropDialog`,
+  `CableDialog`, `DeliveryDialog`, `DrumMicingDialog`, `WirelessRigDialog`,
+  `ReconcileDialog`, `GraphmlImportDialog`, `NewRentmanDeviceWizard`,
+  `AtemMvConfigDialog`, `CommandPalette`. Acht andere haben es
+  (`ExportDialog`, `VideohubExportDialog`, `GreenGoExportDialog`,
+  `HubSwitchDialog`, `AtemAudioRouterDialog`, `MultiviewerLayoutView`,
+  `RackInternalWireOverlay`, `RentmanImportDialog`).
+  Das ist also **kein fehlendes Bauteil, sondern ein nicht benutztes** — und
+  damit die billigste Sorte Reparatur, solange man sie nicht mit dem
+  Rasenmäher macht.
+* **Und der Grund, warum ein Rasenmäher hier falsch wäre:** ein Dialog, der
+  eine begonnene Eingabe hält, darf bei einem Fehlklick daneben NICHT
+  zumachen. Wer im `RackBuilderDialog` zwanzig Höheneinheiten bestückt hat
+  oder im `NewRentmanDeviceWizard` auf Seite drei steht, verliert sonst
+  Arbeit — und das ist schlimmer als ein Kreuz, das man suchen muss. Die
+  Regel muss deshalb lauten: **Hintergrund-Klick schliesst, ausser der Dialog
+  hält ungesicherte Eingaben; dann fragt er.** Genau das ist zu bauen, nicht
+  ein `onClick={onClose}` an fünfzehn Stellen.
+* **Befund 2 — Touch.** Keine einzige Stelle im Renderer fragt
+  `pointer: coarse` ab; die einzigen Touch-Behandlungen sind
+  `CanvasArea.tsx` (Pan/Zoom, `clientX/Y` für Maus ODER Touch) und
+  `PanelWindowMenu.tsx` (`touchAction: 'none'`). Alles andere ist auf Maus
+  gebaut: Hover-Menüs, Drag-Griffe von wenigen Pixeln, Kontextmenüs auf
+  Rechtsklick. **Zu messen, bevor gebaut wird:** wie viele Bedienelemente
+  unter der 44-px-Marke liegen und wo eine Funktion NUR über Hover oder
+  Rechtsklick erreichbar ist — eine Funktion ohne Touch-Weg ist auf einem
+  Tablet nicht vorhanden.
+* **Befund 3 — Umbruch.** Zu erheben. Der Verdacht: die Dialoge haben feste
+  `max-w-*`-Breiten und mehrspaltige Raster ohne Umbruchpunkt, und die
+  Eigenschaften-Leiste ist auf Desktop-Breite gebaut. Die Mobile-Ansicht
+  (`src/mobile/`) ist davon nicht betroffen — sie ist eigenständig gebaut.
+* **Reihenfolge (Vorschlag):** (1) Schliessen — die Regel als EIN Bauteil,
+  dann die fünfzehn Dialoge darauf; (2) die Messung für Touch und Umbruch,
+  als Wächter, damit die nächste neue Komponente nicht wieder darunter fällt;
+  (3) die Reparaturen, geordnet nach dem, was die Messung findet.
+* **Aufwand:** (1) mittel, (2) klein, (3) gross.
+
+### B-45 · Stromplanung, die diesen Namen verdient
+
+* **Status:** offen. **Wunsch des Eigentümers, 2026-09-08:** „Zudem fehlen
+  noch die Möglichkeiten für ordentliche Stromplanung. Powerlock Kabel zieht
+  man einzeln. Die müssen auch die Adern Farben bekommen. Und auch
+  Lichtschalter und so müssen integrierbar sein."
+
+* **Was schon steht (gemessen 2026-09-08):**
+  * `types/circuit.ts` + `lib/circuitSolver.ts` (aus `cable#771`) kennen
+    **Einspeisung, Aus-Schalter, Wechselschalter, Kreuzschalter, Dimmer,
+    Leuchte und Klemmstelle**, jeweils mit Klemmennummern am Port statt an
+    der Port-Reihenfolge. Bedienbar in
+    `components/Properties/sections/CircuitSection.tsx`. **Der Wunsch
+    „Lichtschalter und so" ist damit im Kern erfüllt** — was fehlt, ist die
+    Fortsetzung: Schütz/Relais, Taster mit Stromstossschalter, Not-Aus,
+    Fehlerstrom- und Leitungsschutzschalter als eigene Bauarten.
+  * `powerPhase` (L1/L2/L3) am Gerät, `powerConsumptionWatts`,
+    `types/powerStandard.ts`, und `Powerlock`, `CEE16/32/63`, `Socapex`,
+    `Harting`, `PowerCON`, `Schuko`, `IEC` als Steckertypen.
+* **Was fehlt — und das ist der Kern des Wunsches: DIE EINZELADER.** Heute
+  ist ein Kabel im Plan **eine** Verbindung von Port zu Port. Powerlock ist
+  aber genau das nicht: man zieht **je Leiter ein eigenes Kabel**, und
+  welcher Leiter das ist, steht in seiner Farbe. Ein 400-A-Anschluss sind
+  fünf einzelne Leitungen — L1, L2, L3, N, PE —, jede mit eigener Länge,
+  eigenem Weg und eigenem Steckerpaar. Wer das als „ein Kabel" plant, hat
+  weder die richtige Stückliste noch das richtige Gewicht noch die richtige
+  Ziehliste; und auf der Baustelle liegen fünf Leitungen, von denen der Plan
+  eine kennt.
+* **Und die Farbe ist keine Kosmetik.** Sie ist die einzige Angabe, an der
+  auf der Baustelle hängt, welcher Leiter wohin gehört. Ein vertauschter
+  Aussenleiter dreht ein Drehfeld; ein als N gezogener Aussenleiter ist eine
+  Gefahr. Die Farbe gehört deshalb an die Ader, nicht an eine Beschriftung,
+  und sie muss auf die Ziehliste, auf das Kabel-Etikett und in die Prüfung.
+* **Was zu klären ist, bevor gebaut wird (nicht zu raten):**
+  * **Farbnorm.** Welche Zuordnung gilt für dieses Haus? Die deutsche
+    Neuinstallation, die alte Farbgebung mit anderen Aussenleiter-Farben und
+    die nordamerikanische Zuordnung sind drei verschiedene Sätze, und ein
+    falsch voreingestellter kostet mehr, als er spart. **Deshalb: keine
+    eingebaute Vorgabe raten** — die Norm wird gewählt, und die Auswahl
+    trägt ihre Herkunft im Klartext (dieselbe Regel wie bei den
+    Text-Protokoll-Vorlagen, Invariante 18).
+  * **Powerlock-Kodierung.** Die Farbringe und die mechanische Kodierung der
+    Powerlock-Steckverbinder (Quelle/Senke, Erde-Sonderform) stehen im
+    Herstellerdokument. Sie aus dem Gedächtnis einzutragen wäre genau der
+    Fehler, den Invariante 18 benennt — bis ein Dokument vorliegt, trägt der
+    Nutzer die Kodierung ein.
+* **Vorschlag für die Bauform:** ein Kabel bekommt optional **Adern**
+  (`conductors`), jede mit Rolle (L1/L2/L3/N/PE, oder frei) und Farbe. Für
+  ein normales Kabel bleibt das Feld leer und alles ist wie heute. Für den
+  Einzelader-Fall gibt es eine **Bündel-Beziehung**: fünf Kabel, die
+  denselben Anschluss bilden, wissen voneinander — damit Stückliste,
+  Ziehliste und Prüfung sie als eine Sache zeigen können und die Prüfung
+  merkt, wenn eine Ader fehlt. Vier gezogene Leitungen bei fünf geplanten
+  sind der Fehler, den ein Plan finden muss.
+* **Aufwand:** gross.
+
+### B-46 · Steck- und Kabeladapter als eigene Objekte
+
+* **Status:** offen. **Wunsch des Eigentümers, 2026-09-08:** „Ebenso fehlen
+  Steck und Kabeladapter wie zum Beispiel Micro HDMI auf HDMI Adapter oder
+  USB C auf DisplayPort."
+
+* **Befund (gemessen 2026-09-08):** Adapter kommen im Code nur als **Text in
+  Warnungen** vor — `types/cableSpec.ts` sagt „… need an adapter" und „use a
+  matching cable/adapter". Ein Adapter als Objekt gibt es nicht. Damit ist er
+  auch nicht in der Stückliste, nicht im Gewicht, nicht in der Kiste und
+  nicht auf der Packliste — und genau daran scheitert ein Aufbau: das Kabel
+  ist da, der Adapter nicht.
+* **Und `Micro-HDMI` fehlt sogar als Steckertyp.** `ALL_CONNECTOR_TYPES`
+  kennt `HDMI` und `Mini-HDMI`, aber nicht `Micro-HDMI` (Typ D) — das
+  Beispiel des Eigentümers lässt sich heute nicht einmal benennen.
+* **Warum ein Adapter kein Kabel mit zwei Enden ist.** Er ist eine
+  **Wandlung** und trägt drei Aussagen, die ein Kabel nicht trägt:
+  1. **Richtung.** USB-C auf DisplayPort geht in genau eine Richtung und nur,
+     wenn die Quelle den DisplayPort-Alternate-Mode kann. Ein Adapter, den
+     der Plan als „passt" zeichnet, obwohl der Rechner es nicht kann, ist die
+     gefährlichste Sorte grüner Haken.
+  2. **Grenze.** Ein passiver Adapter kann die Bandbreite begrenzen; ein
+     aktiver braucht Strom. Beides gehört an das Objekt, nicht in eine
+     Fussnote.
+  3. **Er liegt im Weg.** Der Signalweg (`lib/signalChain.ts`) muss ihn als
+     Station kennen, sonst rechnet die Formatprüfung an ihm vorbei.
+* **Vorschlag:** Adapter als eigene Geräte-Kategorie mit genau einem Eingang
+  und einem Ausgang, deren Steckertypen die Wandlung beschreiben — damit
+  fallen Stückliste, Packliste, Signalweg und Formatprüfung ohne
+  Sonderbehandlung an. Die Richtungs- und Bandbreiten-Angaben sind
+  **erklärt** und werden nicht aus den Steckertypen geraten.
+* **Aufwand:** mittel.
+
+### B-47 · Der Monitor weiss, was er kann — ein virtuelles EDID
+
+* **Status:** offen. **Wunsch des Eigentümers, 2026-09-08:** „Auch sind
+  Monitore noch nicht intelligent. Man bräuchte quasi auch ein virtuelles
+  EDID."
+
+* **Befund (gemessen 2026-09-08):** Der Begriff EDID kommt im gesamten
+  Quelltext nicht vor. Ein Monitor trägt genau **ein** Feld zu dem, was er
+  kann: `resolution?: string` — eine Zeichenkette, mit der nichts gerechnet
+  wird. `types/videoFormat.ts` kennt Formate und `SdiCapabilities` für die
+  SDI-Seite; für Displays gibt es kein Gegenstück.
+* **Was ein virtuelles EDID im PLANER leistet — und was nicht.** Es ersetzt
+  nicht die Aushandlung am Kabel; die passiert zwischen zwei Geräten und
+  nicht in einer Planungssoftware. Es beantwortet die Frage, die man vorher
+  stellt: **kommt das Bild dort an, das ich schicken will?** Also: welche
+  Timings, Bildwiederholraten, Farbtiefen und HDR-Fassungen die Senke
+  erklärt — und ob die Quelle, das Kabel, der Adapter (B-46) und jede
+  Zwischenstation auf dem Weg das tragen. Das ist dieselbe Rechnung wie beim
+  Prüfbild-Weg (B-42), nur mit Formaten statt mit Kreuzpunkten.
+* **Der Fallstrick, den es zu vermeiden gilt.** Ein Feld namens „EDID", das
+  eine Zeichenkette hält, sähe nach einer Zusicherung aus und wäre keine. Und
+  eine EDID, die die App **rät** (aus dem Modellnamen, aus der Auflösung),
+  wäre die Defektform, gegen die dieses Repo an sechs Stellen schon steht:
+  eine Vermutung, die als Messung gelesen wird. Also: entweder die
+  Fähigkeiten sind **erklärt** (der Nutzer trägt sie ein oder importiert
+  eine echte EDID-Datei), oder das Gerät sagt „unbekannt" — und ein Weg zu
+  einem unbekannten Ziel ist ein offener Weg, kein grüner.
+* **Woher echte Daten kommen könnten:** eine ausgelesene EDID ist eine
+  128-Byte-Struktur (mit Erweiterungsblöcken), und Auslesewerkzeuge gibt es
+  auf jedem Betriebssystem. Ein Import „Datei rein, Fähigkeiten raus" ist
+  damit machbar — **die Feldbedeutungen gehören aber aus der Spezifikation
+  belegt und nicht aus dem Gedächtnis** (Invariante 18). Bis dahin: erklärte
+  Fähigkeiten von Hand.
+* **Aufwand:** gross. Sinnvoll erst nach B-46, weil der Adapter die
+  interessanteste Station auf dem Weg ist.
+
 ## Eigentümer-Entscheidungen
 
 **Alle offen gebliebenen Punkte dieser Tabelle sind am 2026-09-08 entschieden
