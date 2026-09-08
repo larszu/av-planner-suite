@@ -1012,9 +1012,11 @@ ist selbst ein Ergebnis.
   Provenienz-Register, und das Register prüft beide Richtungen.
 * **Aufwand:** klein bis mittel
 
-### B-34 · Die Zeitachse fehlt in allen acht Repos
+### B-34 · ~~Die Zeitachse fehlt in allen acht Repos~~
 
-* **Status:** offen
+* **Status:** ~~offen~~ **erledigt** (2026-09-08) — in zwei Schritten, von
+  denen der erste schon lag: `suite#142` (Ablauf einlesen und verknüpfen)
+  und der hier (die Umkehrung: wann wird DIESES Objekt gebraucht).
 * **Befund (2026-09-04, Korpus-Durchgang):** **Kein Datensatz in keinem der acht
   Repos kann sagen, WANN ein Gerät, eine Kamera oder ein Fixture gebraucht
   wird.** `cable-planner` führt an Projekt und Gerät nur `updatedAt` und
@@ -1033,7 +1035,49 @@ ist selbst ein Ergebnis.
   nicht auf. Das ist eine Eigenschaft der Tabelle, nicht des Bedarfs.
 * **DoD:** Eigentümer-Entscheidung zuerst (E-18) — ob die Suite die Zeitachse
   überhaupt besetzt. Erst danach ein Datenmodell.
-* **Aufwand:** groß
+* **E-18 ist seit 2026-09-07 entschieden: NUR LESEN.** Damit war die DoD-Sperre
+  weg, und `suite#142` hat das Datenmodell gebaut: `packages/ui/src/rundown.ts`
+  (`Rundown`, `RundownItem` mit `startMin`/`durationMin`, `RundownRef` auf
+  Seed-Objekte **über deren Id**, `ref-missing` als Befund) plus fünf
+  Empfänger-Sichten in `rundownViews.ts`. Der Ablauf wird eingelesen, nicht
+  hier geführt — die Autorenschaft bleibt in der Tabelle des Kunden.
+* **Was danach noch fehlte, und wonach der Befund wörtlich fragt:** die
+  **Umkehrung**. Der eingelesene Ablauf beantwortet die Frage der Regie („was
+  passiert um 14:20"). Der Befund fragt die der Technik — „**WANN** wird ein
+  Gerät gebraucht" —, und dafür gab es keinen Index: `rundownCoverage` zählt
+  nur, **ob** ein Objekt überhaupt vorkommt.
+* **Gebaut 2026-09-08:**
+  * `rundownSchedule(rundown, seed)` — je Objekt des Plans die Ablauf-Punkte,
+    in denen es vorkommt, dazu `firstMin`, `lastMin`, `lastDurationMin` und
+    die Zahl der Punkte ohne lesbare Zeit. **Auch für Objekte ohne einen
+    einzigen Punkt:** `points: []` ist eine Aussage, ein fehlender Eintrag
+    ist keine.
+  * `gearSheet(rundown, seed)` — dasselbe als Blatt, mit Legende und
+    Stand-Zeile, über denselben CSV-Schreiber wie die fünf Sichten. In der
+    Shell als Knopf „Geräte-Zeiten", **abgesetzt** von den fünf: es ist kein
+    sechster Empfänger, sondern dieselbe Quelle um neunzig Grad gedreht (eine
+    Zeile je Gegenstand statt je Ablauf-Punkt). In die Empfänger-Liste
+    gestellt hätte es den Wächter „genau fünf Empfänger, Spalten-Auswahlen
+    aus einer Zeilenmenge" stillschweigend weicher gemacht.
+* **Drei Dinge, die das Blatt bewusst nicht behauptet:** Es gibt **keine
+  Spalte „bis"** — `lastMin` ist der BEGINN des letzten Punktes, und wann ein
+  Gerät frei wird, sagt dieser Ablauf nicht; die Dauer eben dieses Punktes
+  steht daneben, aufaddiert wird sie nicht. Punkte ohne lesbare Zeit werden
+  **gezählt**, nicht übersprungen — ein Gegenstand, der nur in zeitlosen
+  Punkten vorkommt, bekommt „ohne Zeit" statt einer erfundenen Spanne. Und es
+  meldet **keine Lücke**: dieselbe Begründung wie bei `coverage` — auf einem
+  halb eingelesenen Ablauf wäre jede Meldung ein Fehlalarm.
+* **Was weiterhin NICHT stimmt und auch nicht soll:** die Planer-Objekte
+  selbst tragen weiterhin kein Zeitfenster (`cable-planner`s `EquipmentItem`
+  hat keine Bedarfs-Spanne, `multicam`s `Shotlist` keine Uhr). Das ist die
+  Folge von E-18 und kein Rest: die Zeit gehört dem Ablauf des Kunden, und
+  sie in jedes Planer-Objekt zu kopieren hieße, sie zweimal zu führen — mit
+  genau der Gabelung, gegen die Bedarf 7 gebaut ist.
+* **Gegengeprobt** (fünf Eingriffe, alle rot, zurückgebaut grün): zeitlose
+  Punkte gehen in die Spanne ein · nur verplante Objekte in der Liste ·
+  doppelte Nennung zählt doppelt · die Spalte heißt wieder „bis" · die Spanne
+  wird aufaddiert statt der Dauer des letzten Punktes.
+* **Aufwand:** ~~groß~~ erledigt
 
 ### B-35 · Vier der acht Repos sind aus der Suite nicht erreichbar
 
