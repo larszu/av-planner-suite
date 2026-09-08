@@ -2097,9 +2097,9 @@ belegbar, dort sind sie erprobt.
 
 ### B-46 · Steck- und Kabeladapter als eigene Objekte
 
-* **Status:** offen. **Wunsch des Eigentümers, 2026-09-08:** „Ebenso fehlen
-  Steck und Kabeladapter wie zum Beispiel Micro HDMI auf HDMI Adapter oder
-  USB C auf DisplayPort."
+* **Status:** GEBAUT — `cable#781`. **Wunsch des Eigentümers, 2026-09-08:**
+  „Ebenso fehlen Steck und Kabeladapter wie zum Beispiel Micro HDMI auf HDMI
+  Adapter oder USB C auf DisplayPort."
 
 * **Befund (gemessen 2026-09-08):** Adapter kommen im Code nur als **Text in
   Warnungen** vor — `types/cableSpec.ts` sagt „… need an adapter" und „use a
@@ -2107,6 +2107,19 @@ belegbar, dort sind sie erprobt.
   auch nicht in der Stückliste, nicht im Gewicht, nicht in der Kiste und
   nicht auf der Packliste — und genau daran scheitert ein Aufbau: das Kabel
   ist da, der Adapter nicht.
+* **KORREKTUR zu diesem Befund (2026-09-08, beim Bauen nachgemessen).** Der
+  letzte Satz stimmt nicht. `lib/planDemandExtras.ts` **leitet seit Bedarf 17
+  Adapter-Zeilen für die Kommissionierliste ab** — aus `cable.needsConverter`
+  und aus ungleichen LWL-Steckertypen. Auf der Packliste stand der Adapter
+  also sehr wohl.
+  Die Korrektur macht den eigentlichen Befund erst scharf, statt ihn zu
+  entkräften: die abgeleitete Zeile heisst „Adapter HDMI ↔ USB-C", **weil
+  zwei Steckertypen nicht zusammenpassen**. Sie ist aus dem MANGEL gebaut und
+  nicht aus einer Angabe — genau der Schluss, den ADR-002 für folgenreiche
+  Entscheidungen ausschliesst. Sie kann deshalb nicht sagen, in welche
+  Richtung der Adapter geht, was er durchlässt oder ob er Strom braucht, und
+  sie liegt nirgends im Signalweg. Was fehlte, war nicht die Zeile, sondern
+  **das Ding**.
 * **Und `Micro-HDMI` fehlt sogar als Steckertyp.** `ALL_CONNECTOR_TYPES`
   kennt `HDMI` und `Mini-HDMI`, aber nicht `Micro-HDMI` (Typ D) — das
   Beispiel des Eigentümers lässt sich heute nicht einmal benennen.
@@ -2121,12 +2134,42 @@ belegbar, dort sind sie erprobt.
      Fussnote.
   3. **Er liegt im Weg.** Der Signalweg (`lib/signalChain.ts`) muss ihn als
      Station kennen, sonst rechnet die Formatprüfung an ihm vorbei.
-* **Vorschlag:** Adapter als eigene Geräte-Kategorie mit genau einem Eingang
-  und einem Ausgang, deren Steckertypen die Wandlung beschreiben — damit
-  fallen Stückliste, Packliste, Signalweg und Formatprüfung ohne
-  Sonderbehandlung an. Die Richtungs- und Bandbreiten-Angaben sind
-  **erklärt** und werden nicht aus den Steckertypen geraten.
-* **Aufwand:** mittel.
+* **GEBAUT (`cable#781`).** `types/adapter.ts` trägt die `AdapterSpec` am
+  Gerät (`EquipmentItem.adapter`): die beiden Steckerseiten, Richtung,
+  Speisung, die durchgelassene Höchst-Grenze und was der Adapter an der
+  Quelle voraussetzt. Damit fallen Stückliste, Packliste, Signalweg und
+  Formatprüfung ohne Sonderbehandlung an.
+  * **DREI Urteile und nicht zwei** — `passt`, `passt-nicht`, `offen`. Die
+    dritte ist die, um die es geht: „trägt nicht" und „ist nicht erklärt"
+    sehen auf dem Blatt gleich aus und bedeuten das Gegenteil. Wer sie
+    zusammenwirft, macht aus jeder Lücke einen Fehler oder aus jeder Lücke
+    ein OK; die zweite Richtung ist die gefährliche. Das steht jetzt als
+    **Invariante 21** in `docs/architecture.md`.
+  * **Der Fall aus dem Wunsch.** „USB-C auf DisplayPort" arbeitet nur an
+    einem Anschluss mit DisplayPort-Alternate-Mode. Das **Quellgerät**
+    erklärt das unter `kann`; steht dort nichts, lautet das Urteil `offen`.
+    Aus dem Modellnamen darauf zu schliessen wäre der Namensabgleich aus
+    ADR-002, und die falsche Antwort ist hier ein grüner Haken auf einer
+    Strecke, die schwarz bleibt.
+  * **Der halbe Datensatz.** Ohne Heilung ist `spec.richtung === 'unbekannt'`
+    bei einem fehlenden Feld schlicht `false`, und die Beurteilung fällt bis
+    ans Ende durch — auf `passt`. `normalisiereAdapter` setzt deshalb auf
+    `unbekannt` **herunter**, statt stehen zu lassen.
+  * **Standards nur innerhalb ihrer Familie.** „Ist HDMI-2.0 mehr als
+    DP-1.4?" hat keine Antwort, die stimmt; `vergleicheStandard` sagt dann
+    `nicht-vergleichbar`, und die erfundene Zahl steht nicht in einem Befund.
+  * **`Micro-HDMI` (Typ D)** ist Steckertyp — vorher stand er nur in einem
+    Kommentar. Die `Record<ConnectorType, string>`-Farbtabelle hat die
+    fehlende Farbe beim Übersetzen gemeldet, wie sie soll.
+  * **Signalweg**: eigene Station `adapter` und nicht `converter` — sonst
+    stünde „Wandler" an einer Stelle, an der ein Steckadapter sitzt, und wer
+    den Weg abgeht, sucht ein Gerät mit Netzteil.
+  * **Packliste**: ein erklärter Adapter verdrängt die geratene Zeile,
+    sonst wäre es `zwei-rechnungen` und die Kommissionierung packt zwei.
+* **Was offen bleibt:** die Fortsetzung aus der Bauform-Frage — ob ein
+  Adapter mit mehr als einem Ausgang (Splitter im Steckergehäuse) eine eigene
+  Bauart braucht. Heute endet der Weg dort als `mehrdeutig`, benannt.
+* **Aufwand:** mittel — erledigt.
 
 ### B-47 · Der Monitor weiss, was er kann — ein virtuelles EDID
 
