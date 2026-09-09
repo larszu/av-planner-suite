@@ -1765,7 +1765,8 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
 
 ### B-39 · Was der Projekt-Fluss noch nicht trägt
 
-* **Status:** offen (nur noch Punkt 5; 1, 2, 3 und 4 erledigt) — **Punkt 1 ist
+* **Status:** offen (nur noch Punkt 5; 1, 2, 3 und 4 erledigt — Punkt 1 seit
+  2026-09-09 samt der Licht-Seite, dem letzten benannten Rest) — **Punkt 1 ist
   am 2026-09-08 gebaut** (`suite#169`): der Raum geht zurück, und zwar durch
   die Konfliktregel aus E-21 (Eigentum je Feld; geteilte Felder melden den
   Widerspruch als Befund, statt still zu überschreiben)
@@ -1817,15 +1818,47 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
      hält fest, dass Hin- und Rückweg einander umkehren; ohne das meldete jeder
      übernommene Seed sofort einen Widerspruch gegen sich selbst.
 
-     **Was ausdrücklich NOCH NICHT gebaut ist: die Licht-Seite.** Der
-     Licht-Planer liest den Raum aus dem Seed heute gar nicht — sein
-     `shellSeed.ts` kennt nur Scheinwerfer, und sein eigenes Raum-Modell
-     (Boden, Wände, Fenster, Podeste) bildet `venue.widthM/heightM/stage` nicht
-     eins zu eins ab. Die Regel trägt ihn bereits (er ist als Schreiber
-     `fixtures` vorgesehen, und die Tests decken ihn ab); was fehlt, ist die
-     Abbildung in dieser App. Das steht hier als benannter Rest und nicht als
-     stille Lücke — sonst liest der nächste Durchgang „Punkt 1 erledigt" und
-     wundert sich, warum das Licht den Raum nicht meldet.
+     ~~**Was ausdrücklich NOCH NICHT gebaut ist: die Licht-Seite.**~~
+     **Erledigt 2026-09-09 (`suite#201`).** Der Licht-Planer las den Raum aus
+     dem Seed gar nicht: wer in der Suite auf „Licht" wechselte, sah seine
+     Scheinwerfer an den richtigen Koordinaten in einer **leeren Fläche** —
+     ohne Bühne, ohne Raumgrenze, ohne Anhaltspunkt, wo das alles steht.
+
+     **Die Frage war nicht, OB, sondern WORAUS.** `widthM × heightM` sind ein
+     Rechteck, vier Wände sind vier Linien — und genau das wäre falsch
+     gewesen: Lights `Wall` trägt `height`, `reflectance` und `material`, und
+     die drei gehen **in die Lichtrechnung** ein. Vier erfundene Wände
+     änderten jede Beleuchtungsstärke im Plan, und zwar nach oben. Eine
+     Vermutung, die als Messung gelesen wird — diesmal mit einer Zahl am Ende,
+     die aussieht wie ein Ergebnis.
+
+     Gebaut ist deshalb:
+     * `widthM`/`heightM`/`name` → **`venueForeign`**, das ADR-005-Feld, das es
+       schon gab. Light modelliert keine Raumgröße, führt sie aber unverändert
+       mit — derselbe Speicher, den auch der Datei-Import füllt; ein zweiter
+       wären beim Speichern zwei Kandidaten für dasselbe Feld.
+     * `venue.stage` → eine **Zeichnung** (`Shape`, `rect`) und kein
+       `StageElement`. Ein Podest hat eine Höhe; der Seed nennt keine.
+       `height: 0` wäre die Behauptung „nicht erhöht". Eine Zeichnung zeigt,
+       **wo** die Bühne liegt, ohne zu behaupten, **wie** sie gebaut ist — und
+       geht in keine Rechnung ein.
+     * Feste Id (`seed-venue-stage`): der Seed kommt bei jeder Änderung erneut,
+       eine neue Id je Mal legte bei der dritten Änderung drei Rechtecke
+       übereinander. Ersetzt wird nur diese eine — Maßketten und Markierungen
+       des Nutzers bleiben stehen.
+     * Der Raum wird **vor** der Leer-Sperre übernommen. Die Sperre lehnt einen
+       Seed ohne Scheinwerfer ab, damit er keinen gefüllten Plan leert; das ist
+       eine Aussage über Scheinwerfer, und den Raum mit ihr wegzuwerfen hieße,
+       ihn aus einem Grund zu verlieren, der nichts mit ihm zu tun hat.
+     * **Kein Rückweg für den Raum.** Light ist als Schreiber `fixtures`
+       vorgesehen (E-21) und modelliert keine Raumgröße — ein Rückweg schriebe
+       der Shell ihren eigenen Wert zurück und erzeugte bei jedem Durchlauf
+       einen Widerspruch gegen sich selbst. Ein Test hält das fest.
+
+     **Gegengeprobt (8), und eine Regel war zuerst unverdient:** „lässt weg,
+     was der Seed nicht nennt" blieb grün, als die Breite fest auf 0 gesetzt
+     wurde — der gemessene Fall nannte sie ja. Jetzt steht jedes Maß einmal als
+     fehlend im Test, und beide Zweige fallen einzeln.
 
      Gegengeprobt (alle acht rot, zurückgebaut grün) — Regel und Shell:
      geteiltes Feld wird still überschrieben · `gleich()` über
