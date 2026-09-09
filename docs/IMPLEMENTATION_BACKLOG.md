@@ -1228,8 +1228,11 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
   sind), der leere Zustand der Shotlist (das abschliessende „klicken"
   entfällt — im Deutschen steht das Verb am Ende, im Englischen vor dem
   Knopfnamen) und der UI-Zoom („Strg" im Deutschen, „Ctrl" im Englischen).
-* **Was dabei herausfiel und einen eigenen Punkt bekam:** der Lauf lässt sich
-  NICHT in die deutsch-quelligen Repos kopieren. Siehe **B-63**.
+* **Was dabei herausfiel und einen eigenen Punkt bekam:** der Lauf ließ sich
+  NICHT unverändert in die deutsch-quelligen Repos kopieren — das JSX-Muster
+  hätte dort Quelltext für Beschriftung gehalten. Gelöst in **B-63**
+  (GEBAUT 2026-09-09): das Muster unterscheidet jetzt Tag von
+  Vergleichsoperator, und der Zähler steht in allen drei Repos.
 * **Befund (gemessen 2026-09-09, nach dem Rückweg):** Die 14 Dateien, die die
   Suite-Kopie gewickelt hat, sind durch. Was bleibt, sind Dateien, die es
   **drüben genauso ungewickelt gibt** — der Rückweg hilft dort also nicht,
@@ -1268,9 +1271,11 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
 * **Aufwand:** mittel — die Zeichenketten sind gezählt und liegen beieinander;
   die Wicklung ist mechanisch, das Wörterbuch ist schon da.
 
-### B-63 · Der Sprachmix-Zähler lässt sich nicht in die deutsch-quelligen Repos kopieren — gemessen
+### B-63 · Der Sprachmix-Zähler zählt jetzt in allen drei Repos — die offene Frage ist beantwortet, mit null
 
-* **Status:** offen. Befund erhoben 2026-09-09 beim Bau von B-61.
+* **Status:** **GEBAUT 2026-09-09** — `multicam#120`/`#121`, `cable#801`,
+  `light#105`/`#106`, `suite`-Parity erweitert. Befund erhoben 2026-09-09 beim
+  Bau von B-61.
 * **Was B-61 gebaut hat:** `multicam-planner` zählt seit `multicam#118`
   nicht mehr nur die `t()`-Fallbacks, sondern auch den **ungewickelten**
   sichtbaren Text — und deckelt ihn. Grenze steht auf 0.
@@ -1299,27 +1304,79 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
   Ende des Wächters:** 47 gemeldete Code-Zeilen als angeblicher
   Sprachmisch-Verstoss — nach dem dritten Mal schaltet ihn jemand ab. Genau
   das Ende, das `sony#22` für seinen Vorgänger beschreibt.
-* **Die eigentliche Frage bleibt offen und ist berechtigt:** haben
-  `cable-planner` und `light-planner` denselben blinden Fleck? Ihr
-  `lang:check` misst wie der frühere MultiCam-Lauf **nur** die
-  `t()`-Fallbacks (2324 bzw. 333 deutsche, 0 englische). Ob dort englische
-  Beschriftungen ungewickelt herumstehen, ist damit **nicht gemessen** — und
-  es als „vermutlich nicht" abzutun wäre dieselbe Behauptung ohne Messung,
-  gegen die dieses Backlog sonst schreibt.
-* **Was es dafür braucht:** ein JSX-Muster, das Code von Text unterscheidet.
-  Der billige Weg ist eine Zusatzbedingung am Treffer (keine Klammern, kein
-  `=>`, kein `===`, kein Semikolon, keine Zuweisung); der saubere ist, den
-  JSX-Text über den Parser zu holen statt über einen regulären Ausdruck.
-  Welcher reicht, entscheidet sich an der Messung — der billige Weg ist
-  zuerst zu probieren, weil er die Zahl sofort liefert und man an der Liste
-  sieht, ob noch Code darin steht.
-* **Beim Bauen zu beachten:** `npm run lang:parity` in der Suite hält die
-  Wortlisten der beiden Kopien zusammen. Wer in einem Repo die Listen
-  anfasst, fasst sie drüben mit an — die Erweiterung selbst betrifft die
-  Listen nicht, aber wer dabei ein Stoppwort ergänzt, merkt es sonst erst in
-  der Suite-CI.
-* **Aufwand:** klein bis mittel — die Messung steht, der Rest ist ein
-  besseres Muster und zwei Deckel.
+* **Die eigentliche Frage war offen und berechtigt:** haben `cable-planner`
+  und `light-planner` denselben blinden Fleck? Ihr `lang:check` maß wie der
+  frühere MultiCam-Lauf **nur** die `t()`-Fallbacks (2324 bzw. 333 deutsche,
+  0 englische). Ob dort englische Beschriftungen ungewickelt herumstanden,
+  war **nicht gemessen** — und es als „vermutlich nicht" abzutun wäre
+  dieselbe Behauptung ohne Messung gewesen, gegen die dieses Backlog sonst
+  schreibt.
+
+  **Jetzt ist sie gemessen: null in beiden.** Das ist ein Ergebnis, keine
+  Selbstverständlichkeit — und ab jetzt hält es ein Wächter fest, in beide
+  Richtungen (siehe unten).
+
+#### Was gebaut wurde
+
+* **Das JSX-Muster ist ein Tag-Muster geworden**, der billige Weg hat
+  gereicht (`multicam#120`): vor dem `>` muss ein Bezeichner, ein
+  Anführungszeichen, `}` oder `/` stehen — nie Leerzeichen, `=`, `<`, `!`
+  (damit fallen `a > b`, `=>`, `<=` heraus) — und das schließende `<` muss
+  ein Tag beginnen (`</` oder `<Buchstabe`). Generics fängt `NACH_CODE`, das
+  **nur** auf JSX-Text greift und nie auf Attribute: dort steht ein `=`
+  durchaus als Oberfläche („Shift = frei, Mausrad = Stufe"). Ergebnis: alle
+  47 Code-Fehltreffer weg, kein einziger echter Fund verloren.
+* **Der Zähler steht in allen drei Repos** (`cable#801`, `light#105`), mit
+  `MIX_GRENZE = 0`, scharf in **beide** Richtungen. Eine Grenze über dem Ist
+  wäre ein Deckel: wer übersetzt und die Zahl stehen lässt, gibt den Platz
+  frei, den der nächste Zuwachs unbemerkt füllt — bei grünem Check.
+* **Jede Kopie probt ihr Muster an einer festen Probe** (`multicam#121`,
+  `cable#801`, `light#106`): acht Zeilen, drei echte Beschriftungen
+  (Attribut, JSX-Textknoten, Rückfrage im Backtick) und fünf, die *nicht*
+  gefunden werden dürfen — zwei Kommentare, zwei Code-Zeilen, ein gewickelter
+  Fallback. Ohne sie wäre ein kaputtes Muster die gefährlichste Art grün: es
+  findet nichts, und Nichts sieht hier aus wie ein Ergebnis.
+
+  Der naheliegende Weg — eine **Untergrenze auf der Fundzahl** — ist geprüft
+  und **verworfen**: sie fällt genau dann, wenn die Arbeit gelingt. Je mehr
+  gewickelt ist, desto weniger ungewickelter Text bleibt übrig (multicam nach
+  seinem i18n-Durchgang: 65; cable: 292; light: 152). Eine solche Schwelle
+  müsste bei jedem Fortschritt nachgezogen werden und wäre nach dem zweiten
+  Nachziehen nur noch Zierrat. Die Zahl steht weiter in der Ausgabe — als
+  Angabe, nicht als Schwelle.
+* **Die Kommentar-Zeilen der Probe tragen mit Absicht Muster, die *ohne* den
+  Kommentarfilter treffen würden.** Die erste Fassung hatte dort eine
+  harmlose Kommentarzeile stehen und belegte damit nichts: was kein `>` und
+  kein `title=` enthält, findet der Zähler ohnehin nicht. Aufgefallen ist das
+  erst in der Gegenprobe — ein Beleg für den Satz aus B-36, dass eine Probe
+  ohne Gegenprobe nur eine weitere Behauptung ist.
+
+#### Was `lang:parity` jetzt zusätzlich vergleicht
+
+Der Guard verglich bisher **nur** die beiden Wortlisten und `klassifiziere`.
+Das war eine echte Lücke, keine theoretische: als der Sprachmix-Zähler in alle
+drei Repos wanderte, lief er in einem davon mit einem anderen Rumpf und in
+einem anderen mit dem **lockeren** JSX-Muster — und der Guard sah nichts
+davon. Genau die Bauform von Drift, gegen die er gebaut ist, lief unter ihm
+hindurch.
+
+Verglichen werden jetzt zusätzlich: `SICHTBARE_ATTRIBUTE`, `JSX_TEXT`,
+`NACH_CODE`, `RUFE`, die Rümpfe von `ohneKommentare` und `sichtbareTexte`
+sowie die Probe selbst. **Nicht** verglichen wird `MIX_GRENZE` — sie ist eine
+Messung des jeweiligen Repos und darf sich unterscheiden; dass sie heute
+überall auf 0 steht, ist ein Ergebnis und keine Zusicherung.
+
+Gegengeprobt, alle drei rot: gelockertes JSX-Muster in einer Kopie, eine
+entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
+
+#### Was offen bleibt
+
+* Der **saubere** Weg — den JSX-Text über einen Parser statt über einen
+  regulären Ausdruck holen — ist nicht gebaut worden und war nicht nötig: der
+  billige Weg liefert in allen drei Repos null Fehltreffer. Er bleibt die
+  Antwort, falls das Muster doch einmal an einer Datei scheitert; die Probe
+  ist dann die Prüfliste, gegen die ein Parser-Weg antreten muss.
+* Aufwand für das Gebaute: klein, wie geschätzt.
 
 ### B-62 · Die Kopfzeile eines Backlog-Eintrags altert schneller als sein Rumpf — jetzt mit Wächter
 
