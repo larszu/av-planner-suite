@@ -296,12 +296,23 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
   ausdrücklich nicht passiert:** die beiden Domänen ersatzweise doch im
   `cable-planner` weiterbauen. Das wäre genau der Zuwachs, gegen den ADR-006
   geschrieben ist, und er wäre danach schwerer zu trennen als heute.
-* **Was NICHT blockiert ist, und deshalb vorgezogen wurde:** Schritt 1 des
-  ADR-006-Verfahrens („die Fragen zuerst, bevor eine Datei umzieht"). Für das
-  Lager steht er seit dem 2026-09-07 im ADR; für die Festinstallation seit dem
-  2026-09-09 — sechs Fragen an das Gebäude, ein Rückweg (`mangelMelden`), und
-  die gemessene Liste der fünf Module, die „Festinstallation" in der Kopfzeile
-  tragen und trotzdem **nicht** mitziehen.
+* **Was NICHT blockiert ist, und deshalb vorgezogen wurde:** Schritt 1 **und
+  Schritt 2** des ADR-006-Verfahrens. Schritt 1 („die Fragen zuerst, bevor eine
+  Datei umzieht") steht für das Lager seit dem 2026-09-07 im ADR, für die
+  Festinstallation seit dem 2026-09-09 — sechs Fragen an das Gebäude, ein
+  Rückweg (`mangelMelden`), und die gemessene Liste der fünf Module, die
+  „Festinstallation" in der Kopfzeile tragen und trotzdem **nicht** mitziehen.
+  Schritt 2 („Paket vor Repo") ist für beide Seiten erledigt: das Lager liegt
+  seit dem 2026-09-07 als `cable-planner/src/renderer/lager/` hinter vier Haken,
+  die Festinstallation seit dem 2026-09-09 als **`packages/facility-core`** —
+  Modell (Raum, Anschlusspunkt, Stromkreis, Verteilung, Steuerklinke,
+  Hausstrecke, Mangel) plus die sechs Fragen als reine Funktionen, 31 Tests,
+  zehn Gegenproben.
+  **Das Paket hat noch keinen Aufrufer, und das ist Absicht:** der Vertrag steht
+  vor dem Verbraucher, sonst entsteht er aus dem, was der erste Aufrufer zufällig
+  braucht. Sein Wächter liest die Fragenliste **aus dem ADR** statt aus einer
+  Abschrift im Test — eine zweite Liste wäre die zweite Wahrheit und driftete
+  lautlos.
 * **Was der Eigentümer tun muss, damit es weitergeht:** zwei leere Repos
   anlegen — `larszu/facility-planner` und `larszu/inventory-planner` — oder
   der App das Recht geben, das selbst zu tun. Alles danach ist nicht mehr

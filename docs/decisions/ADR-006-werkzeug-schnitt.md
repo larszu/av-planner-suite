@@ -260,24 +260,53 @@ Und auf Issue-Ebene, weil der Kommentar an den drei Issues vom 2026-09-07 an ein
 
 ### Wie der Vertrag gehalten wird
 
-**Noch gar nicht — und das ist kein Versäumnis, sondern die Reihenfolge.** Ein Wächter misst
-Dateien; hier gibt es noch keine. Er entsteht mit Schritt 2 (Paket vor Repo) und misst dann
-dasselbe wie `lagerVertrag.test.ts`: dass die Domäne **der Ordner** ist und keine Pfadliste, dass
-niemand außerhalb ein Internum importiert, dass die Tür nicht selbst rechnet (Punkt 4), und dass
-die sechs Fragen sechs bleiben, solange dieser Abschnitt sechs sagt.
+**Der Wächter misst diesen Abschnitt, nicht eine Abschrift davon.**
+`packages/facility-core/test/vertrag.test.ts` liest die Tabelle oben aus dieser Datei, zieht die
+Funktionsnamen aus den sechs Zeilen und vergleicht sie mit `VERTRAG_FRAGEN` im Code — in beide
+Richtungen. Eine siebte Funktion ohne siebte Zeile ist rot, eine gestrichene Zeile ohne
+gestrichene Funktion ebenso. Dasselbe für den einen Rückweg.
 
-Was hier stattdessen zählt: dieser Abschnitt ist der Prüfstein, gegen den der erste Code gelesen
-wird. Eine siebte Frage, die im Code auftaucht und hier nicht steht, ist ein Befund — entweder
-fehlt sie hier, oder sie gehört nicht ins Werkzeug.
+Eine zweite Liste im Test hätte genügt und wäre falsch gewesen: sie wäre die zweite Wahrheit, gegen
+die ADR-001 geschrieben ist, und sie driftet lautlos von diesem Abschnitt weg — was ein Wächter,
+der sie liest, nie bemerken könnte.
+
+Die zweite Hälfte des Wächters ist Punkt 4 (**die Tür rechnet nicht selbst**). Er hängt an der
+Stelle, an der es am meisten verlockt: `belastbarkeit()` gibt `watt: null` mit Grund zurück, wenn
+das Gebäude keine Dauerleistung angibt. `absicherungA × 230` wäre die naheliegendste Zeile des
+Pakets und die gefährlichste — der Nennstrom ist die Auslöseschwelle des Schutzschalters, nicht die
+zulässige Dauerlast, und die gerechnete Zahl sähe aus wie eine Auskunft des Hauses. Ein Test
+verlangt ausdrücklich, dass sie nirgends auftaucht.
+
+Und die Regel, die alle sechs Fragen teilen: **„nicht angegeben" ist nicht „nein".** Fehlt die
+Angabe, kommt `{ bekannt: false, grund }` zurück und keine leere Liste, `undefined` und kein
+`false`. Eine leere Geschwister-Liste liest sich als „teilt sich mit niemandem" — eine Zusicherung,
+die das Gebäude nie gegeben hat, und danach hängt das Rig auf zwei Dosen an einem RCD.
+
+Zehn Gegenproben, alle rot und zurückgebaut grün: siebte Frage im Code · gestrichene Zeile im ADR ·
+`belastbarkeit` rechnet `A × 230` · `geschaltet: p.geschaltet ?? false` · leere Liste statt
+„unbekannt" · Namensabgleich als Rückfall in `hausStrecke` · `vonRaumId` als Ort einer Strecke ·
+Mangel auf ein unbekanntes Objekt angenommen · `mangelMelden` verändert das übergebene Gebäude ·
+`hausForeign` fällt beim Rückweg weg.
 
 ### Was als Nächstes ansteht
 
-Schritt 2 und 3, in dieser Reihenfolge, sobald das Repo existiert: `larszu/facility-planner` mit
-demselben Gerüst wie die anderen Planer (Vite + React + TS, CI auf `pull_request`,
-`avplan.sourceLanguage: 'de'`, proprietäre Lizenz, `private: true`), die drei Modelle
-Schaltschrank / UP-AP-Dose / Stromkreis, dann die Aufnahme in `scripts/planner-drift.mjs`.
+**Schritt 2 ist gebaut (2026-09-09): `packages/facility-core`.** Das Paket trägt das Modell
+(Raum, Anschlusspunkt, Stromkreis, Verteilung/Schaltschrank, Steuerklinke, Hausstrecke, Mangel)
+und die sechs Fragen samt Rückweg als reine Funktionen. Es hat noch keinen Aufrufer, und das ist
+richtig so: der Vertrag steht vor dem Verbraucher, sonst entsteht er aus dem, was der erste
+Aufrufer zufällig braucht.
+
+Zwei Dinge sind im Modell ausdrücklich **nicht** dasselbe wie im Planer, obwohl sie gleich heißen:
+der `Stromkreis` des Gebäudes ist nicht der `circuit.ts` der Show (der wird am Abbautag wieder
+eingepackt), und der `Anschlusspunkt` fasst Einspeisung und Dose zu einem Typ zusammen, weil der
+Plan von beiden dieselben sechs Angaben braucht.
+
+Offen ist **Schritt 3**: `larszu/facility-planner` mit demselben Gerüst wie die anderen Planer
+(Vite + React + TS, CI auf `pull_request`, `avplan.sourceLanguage: 'de'`, proprietäre Lizenz,
+`private: true`), die Oberfläche zu den drei Modellen, dann die Aufnahme in
+`scripts/planner-drift.mjs` — und der Umzug dieses Pakets dorthin.
 
 **Blockiert, und woran:** das Anlegen des Repos scheitert an den Rechten der GitHub-App —
 `POST https://api.github.com/user/repos` antwortet `403 Resource not accessible by integration`.
-Das leere Repo muss der Eigentümer anlegen (oder der App das Recht geben); alles danach ist nicht
-blockiert.
+Das leere Repo muss der Eigentümer anlegen (oder der App das Recht geben). Schritt 2 war davon
+nicht betroffen und ist deshalb vorgezogen worden.
