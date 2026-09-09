@@ -137,32 +137,62 @@ export type Zustellung =
   | { tun: 'senden' }
   /** Der Rahmen laedt noch — spaeter noch einmal. */
   | { tun: 'warten' }
-  /** Der Sprung ist vorbei (anderes Modul): stumm fallen lassen. */
+  /** Der Sprung ist vorbei: stumm fallen lassen. */
   | { tun: 'verwerfen' }
-  /** Der Planer ist zugeklappt: sagen, dass nur ausgewaehlt wurde. */
-  | { tun: 'melden' }
 
 /**
  * Was mit einer offenen Bitte zu tun ist.
  *
- * Die vier Ausgaenge sind vier verschiedene Auskuenfte, und sie
- * zusammenzuziehen waere jedes Mal eine Luege:
+ * Die Ausgaenge sind verschiedene Auskuenfte, und sie zusammenzuziehen waere
+ * jedes Mal eine Luege:
  *
- *  - `verwerfen` ist der Nutzer, der weitergeklickt ist. Ihn jetzt noch zu
- *    behelligen waere Laerm ueber einen Sprung, den er selbst abgebrochen hat
- *    — und ZUZUSTELLEN waere schlimmer: die Bitte landete im falschen Modul.
+ *  - `verwerfen` ist der Nutzer, der weitergeklickt oder den Planer
+ *    zugeklappt hat. Ihn jetzt noch zu behelligen waere Laerm ueber einen
+ *    Sprung, den er selbst abgebrochen hat — und ZUZUSTELLEN waere schlimmer:
+ *    die Bitte landete im falschen Modul oder im Nichts.
  *  - `warten` ist der Rahmen, der noch laedt. Das ist der Normalfall direkt
  *    nach dem Modulwechsel; hier zu melden hiesse, jeden zweiten Sprung als
  *    Fehlschlag auszugeben.
- *  - `melden` ist der zugeklappte Planer. Da kommt nichts mehr nach, und die
- *    Auswahl allein ist nicht das, was der Nutzer erwartet hat. Schweigen
- *    waere hier der stumme Sprung aus E-11.
  *  - `senden` ist der Regelfall.
+ *
+ * WAS HIER NICHT ENTSCHIEDEN WIRD: der zugeklappte Planer im Augenblick des
+ * Sprungs. Das ist keine Zustellung, sondern eine Annahme — siehe `annahme`.
+ * Die Trennung ist nicht kosmetisch: dort ist der Nutzer gerade gesprungen und
+ * will hoeren, dass sein Sprung nur bis zur Vorschau reicht; hier hat er
+ * selbst etwas weggeklickt, und eine Meldung darueber waere Vorhaltung.
  */
 export const zustellung = (bitte: OffeneBitte | null, lage: Lage): Zustellung => {
   if (!bitte) return { tun: 'nichts' }
   if (bitte.modul !== lage.modul) return { tun: 'verwerfen' }
-  if (!lage.planerOffen) return { tun: 'melden' }
+  if (!lage.planerOffen) return { tun: 'verwerfen' }
   if (!lage.rahmenHoert) return { tun: 'warten' }
   return { tun: 'senden' }
+}
+
+export type Annahme =
+  /** Eine Bitte anlegen; sie wartet auf den Rahmen des Ziel-Moduls. */
+  | { tun: 'bitte' }
+  /** Der Planer ist zugeklappt: sagen, dass der Sprung nur auswaehlt. */
+  | { tun: 'melden' }
+  /** Nichts weiter zu tun: die Auswahl IST der ganze Sprung. */
+  | { tun: 'nichts' }
+
+/**
+ * Ob ein Sprung mit Ziel ueberhaupt eine Zeig-Bitte auszuloesen hat —
+ * entschieden im Augenblick des Sprungs, wo der Nutzer noch hinsieht.
+ *
+ *  - Kein Planer im Ziel-Modul (Uebersicht, Board): die Auswahl ist der ganze
+ *    Sprung. Die Shell zeigt sie in ihren eigenen Panels, und es gibt
+ *    niemanden, den man noch bitten muesste. `nichts` ist hier kein
+ *    Fehlschlag.
+ *  - Planer da, aber zugeklappt: da kommt nichts mehr nach — kein Rahmen, der
+ *    sich spaeter meldet. Der Sprung reicht bis zur Vorschau und nicht
+ *    weiter, und das SAGT die Shell. Schweigen waere der stumme Sprung aus
+ *    E-11: der Nutzer suchte in einem Planer nach etwas, das dort nie ankam.
+ *  - Sonst: Bitte anlegen und auf den Rahmen warten.
+ */
+export const annahme = (lage: { hatPlaner: boolean; gemountet: boolean }): Annahme => {
+  if (!lage.hatPlaner) return { tun: 'nichts' }
+  if (!lage.gemountet) return { tun: 'melden' }
+  return { tun: 'bitte' }
 }

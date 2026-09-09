@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { knotenFuer, objektAmKabel, querziel, zustellung } from '../src/shell/crossLink'
+import { annahme, knotenFuer, objektAmKabel, querziel, zustellung } from '../src/shell/crossLink'
 import type { SuiteProject } from '../src/data/project'
 import { PROJECT } from '../src/data/project'
 
@@ -122,18 +122,39 @@ describe('Die offene Bitte kommt im richtigen Moment im richtigen Modul an', () 
     ).toEqual({ tun: 'verwerfen' })
   })
 
-  it('meldet den zugeklappten Planer, statt still zu bleiben', () => {
-    // Da kommt nichts mehr nach — kein Rahmen, der sich spaeter meldet.
-    // Schweigen waere hier der stumme Sprung aus E-11.
+  it('verwirft, wenn der Nutzer den Planer inzwischen zugeklappt hat', () => {
+    // Sein eigener Griff, nicht ein Fehlschlag des Sprungs. Eine Meldung
+    // darueber waere Vorhaltung — und zuzustellen gaebe es nichts mehr.
     expect(
       zustellung(bitte, { modul: 'signal', planerOffen: false, rahmenHoert: false }),
-    ).toEqual({ tun: 'melden' })
+    ).toEqual({ tun: 'verwerfen' })
   })
 
   it('tut nichts, wenn nichts offen ist', () => {
     expect(
       zustellung(null, { modul: 'signal', planerOffen: true, rahmenHoert: true }),
     ).toEqual({ tun: 'nichts' })
+  })
+})
+
+describe('Der zugeklappte Planer wird beim SPRUNG beantwortet, nicht spaeter', () => {
+  it('meldet, dass der Sprung nur bis zur Vorschau reicht', () => {
+    // Da kommt nichts mehr nach — kein Rahmen, der sich spaeter meldet.
+    // Schweigen waere hier der stumme Sprung aus E-11: der Nutzer suchte in
+    // einem Planer nach etwas, das dort nie ankam.
+    expect(annahme({ hatPlaner: true, gemountet: false })).toEqual({ tun: 'melden' })
+  })
+
+  it('legt eine Bitte an, wenn ein Planer offen ist', () => {
+    expect(annahme({ hatPlaner: true, gemountet: true })).toEqual({ tun: 'bitte' })
+  })
+
+  it('schweigt, wo es gar keinen Planer gibt', () => {
+    // Uebersicht und Board: die Auswahl IST der ganze Sprung, die Shell zeigt
+    // sie in ihren eigenen Panels. Eine Meldung waere hier Laerm ueber einen
+    // Sprung, der gelungen ist.
+    expect(annahme({ hatPlaner: false, gemountet: false })).toEqual({ tun: 'nichts' })
+    expect(annahme({ hatPlaner: false, gemountet: true })).toEqual({ tun: 'nichts' })
   })
 })
 
@@ -195,6 +216,18 @@ describe('Die Verdrahtung', () => {
     const embed = lies('../../packages/ui/src/embed.ts')
     expect(embed).toContain('export function postNavigateToShell')
     expect(lies('../../packages/ui/src/index.ts')).toContain('postNavigateToShell')
+  })
+
+  it('die Annahme faellt im Sprung, die Zustellung im Effekt', () => {
+    const app = lies('src/App.tsx')
+    const sprung = app.slice(app.indexOf('const goToModule = useCallback'))
+    expect(sprung.slice(0, 1400)).toMatch(/annahme\(\{ hatPlaner:/)
+    expect(sprung.slice(0, 1400)).toContain('shell.reveal.plannerClosed')
+    // Der Zustell-Effekt vermerkt in einem Ref und ruft KEIN setState: sonst
+    // loeste jede Zustellung eine zweite Renderrunde aus.
+    const effekt = app.slice(app.indexOf('const was = zustellung('))
+    expect(effekt.slice(0, 900)).toContain('erledigt.current = bitte')
+    expect(effekt.slice(0, 900)).not.toMatch(/setOffeneBitte|pushToast/)
   })
 
   it('die Knoepfe im Eigenschaften-Panel nehmen ein Ziel mit', () => {
