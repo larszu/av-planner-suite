@@ -27,11 +27,12 @@ type TFn = (key: string, de: string) => string;
 const groupsFor = (t: TFn): Group[] => [
   [
     { id: 'select', icon: 'select', label: t('tool.select', 'Select'), hint: t('tool.select.hint', 'Select & move — V') },
-    { id: 'pan', icon: 'pan', label: t('tool.pan', 'Pan'), hint: t('tool.pan.hint', 'Pan the view — space/H') },
+    { id: 'pan', icon: 'pan', label: t('tool.pan', 'Pan'), hint: t('tool.pan.hint', 'Drag on empty canvas already pans — this also pans over objects') },
+    { id: 'marquee', icon: 'marquee', label: t('tool.marquee', 'Marquee'), hint: t('tool.marquee.hint', 'Frame-select without Shift — for touch devices') },
   ],
   [
     { id: 'person', icon: 'person', label: t('tool.person', 'Person'), hint: t('tool.person.hint', 'Place a person') },
-    { id: 'stage', icon: 'podium', label: t('tool.stage', 'Podest'), hint: t('tool.stage.hint', 'Draw a rectangular riser') },
+    { id: 'stage', icon: 'podium', label: t('tool.stage', 'Riser'), hint: t('tool.stage.hint', 'Draw a rectangular riser') },
     { id: 'stagepoly', icon: 'stage', label: t('tool.stagepoly', 'Stage (polygon)'), hint: t('tool.stagepoly.hint', 'Draw a stage as a polygon') },
     { id: 'truss', icon: 'truss', label: t('tool.truss', 'Truss'), hint: t('tool.truss.hint', 'Drag a truss') },
     { id: 'wall', icon: 'wall', label: t('tool.wall', 'Wall'), hint: t('tool.wall.hint', 'Draw a wall path') },

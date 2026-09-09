@@ -60,27 +60,11 @@ interface Props {
   onViewChange?: (pixelsPerMeter: number) => void;
 }
 
+const GRID_COLOR = '#2a2a3c';
+const GRID_MAJOR_COLOR = '#3a3a50';
+const RULER_BG = '#1e1e30';
+const RULER_TEXT = '#888';
 const RULER_SIZE = 28;
-
-/**
- * Canvas-Flächenfarben je Theme. Die Semantik-Farben (Leuchten, Beams, Wände …)
- * bleiben fest; nur Hintergrund, Raster, Lineale und neutrale Texte folgen dem
- * Shell-Theme (data-theme am <html>). Der Draw-Loop liest das pro Frame.
- */
-function canvasPalette() {
-  const light = typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light';
-  return light
-    ? {
-        bg: '#f4f6fb', gridMinor: '#dce2ec', gridMajor: '#c7cfdd',
-        rulerBg: '#e9edf4', rulerCorner: '#dfe4ec', rulerText: '#6b7688',
-        stroke: '#c2cbd9', faint: '#9aa4b4', text: '#2b3444', text2: '#5a6577',
-      }
-    : {
-        bg: '#1a1a2e', gridMinor: '#2a2a3c', gridMajor: '#3a3a50',
-        rulerBg: '#1e1e30', rulerCorner: '#15152a', rulerText: '#888',
-        stroke: '#444', faint: '#666', text: '#ccc', text2: '#999',
-      };
-}
 
 // Shortest distance from point (px,py) to segment (ax,ay)-(bx,by).
 function distToSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
@@ -159,6 +143,16 @@ const PlanCanvas: React.FC<Props> = ({
     planOrigY?: number;
     additive?: boolean;
     pendingSelectId?: string;
+    /**
+     * Ein Schub, der auf leerer Flaeche im Auswahl-Werkzeug begann.
+     *
+     * Er braucht das Flag, weil ein Klick ohne Bewegung dort weiterhin die
+     * Auswahl aufheben muss — vorher erledigte das der Rahmen-Zweig, der
+     * genau dafuer eine Mindest-Strecke von 0,15 m pruefte. Das Hand-Werkzeug,
+     * die mittlere Maustaste und die Leertaste setzen es NICHT: wer bewusst
+     * schiebt, will seine Auswahl behalten.
+     */
+    deselectOnClick?: boolean;
   } | null>(null);
   const measureEndRef = useRef<{ x: number; y: number } | null>(null);
   const marqueeEndRef = useRef<{ x: number; y: number } | null>(null);
@@ -192,16 +186,15 @@ const PlanCanvas: React.FC<Props> = ({
 
   const drawRulers = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number) => {
     const v = viewRef.current;
-    const pal = canvasPalette();
-    ctx.fillStyle = pal.rulerBg;
+    ctx.fillStyle = RULER_BG;
     ctx.fillRect(0, 0, w, RULER_SIZE);
     ctx.fillRect(0, 0, RULER_SIZE, h);
-    ctx.fillStyle = pal.rulerCorner;
+    ctx.fillStyle = '#15152a';
     ctx.fillRect(0, 0, RULER_SIZE, RULER_SIZE);
 
     ctx.save();
     ctx.font = '9px monospace';
-    ctx.fillStyle = pal.rulerText;
+    ctx.fillStyle = RULER_TEXT;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
@@ -221,7 +214,7 @@ const PlanCanvas: React.FC<Props> = ({
     for (let xm = startX; xm <= right; xm += tickM) {
       const sx = v.offsetX + xm * v.scale;
       if (sx < RULER_SIZE) continue;
-      ctx.strokeStyle = pal.stroke;
+      ctx.strokeStyle = '#444';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(sx, RULER_SIZE - 6);
@@ -234,7 +227,7 @@ const PlanCanvas: React.FC<Props> = ({
     for (let ym = startY; ym <= bottom; ym += tickM) {
       const sy = v.offsetY + ym * v.scale;
       if (sy < RULER_SIZE) continue;
-      ctx.strokeStyle = pal.stroke;
+      ctx.strokeStyle = '#444';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(RULER_SIZE - 6, sy);
@@ -247,7 +240,7 @@ const PlanCanvas: React.FC<Props> = ({
       ctx.restore();
     }
 
-    ctx.strokeStyle = pal.gridMajor;
+    ctx.strokeStyle = '#3a3a50';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(RULER_SIZE, 0);
@@ -264,7 +257,6 @@ const PlanCanvas: React.FC<Props> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const v = viewRef.current;
-    const pal = canvasPalette();
     const w = canvas.width;
     const h = canvas.height;
     // Report the draw scale (backing px per metre) so the plot export can size
@@ -275,7 +267,7 @@ const PlanCanvas: React.FC<Props> = ({
     }
 
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = pal.bg;
+    ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(0, 0, w, h);
 
     ctx.save();
@@ -297,17 +289,17 @@ const PlanCanvas: React.FC<Props> = ({
     const startY = Math.floor(top / gridStep) * gridStep;
     ctx.lineWidth = 1 / v.scale;
     for (let x = startX; x <= right; x += gridStep) {
-      ctx.strokeStyle = x % 5 === 0 ? pal.gridMajor : pal.gridMinor;
+      ctx.strokeStyle = x % 5 === 0 ? GRID_MAJOR_COLOR : GRID_COLOR;
       ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
     }
     for (let y = startY; y <= bottom; y += gridStep) {
-      ctx.strokeStyle = y % 5 === 0 ? pal.gridMajor : pal.gridMinor;
+      ctx.strokeStyle = y % 5 === 0 ? GRID_MAJOR_COLOR : GRID_COLOR;
       ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke();
     }
 
     // Axes
     ctx.lineWidth = 2 / v.scale;
-    ctx.strokeStyle = pal.stroke;
+    ctx.strokeStyle = '#555';
     ctx.beginPath();
     ctx.moveTo(0, top); ctx.lineTo(0, bottom);
     ctx.moveTo(left, 0); ctx.lineTo(right, 0);
@@ -355,7 +347,7 @@ const PlanCanvas: React.FC<Props> = ({
         if (isSelP) { ctx.fillStyle = '#ffcc33'; for (const p of pts) { ctx.beginPath(); ctx.arc(p.x, p.y, 0.1, 0, Math.PI * 2); ctx.fill(); } }
         const cxp = pts.reduce((s, p) => s + p.x, 0) / pts.length;
         const cyp = pts.reduce((s, p) => s + p.y, 0) / pts.length;
-        ctx.fillStyle = pal.text;
+        ctx.fillStyle = '#ccc';
         ctx.font = `${10 / v.scale}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.fillText(`${se.label ? se.label + ' · ' : ''}Bühne h=${se.height}m`, cxp, cyp);
@@ -371,7 +363,7 @@ const PlanCanvas: React.FC<Props> = ({
       ctx.lineWidth = 2 / v.scale;
       ctx.fillRect(-se.width / 2, -se.depth / 2, se.width, se.depth);
       ctx.strokeRect(-se.width / 2, -se.depth / 2, se.width, se.depth);
-      ctx.fillStyle = pal.text;
+      ctx.fillStyle = '#ccc';
       ctx.font = `${10 / v.scale}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.fillText(`${se.width}×${se.depth}m h=${se.height}m`, 0, 4 / v.scale);
@@ -438,7 +430,7 @@ const PlanCanvas: React.FC<Props> = ({
       if (isSel) {
         const hs = 7 / v.scale;
         ctx.fillStyle = '#ffcc33';
-        ctx.strokeStyle = pal.bg;
+        ctx.strokeStyle = '#1a1a2e';
         ctx.lineWidth = 1 / v.scale;
         for (const [lx, ly] of [[-se.width / 2, -se.depth / 2], [se.width / 2, -se.depth / 2], [se.width / 2, se.depth / 2], [-se.width / 2, se.depth / 2]]) {
           ctx.fillRect(lx - hs / 2, ly - hs / 2, hs, hs);
@@ -582,7 +574,7 @@ const PlanCanvas: React.FC<Props> = ({
         ctx.strokeRect(rx, ry, rw, rh);
         ctx.setLineDash([]);
         if (shape.label) {
-          ctx.fillStyle = pal.text;
+          ctx.fillStyle = '#ccc';
           ctx.font = `${12 / v.scale}px sans-serif`;
           ctx.fillText(shape.label, rx + 4 / v.scale, ry + 14 / v.scale);
         }
@@ -599,7 +591,7 @@ const PlanCanvas: React.FC<Props> = ({
         if (shape.label) {
           const mx = (shape.points[0].x + shape.points[1].x) / 2;
           const my = (shape.points[0].y + shape.points[1].y) / 2;
-          ctx.fillStyle = shape.type === 'measure' ? '#ff9800' : pal.text;
+          ctx.fillStyle = shape.type === 'measure' ? '#ff9800' : '#ccc';
           ctx.font = `bold ${13 / v.scale}px sans-serif`;
           ctx.textAlign = 'center';
           ctx.fillText(shape.label, mx, my - 8 / v.scale);
@@ -687,7 +679,7 @@ const PlanCanvas: React.FC<Props> = ({
       ctx.beginPath(); ctx.arc(p.x, p.y, r * 0.4, 0, Math.PI * 2);
       ctx.fillStyle = isSel ? '#ffcc33' : '#ff9633';
       ctx.fill();
-      ctx.fillStyle = pal.text;
+      ctx.fillStyle = '#eee';
       ctx.font = `${11 / v.scale}px sans-serif`;
       ctx.textAlign = 'center';
       const poseTag = p.pose === 'sitting' ? ' (sitzt)' : '';
@@ -833,7 +825,7 @@ const PlanCanvas: React.FC<Props> = ({
           ctx.stroke();
         } else {
           const cs = 0.12;
-          ctx.strokeStyle = pal.faint;
+          ctx.strokeStyle = '#666';
           ctx.lineWidth = 1.5 / v.scale;
           ctx.beginPath();
           ctx.moveTo(f.aimX - cs, f.aimY); ctx.lineTo(f.aimX + cs, f.aimY);
@@ -863,11 +855,11 @@ const PlanCanvas: React.FC<Props> = ({
       }
 
       // Labels
-      ctx.fillStyle = pal.text;
+      ctx.fillStyle = '#ddd';
       ctx.font = `${10 / v.scale}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.fillText(f.fixture.name, f.x, f.y - rad - 6 / v.scale);
-      ctx.fillStyle = pal.text2;
+      ctx.fillStyle = '#999';
       ctx.font = `${9 / v.scale}px sans-serif`;
       ctx.fillText(`h=${f.mountingHeight}m`, f.x, f.y + rad + 12 / v.scale);
       // Channel / DMX patch badge
@@ -1091,7 +1083,7 @@ const PlanCanvas: React.FC<Props> = ({
     ctx.restore(); ctx.restore();
     drawRulers(ctx, w, h);
 
-    ctx.fillStyle = pal.text2;
+    ctx.fillStyle = '#888';
     ctx.font = '11px monospace';
     ctx.fillText(`1m = ${v.scale.toFixed(0)}px | Zoom: ${((v.scale / 40) * 100).toFixed(0)}%`, RULER_SIZE + 10, h - 10);
   }, [fixtures, shapes, persons, stageElements, trusses, walls, ceilings, floorPlan, layers, cameras, selectedIds, showHeatMap, heatMapScale, heatMapTarget, showFocusNotes, planMode, activeTool, screenToWorld, drawRulers, onViewChange]);
@@ -1270,6 +1262,16 @@ const PlanCanvas: React.FC<Props> = ({
       draw();
       return;
     }
+    if (activeTool === 'marquee') {
+      // Das Werkzeug fuer die Finger. Seit ein Zug auf leerer Flaeche schiebt,
+      // braucht der Rahmen Shift — und die gibt es auf einem Tablet nicht.
+      // Ohne diesen Zweig waere die Rahmen-Auswahl fuer Touch-Bedienung mit
+      // der Umstellung verschwunden, und zwar unbemerkt.
+      marqueeEndRef.current = { x: wx, y: wy };
+      dragRef.current = { type: 'marquee', startScreenX: sx, startScreenY: sy, startWorldX: wx, startWorldY: wy,
+        additive: e.shiftKey || e.ctrlKey || e.metaKey };
+      return;
+    }
     if (activeTool === 'measure') {
       measureEndRef.current = { x: wx, y: wy };
       dragRef.current = { type: 'draw-measure', startScreenX: sx, startScreenY: sy, startWorldX: wx, startWorldY: wy };
@@ -1285,7 +1287,12 @@ const PlanCanvas: React.FC<Props> = ({
     }
 
     if (activeTool === 'select') {
-      const ctrl = e.ctrlKey || e.metaKey;
+      // Additive Auswahl auf Shift UND Ctrl/Meta — dieselbe Belegung wie im
+      // cable-planner (`multiSelectionKeyCode={['Shift','Control','Meta']}`).
+      // Dort steht als Begruendung, warum Shift dazugehoert: sonst wechselt
+      // man staendig den Modifier zwischen "Rahmen ziehen" und "noch eines
+      // dazu waehlen".
+      const ctrl = e.shiftKey || e.ctrlKey || e.metaKey;
       // A layer that is hidden or locked is not pickable.
       const pickable = (k: keyof Layers) => layers[k].visible && !layers[k].locked;
       // Check aim-point handles first (only for selected fixture)
@@ -1457,9 +1464,33 @@ const PlanCanvas: React.FC<Props> = ({
           return;
         }
       }
-      // Empty space → start a box / marquee selection
-      marqueeEndRef.current = { x: wx, y: wy };
-      dragRef.current = { type: 'marquee', startScreenX: sx, startScreenY: sy, startWorldX: wx, startWorldY: wy, additive: ctrl };
+      // ── Leere Flaeche ────────────────────────────────────────────────
+      //
+      // HIER LAG DER UNTERSCHIED, den der Nutzer gemeldet hat: "in light
+      // planner gibt es verschieben und auswahl. bei cable planner und
+      // multicam planner ist die canvas steuerung intuitiver."
+      //
+      // Vorher zog ein einfacher Zug auf leerer Flaeche einen AUSWAHLRAHMEN.
+      // Wer die Zeichnung verschieben wollte, musste erst das Hand-Werkzeug
+      // waehlen oder die Leertaste halten — zwei Zustaende fuer das, was in
+      // den beiden anderen Planern eine Geste ist. Der cable-planner setzt
+      // `panOnDrag` auf `true` und legt den Rahmen auf Shift
+      // (`selectionKeyCode='Shift'`); genau diese Belegung steht jetzt hier.
+      //
+      // Warum herum und nicht andersherum: Schieben ist die Geste, die man
+      // in einem Plan hundertmal macht, Rahmenziehen ein paar Mal. Die
+      // haeufigere gehoert auf die Geste ohne Taste.
+      //
+      // Das Hand-Werkzeug, die mittlere Maustaste und die Leertaste bleiben
+      // unveraendert — wer sie gewohnt ist, merkt nichts.
+      if (e.shiftKey) {
+        marqueeEndRef.current = { x: wx, y: wy };
+        dragRef.current = { type: 'marquee', startScreenX: sx, startScreenY: sy, startWorldX: wx, startWorldY: wy,
+          additive: e.ctrlKey || e.metaKey };
+        return;
+      }
+      dragRef.current = { type: 'pan', startScreenX: sx, startScreenY: sy, startWorldX: wx, startWorldY: wy,
+        origOffsetX: viewRef.current.offsetX, origOffsetY: viewRef.current.offsetY, deselectOnClick: true };
     }
   };
 
@@ -1634,6 +1665,13 @@ const PlanCanvas: React.FC<Props> = ({
         if (w > 0.3 && h > 0.3) onAddStageElement(x0, y0, w, h);
         else onAddStageElement(d.startWorldX, d.startWorldY);
         measureEndRef.current = null;
+      }
+      // Klick auf leere Flaeche, ohne zu ziehen → Auswahl aufheben. Dieselbe
+      // Schwelle (0,15 m) wie beim Rahmen, damit ein Zittern der Hand nicht
+      // als Schub durchgeht und die Auswahl stehen bleibt.
+      if (d.type === 'pan' && d.deselectOnClick
+        && Math.hypot(ewx - d.startWorldX, ewy - d.startWorldY) < 0.15) {
+        onSelect(null);
       }
       if (d.type === 'marquee') {
         const x0 = Math.min(d.startWorldX, ewx), x1 = Math.max(d.startWorldX, ewx);
