@@ -68,6 +68,13 @@ jobs:
       - name: Stand-Stempel rechnet in allen drei Planern gleich
         run: npm run stamp:parity
 
+      # ADR-006: die sechs Fragen an das Gebaeude stehen im ADR UND im Code des
+      # Gebaeude-Werkzeugs. Nur hier liegen beide im selben Baum, also kann nur
+      # hier jemand nachsehen, ob sie noch dieselben sechs sind. Eine Abschrift
+      # der Namen im Werkzeug waere die zweite Wahrheit (ADR-001).
+      - name: Vertrag „Festinstallation" — ADR gegen Code
+        run: npm run vertrag:parity
+
       - name: Vendorte Features haben einen Bedienweg
         run: npm run features:reachable
 

@@ -17,6 +17,7 @@ const planners = [
   { key: 'cameras', src: join(appsDir, 'multicam-planner', 'dist') },
   { key: 'licht', src: join(appsDir, 'light-planner', 'dist') },
   { key: 'lager', src: join(appsDir, 'inventory-planner', 'dist') },
+  { key: 'gebaeude', src: join(appsDir, 'larszu-facility-planner', 'dist') },
 ]
 
 const outRoot = join(shellDir, 'planners')

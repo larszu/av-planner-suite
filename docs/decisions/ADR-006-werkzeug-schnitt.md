@@ -319,12 +319,27 @@ der `Stromkreis` des Gebäudes ist nicht der `circuit.ts` der Show (der wird am 
 eingepackt), und der `Anschlusspunkt` fasst Einspeisung und Dose zu einem Typ zusammen, weil der
 Plan von beiden dieselben sechs Angaben braucht.
 
-Offen ist **Schritt 3**: `larszu/facility-planner` mit demselben Gerüst wie die anderen Planer
-(Vite + React + TS, CI auf `pull_request`, `avplan.sourceLanguage: 'de'`, proprietäre Lizenz,
-`private: true`), die Oberfläche zu den drei Modellen, dann die Aufnahme in
-`scripts/planner-drift.mjs` — und der Umzug dieses Pakets dorthin.
+**Schritt 3 ist ebenfalls gegangen (2026-09-09): `larszu/larszu-facility-planner`.** Der Eigentümer
+hat das Repo angelegt; `packages/facility-core` ist dorthin umgezogen und in der Suite gelöscht —
+ein Paket und ein Repo mit demselben Inhalt wären zwei Wahrheiten gewesen. Dazu gekommen sind ein
+Speicher und vier Sichten: Anschlusspunkte, Verteilung, Steuerung, Mängel.
 
-**Blockiert, und woran:** das Anlegen des Repos scheitert an den Rechten der GitHub-App —
-`POST https://api.github.com/user/repos` antwortet `403 Resource not accessible by integration`.
-Das leere Repo muss der Eigentümer anlegen (oder der App das Recht geben). Schritt 2 war davon
-nicht betroffen und ist deshalb vorgezogen worden.
+Die Suite bindet es ein wie die anderen: vendorte Kopie unter `apps/larszu-facility-planner`,
+Modul „Gebäude" in der Rail (Port 4185, `strictPort`), Drift-Guard, Lizenz-Guard,
+Dev-Port-Guard.
+
+**Der ADR-Abgleich ist mit umgezogen, aber nicht ins Werkzeug.** Er liegt jetzt als
+`scripts/facility-vertrag-parity.mjs` in der Suite und vergleicht diese Tabelle mit
+`apps/larszu-facility-planner/src/domain/vertrag.ts`. Der Grund ist derselbe wie vorher: nur hier
+liegen ADR und Code im selben Baum. Eine Abschrift der sechs Namen im Werkzeug wäre die zweite
+Wahrheit (ADR-001) — sie driftete von dieser Tabelle weg, und der Test bliebe grün.
+
+**Auf Issue-Ebene abgeschlossen:** `cable#667` ist zu
+[`larszu-facility-planner#2`](https://github.com/larszu/larszu-facility-planner/issues/2) umgezogen
+und im Planer geschlossen. `cable#665` **bleibt offen und teilt sich**: die Gebäude-Hälfte steht als
+[`#1`](https://github.com/larszu/larszu-facility-planner/issues/1) drüben, die Show-Hälfte
+(Mehrfachsteckdose, Verteiler, Patchblende) bleibt im Planer. `cable#666` zieht nicht um.
+
+**Was noch nicht hier ist:** Grundriss, Prüfprotokolle nach Norm, Wartungshistorie — und die
+Verbindung zum Show-Plan. Der `cable-planner` fragt den Vertrag noch gar nicht ab; bis dahin ist das
+Gebäude-Werkzeug für sich benutzbar, aber nicht verbunden.

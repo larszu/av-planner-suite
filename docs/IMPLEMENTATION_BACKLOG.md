@@ -313,14 +313,17 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
   braucht. Sein Wächter liest die Fragenliste **aus dem ADR** statt aus einer
   Abschrift im Test — eine zweite Liste wäre die zweite Wahrheit und driftete
   lautlos.
-* **Halb erledigt seit 2026-09-09:** der Eigentümer hat
-  **`larszu/inventory-planner` angelegt**, und E-27 ist damit gebaut — Gerüst,
-  Domäne, eigene Oberfläche, CI, und die Einbindung in die Suite. Offen bleibt
-  **`larszu/facility-planner`** (E-26); dort steht der Vertrag und das Paket,
-  es fehlt nur das leere Repo.
-* **Was der Eigentümer tun muss, damit es weitergeht:** ein leeres Repo
-  anlegen — `larszu/facility-planner` — oder
-  der App das Recht geben, das selbst zu tun. Alles danach ist nicht mehr
+* **Erledigt am 2026-09-09.** Der Eigentümer hat beide Repos angelegt, und
+  beide Werkzeuge stehen: `larszu/inventory-planner` (E-27) und
+  `larszu/larszu-facility-planner` (E-26) — je Gerüst, Domäne, eigene
+  Oberfläche, CI, und die Einbindung in die Suite als Modul „Lager" (4184) und
+  „Gebäude" (4185).
+  **Der Name des zweiten Repos ist `larszu-facility-planner`**, nicht
+  `facility-planner`, wie diese Zeile bis dahin sagte. Das steht hier, weil ein
+  falscher Repo-Name in einem Backlog jemanden auf ein Repo schicken lässt, das
+  es nicht gibt — und er dann annimmt, es sei nie angelegt worden.
+* **Was der Eigentümer noch tun muss:** nichts. Der 403 spielt keine Rolle
+  mehr, weil keine weiteren Repos anzulegen sind. Alles danach ist nicht mehr
   blockiert: Gerüst wie bei den anderen Planern (Vite + React + TS, CI auf
   `pull_request`, `avplan.sourceLanguage`, proprietäre Lizenz,
   `private: true`), Aufnahme in `scripts/planner-drift.mjs`, und für das Lager

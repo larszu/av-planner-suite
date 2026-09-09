@@ -58,5 +58,20 @@
     "upstreamSha": "34e9e9458185",
     "version": "0.1.0",
     "upstreamVersion": "0.1.0"
+  },
+  "larszu-facility-planner": {
+    "only-upstream": 0,
+    "only-suite": 0,
+    "two-way": 0,
+    "upstream-ahead": 0,
+    "suite-ahead": 0,
+    "expected-overlay": 0,
+    "dead-upstream": 0,
+    "drift": 0,
+    "total": 0,
+    "missingUpstream": false,
+    "upstreamSha": "21eedc3f66bb",
+    "version": "0.1.0",
+    "upstreamVersion": "0.1.0"
   }
 }
