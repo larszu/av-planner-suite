@@ -2275,7 +2275,15 @@ belegbar, dort sind sie erprobt.
 
 ### B-45 · Stromplanung, die diesen Namen verdient
 
-* **Status:** Kern GEBAUT — `cable#782`; die Schalter-Bauarten offen. **Wunsch des Eigentümers, 2026-09-08:** „Zudem fehlen
+* **Status:** **GEBAUT — `cable#782` (Kern) und `cable#788` (Schalter-Bauarten).**
+  Der Eintrag stand danach noch auf „die Schalter-Bauarten offen" und war
+  damit falsch (nachgemessen 2026-09-09): `types/circuit.ts:125–129` führt
+  `contactor` (Schütz), `relay`, `button` (Taster), `emergencyStop`, `rcd`
+  (FI) und `mcb` (LS) als eigene Bauarten in derselben
+  `satisfies Record<CircuitKind, …>`-Tabelle. Sie kamen in derselben Runde
+  wie B-52 Teil 2 heraus, weil beide dieselbe Tabelle anfassen — und der
+  Eintrag hier ist beim Nachtragen liegengeblieben.
+  **Wunsch des Eigentümers, 2026-09-08:** „Zudem fehlen
   noch die Möglichkeiten für ordentliche Stromplanung. Powerlock Kabel zieht
   man einzeln. Die müssen auch die Adern Farben bekommen. Und auch
   Lichtschalter und so müssen integrierbar sein."
@@ -2335,10 +2343,16 @@ belegbar, dort sind sie erprobt.
     eine ohne wird beim Laden verworfen (**Invariante 22**).
   * Die Farbe steht auf der **Ziehliste** („L1 (braun)"), nicht nur im Plan.
   * Die Powerlock-Kodierung ist Freitext — sie steht im Herstellerdokument.
-* **Was offen bleibt:** die Fortsetzung im Schaltbild-Rechner — Schütz/Relais,
+* ~~**Was offen bleibt:** die Fortsetzung im Schaltbild-Rechner — Schütz/Relais,
   Taster mit Stromstossschalter, Not-Aus, Fehlerstrom- und
-  Leitungsschutzschalter als eigene Bauarten.
-* **Aufwand:** gross — der Kern erledigt.
+  Leitungsschutzschalter als eigene Bauarten.~~ **Erledigt (`cable#788`).**
+  Die sechs teilen sich EINE Rechnung — elektrisch sind sie dasselbe wie
+  `switch`, sechs eigene Zeilen in `INNERE_VERBINDUNG` wären sechsmal
+  dieselbe Rechnung. Eigene Bauarten sind sie für **Beschriftung und
+  Ruhestellung**: Not-Aus, FI und LS sind im Ruhezustand **geschlossen**, und
+  genau daran fiel auf, dass drei Stellen unabhängig voneinander ausrechneten,
+  welche Stellung ohne Zutun gilt (Details in B-52 Teil 2).
+* **Aufwand:** gross — erledigt.
 
 ### B-46 · Steck- und Kabeladapter als eigene Objekte
 
