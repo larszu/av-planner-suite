@@ -6,6 +6,12 @@ export type ModuleId =
   | 'signal'
   | 'cameras'
   | 'licht'
+  // Die beiden ausgelagerten Werkzeuge (ADR-006 Schritt 3, E-26/E-27). Sie
+  // standen in MODULES, aber nicht in dieser Union — `tsc -b` hat es lokal
+  // aus einem alten .tsbuildinfo heraus nicht neu geprueft und erst in CI
+  // gemeldet. Wer hier ein Modul ergaenzt, ergaenzt BEIDE Stellen.
+  | 'lager'
+  | 'gebaeude'
   | 'board'
   | RuntimeId
 
