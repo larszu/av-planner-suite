@@ -2,15 +2,15 @@
   "cable-planner": {
     "only-upstream": 0,
     "only-suite": 5,
-    "two-way": 16,
+    "two-way": 15,
     "upstream-ahead": 0,
-    "suite-ahead": 8,
+    "suite-ahead": 9,
     "expected-overlay": 38,
     "dead-upstream": 0,
     "drift": 29,
     "total": 67,
     "missingUpstream": false,
-    "upstreamSha": "95941e9e3c60",
+    "upstreamSha": "dcc26bda8979",
     "version": "9.0.1",
     "upstreamVersion": "9.0.1"
   },
