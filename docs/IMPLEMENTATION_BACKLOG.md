@@ -809,8 +809,38 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
   (`KL Panel XL`, `PAR 64 CP62` fehlen der Bibliothek) — und die Shell zeigt
   danach **3 Kameras** und **4 Fixtures** statt weiter 4 und 6.
 * **Was offen bleibt:** die Shell führt weiter ein eigenes, einfacheres Modell.
-  Der Seed trägt nur, wofür sie eine Quelle hat; Ports, Datenblatt,
-  DMX-Universum, Rigging-Höhe bleiben beim Planer. Ein gemeinsames
+  Der Seed trägt nur, wofür sie eine Quelle hat; Ports und Datenblatt bleiben
+  beim Planer. ~~DMX-Universum~~ (trägt der Seed als `SeedFixture.universe`),
+  ~~Rigging-Höhe~~ **seit 2026-09-09 ebenfalls** (`suite#201`) — und dabei kam
+  ein Defekt heraus, der schwerer wog als das fehlende Feld:
+
+  **Ein erneuter Seed setzte im Licht-Planer Hänge-Höhe und Ausrichtung
+  zurück.** `connectShellSeed` wendet jede höhere Revision an, und die Shell
+  zählt sie bei Projektwechsel, Undo/Redo und Kopf-Änderung hoch;
+  `seedToFixtures` baute daraufhin jeden Scheinwerfer NEU — Höhe aus der
+  UI-Voreinstellung, Ziel auf der eigenen Stelle. Wer zwanzig Lampen auf die
+  Bühne gerichtet und auf 8 m gehängt hatte, verlor beides, sobald jemand in
+  der Shell den Projektnamen änderte. Still, ohne Meldung, ohne Undo in dieser
+  App.
+
+  Die Regel lautet jetzt: **der Seed setzt, was er nennt; was er nicht nennt,
+  behält ein bereits platzierter Scheinwerfer.** Nur ein wirklich neuer bekommt
+  die Voreinstellung — dort ist sie der Anfangswert einer Platzierung und keine
+  Aussage über diese Show. Ein Ziel, das auf der Lampe selbst lag (also nie
+  ausgerichtet wurde), wandert mit, wenn der Seed sie verschiebt; ein echt
+  gesetztes bleibt liegen.
+
+  `SeedFixture.rigHeightM` und `Fixture.rigHeightM` sind beide **optional**:
+  eine fehlende Höhe heißt „nicht angegeben" und nicht „hängt am Boden" — eine
+  0 dort ließe die Stückliste die Kabel zum Scheinwerfer zu kurz rechnen. Die
+  Shell zeigt sie im Eigenschaften-Panel nur, wenn sie gemeldet wurde.
+
+  **Gegengeprobt (10):** Höhe wieder aus der Vorgabe (der alte Defekt) ·
+  Seed-Höhe ignoriert · Ausrichtung zurückgesetzt · Ziel bleibt liegen, auch
+  wenn es nie gesetzt war · Körperdrehung zurückgesetzt · Höhe fährt nicht
+  zurück · Seed-Position ignoriert · und drei auf der Shell-Seite (erfindet
+  eine Höhe, verliert sie im Round-Trip, verliert sie durch einen Patch, der
+  sie nicht nennt). Ein gemeinsames
   Datenmodell ist das **nicht** — siehe B-39 für die Liste dessen, was der
   Fluss noch nicht abdeckt.
 * **Aufwand:** ~~klein (kennzeichnen)~~ verbunden; groß (zusammenführen) bleibt

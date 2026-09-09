@@ -55,7 +55,7 @@ export function useShellSeed(args: ShellSeedArgs): void {
 
         // Ein leerer Seed darf einen gefuellten Plan nicht loeschen.
         if (seed.fixtures.length === 0 && a.fixtures.length > 0) return false;
-        const { fixtures, ausgelassen } = seedToFixtures(seed, a.haengehoehe, a.eigene);
+        const { fixtures, ausgelassen } = seedToFixtures(seed, a.haengehoehe, a.eigene, a.fixtures);
         for (const x of ausgelassen) {
           console.warn(`[shellSeed] Scheinwerfer „${x.name}" nicht platziert — ${x.grund}`);
         }
