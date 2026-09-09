@@ -1993,7 +1993,16 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
     `offen` hängt jetzt an `portsUnknown` und nicht am Katalog-Treffer, damit
     Regel 2 (Port aus einer Kabel-Aussage) und Regel 3 (auf aufgelösten
     Geräten keine erfundenen Ports) beide weiter gelten.
-* **Gegengeprobt (16), und zwei Regeln waren zuerst unverdient:** „lässt weg,
+* **Nachtrag am selben Tag: derselbe Fehler auch beim RAUM.** `seedToVenue`
+  im MultiCam-Planer ersetzte die ganze `stages`-Liste durch die **eine**
+  Bühne, die der Seed nennt. Der Planer kennt aber eine Liste (`addStage`), und
+  der Rückweg meldet ausdrücklich nur `stages[0]`. Wer eine Seitenbühne oder
+  einen Steg angelegt hatte, verlor sie beim nächsten Seed — ausgelöst von
+  einem Projektwechsel in der Shell, die von diesen Bühnen **nie erfahren
+  hat**. Etwas nicht zu *kennen* ist kein Grund, es zu löschen. Der Seed setzt
+  jetzt die erste Bühne (Lage und Größe; Beschriftung und Kennung bleiben) und
+  lässt die übrigen stehen.
+* **Gegengeprobt (19), und zwei Regeln waren zuerst unverdient:** „lässt weg,
   was der Seed nicht nennt" blieb grün, als die Breite fest auf 0 gesetzt wurde
   (der gemessene Fall nannte sie ja) — und die `offen`-Regel im Cable-Planer
   fiel weder bei `false` noch bei `true`, weil kein Test ein Kabel an ein

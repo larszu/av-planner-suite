@@ -237,3 +237,47 @@ describe('shellSeed — was der Seed SAGT, gilt trotzdem', () => {
     expect(cameras[0].z).toBe(1.5);
   });
 });
+
+describe('shellSeed — der Raum: eine Buehne im Seed, eine Liste im Planer', () => {
+  const mehrere: Venue = {
+    ...venue,
+    stages: [
+      { id: 's0', x: 8, y: 3, width: 6, height: 3, label: 'Hauptbühne' },
+      { id: 's1', x: 1, y: 10, width: 3, height: 2, label: 'Seitenbühne' },
+      { id: 's2', x: 12, y: 10, width: 8, height: 1, label: 'Steg' },
+    ],
+  }
+
+  it('setzt die ERSTE Buehne und laesst die uebrigen stehen', () => {
+    // Der Seed nennt genau eine Buehne, dieser Planer kennt eine Liste, und
+    // der Rueckweg meldet nur `stages[0]`. Die ganze Liste zu ersetzen loescht
+    // Buehnen, von denen die Shell nie erfahren hat — etwas nicht zu KENNEN
+    // ist kein Grund, es zu loeschen.
+    const s = seed({ venue: { name: 'Halle A', stage: { x: 2, y: 2, w: 10, h: 5 } } })
+    const nachher = seedToVenue(s, mehrere)
+    expect(nachher.stages).toHaveLength(3)
+    expect(nachher.stages[0]).toMatchObject({ x: 2, y: 2, width: 10, height: 5 })
+    expect(nachher.stages[1].label).toBe('Seitenbühne')
+    expect(nachher.stages[2].label).toBe('Steg')
+  })
+
+  it('behaelt Beschriftung und Kennung der ersten Buehne', () => {
+    // Der Seed sagt, WO sie liegt und WIE GROSS sie ist — nicht, wie sie
+    // heisst. Eine neue Id braeche ausserdem jede Referenz auf sie.
+    const s = seed({ venue: { name: 'Halle A', stage: { x: 2, y: 2, w: 10, h: 5 } } })
+    const nachher = seedToVenue(s, mehrere)
+    expect(nachher.stages[0].id).toBe('s0')
+    expect(nachher.stages[0].label).toBe('Hauptbühne')
+  })
+
+  it('nennt der Seed keine Buehne, bleibt die Liste unangetastet', () => {
+    const nachher = seedToVenue(seed({ venue: { name: 'Halle A' } }), mehrere)
+    expect(nachher.stages).toEqual(mehrere.stages)
+  })
+
+  it('behaelt Masse, die der Seed nicht nennt', () => {
+    const nachher = seedToVenue(seed({ venue: { name: 'Halle A' } }), mehrere)
+    expect(nachher.widthM).toBe(mehrere.widthM)
+    expect(nachher.heightM).toBe(mehrere.heightM)
+  })
+})

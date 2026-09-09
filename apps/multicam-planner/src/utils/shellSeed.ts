@@ -170,16 +170,42 @@ export function seedToCameras(
   return { cameras, ausgelassen };
 }
 
-/** Der Raum aus dem Seed — Masse und Buehne sind Aussagen der Shell. */
+/**
+ * Der Raum aus dem Seed — Masse und Buehne sind Aussagen der Shell.
+ *
+ * DER SEED NENNT GENAU EINE BUEHNE (`SeedVenue.stage`), dieser Planer kennt
+ * eine LISTE. Der Rueckweg meldet deshalb `stages[0]` und sonst nichts
+ * (`venueToSeedPatch`) — und der Hinweg darf entsprechend nur die erste
+ * setzen.
+ *
+ * Vorher ersetzte er die ganze Liste durch die eine aus dem Seed. Wer in
+ * diesem Planer eine zweite Buehne, einen Steg oder eine Seitenbuehne angelegt
+ * hatte (`addStage` gibt es), verlor sie beim naechsten Seed — ausgeloest von
+ * einem Projektwechsel in der Shell, die von diesen Buehnen nie erfahren hat.
+ * Etwas nicht zu KENNEN ist kein Grund, es zu loeschen.
+ *
+ * Die uebrigen Felder der ersten Buehne (Beschriftung, Sperre) bleiben
+ * ebenfalls stehen: der Seed sagt nur, WO sie liegt und WIE GROSS sie ist.
+ */
 export function seedToVenue(seed: SuiteSeed, vorher: Venue): Venue {
   const stage = seed.venue.stage;
+  const erste = vorher.stages[0];
   return {
     ...vorher,
     name: seed.venue.name || vorher.name,
     widthM: seed.venue.widthM ?? vorher.widthM,
     heightM: seed.venue.heightM ?? vorher.heightM,
     stages: stage
-      ? [{ id: vorher.stages[0]?.id ?? 'stage-0', x: stage.x, y: stage.y, width: stage.w, height: stage.h, label: vorher.stages[0]?.label ?? 'Stage' }]
+      ? [
+          {
+            ...(erste ?? { id: 'stage-0', label: 'Stage' }),
+            x: stage.x,
+            y: stage.y,
+            width: stage.w,
+            height: stage.h,
+          },
+          ...vorher.stages.slice(1),
+        ]
       : vorher.stages,
   };
 }
