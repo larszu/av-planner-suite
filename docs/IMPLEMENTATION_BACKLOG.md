@@ -2578,7 +2578,23 @@ belegbar, dort sind sie erprobt.
     auf die Kategorie stand kurz drin und ist wieder heraus (ADR-002).
 * **Was offen bleibt:** der Import einer echten EDID-Datei — sinnvoll, sobald
   die Feldbedeutungen aus der Spezifikation belegt sind.
-* **Aufwand:** gross — der Kern erledigt.
+* **In DIESER Umgebung nicht machbar, und zwar belegt (gemessen 2026-09-09).**
+  Die Bedingung oben ist keine Floskel: Invariante 18 verlangt die Feldbedeutungen
+  **aus der Spezifikation**, und die ist von hier aus nicht zu öffnen. Der
+  Agent-Proxy beantwortet `CONNECT` für `vesa.org:443` mit **403**
+  (`connect_rejected`, „policy denial"); dieselbe Antwort für die frei
+  gespiegelte E-EDID-A2 und für die Enzyklopädie-Seite. Damit gibt es keine
+  Quelle, gegen die sich ein Byte-Offset prüfen liesse.
+* **Deshalb bleibt es liegen, statt aus dem Gedächtnis geschrieben zu werden** —
+  und das ist hier schärfer als bei B-11. Eine falsch eingetragene
+  `manufacturerUrl` zeigt ins Leere und fällt auf. **Ein falsch gelesenes
+  EDID-Byte ergibt keine Fehlermeldung, sondern eine plausible Zahl**: 8 statt
+  10 Bit Farbtiefe, ein Farbraum zu viel, eine Frequenz, die es nicht gibt.
+  Der Plan sagt danach „passt", und niemand sieht, woher das kommt. Genau
+  davor steht Invariante 23 (`tests/edid.test.ts`: hier wird nichts
+  entziffert), und sie bleibt bis auf Weiteres die richtige Antwort.
+* **Aufwand:** gross — der Kern erledigt; der Import braucht eine Umgebung mit
+  Zugang zur Spezifikation.
 
 ### B-48 · Kabel, die hin und zurück laufen; Pfeile, die schräg ins Gerät stechen
 
