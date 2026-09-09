@@ -157,11 +157,29 @@ und ein Tippfehler darin machte den Wächter für genau dieses Modul still wirku
 gehört zum Lager, weil sie darin liegt; wer eine hinzunimmt, verschiebt sie, und das ist ein Diff,
 den man sieht.
 
-### Was als Nächstes ansteht
+### Schritt 3 ist gegangen (2026-09-09): `larszu/inventory-planner`
 
-Schritt 3: `src/renderer/lager/` wird ein eigenes Repo, die Suite bindet es wie die anderen Planer
-ein, `scripts/planner-drift.mjs` bekommt seine Wurzel dazu. Der Schnitt selbst ist damit ein
-Ordner, den man heraushebt — kein Umbau mehr.
+Der Eigentümer hat das Repo angelegt, und das Lager steht darin — mit **eigener Oberfläche**, wie
+E-27 es verlangt: drei Sichten für die drei Fragen (Bestand, Ausgabescheine, Sub-Hire), bedienbar
+ohne offenen Plan. Genau das war der Punkt: im Cable-Planner war das Lager ein Dialog IM Plan, und
+der Lagerist hat keinen Plan offen, sondern ein Regal.
+
+**Die Grenze ist dabei schärfer geworden, als sie im Planer war.** Dort las der Bestands-Store die
+Plan-Geräte direkt (`EquipmentItem[]`) und rief `deriveDemand` in sich selbst. Im eigenen Repo wäre
+das der Kabelbaum, gegen den dieses ADR geschrieben ist. Jetzt gilt: **das Lager kennt kein
+Plan-Modell.** Der Plan rechnet seinen Bedarf selbst und reicht `BedarfsZeile[]` herüber;
+`seedAusBedarf` ist der einzige Schreibweg vom Plan hierher. `scripts/plan-grenze-check.ts` misst
+es, und `npm test` des Repos fährt den Wächter mit — nicht nur sein Workflow, sonst liefe er in der
+vendorten Kopie nie mit (`ci:complete` der Suite hat genau das gemeldet).
+
+Die Suite bindet es ein wie die anderen Planer: vendorte Kopie unter `apps/inventory-planner`,
+Modul „Lager" in der Rail (Port 4184, `strictPort`), Drift-Guard, Lizenz-Guard, Dev-Port-Guard.
+
+**Was noch nicht umgezogen ist, und ausdrücklich:** der Deckungs-Abgleich gegen einen Plan (er
+braucht den Bedarf von der anderen Seite), Scannen, Drucken — und die Cable-Planner-Seite selbst.
+Der Planer behält seine Kopie, solange das nicht steht. Das ist keine Nachlässigkeit, sondern der
+letzte Absatz dieses ADRs: einzeln schneiden, mit grünem CI dazwischen, und der Planer bleibt in
+jedem Zwischenstand lauffähig.
 
 **Was ausdrücklich nicht passiert:** kein „großer Wurf" in einem Schritt. Jeder Bereich wird
 einzeln geschnitten, mit grünem CI dazwischen. Der Cable-Planner bleibt in jedem Zwischenstand

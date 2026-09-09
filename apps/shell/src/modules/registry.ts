@@ -22,7 +22,7 @@ export interface ModuleDef {
   /** data-module-Wert, der die Akzentfarbe im Baum umschaltet. */
   dataModule: string
   /** Welcher Planer steckt dahinter (leer für Übersicht). */
-  planner?: 'cable' | 'multicam' | 'light'
+  planner?: 'cable' | 'multicam' | 'light' | 'inventory'
   /** iframe-URL des Planers (env-überschreibbar, sonst lokale Preview). */
   plannerUrl?: string
   /**
@@ -104,11 +104,26 @@ export const MODULES: ModuleDef[] = [
     eyebrow: 'Fixture · Licht',
   },
   {
+    id: 'lager',
+    label: 'Lager',
+    title: 'Lager',
+    icon: 'library',
+    hotkey: '5',
+    accent: 'var(--mod-lager)',
+    dataModule: 'lager',
+    planner: 'inventory',
+    plannerUrl: plannerUrl('lager', env.VITE_PLANNER_LAGER, 'http://localhost:4184/'),
+    // Die Bibliothek der Shell zeigt hier nichts: der Bestand IST die Ansicht,
+    // und eine zweite Liste daneben waere dieselbe Sache zweimal.
+    libraryTabs: [],
+    eyebrow: 'Bestand · Ausgabe',
+  },
+  {
     id: 'board',
     label: 'Board',
     title: 'Kreativ-Board',
     icon: 'board',
-    hotkey: '5',
+    hotkey: '6',
     accent: 'var(--mod-board)',
     dataModule: 'board',
     libraryTabs: ['Karten', 'Vorlagen'],

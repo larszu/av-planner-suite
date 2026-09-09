@@ -313,8 +313,13 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
   braucht. Sein Wächter liest die Fragenliste **aus dem ADR** statt aus einer
   Abschrift im Test — eine zweite Liste wäre die zweite Wahrheit und driftete
   lautlos.
-* **Was der Eigentümer tun muss, damit es weitergeht:** zwei leere Repos
-  anlegen — `larszu/facility-planner` und `larszu/inventory-planner` — oder
+* **Halb erledigt seit 2026-09-09:** der Eigentümer hat
+  **`larszu/inventory-planner` angelegt**, und E-27 ist damit gebaut — Gerüst,
+  Domäne, eigene Oberfläche, CI, und die Einbindung in die Suite. Offen bleibt
+  **`larszu/facility-planner`** (E-26); dort steht der Vertrag und das Paket,
+  es fehlt nur das leere Repo.
+* **Was der Eigentümer tun muss, damit es weitergeht:** ein leeres Repo
+  anlegen — `larszu/facility-planner` — oder
   der App das Recht geben, das selbst zu tun. Alles danach ist nicht mehr
   blockiert: Gerüst wie bei den anderen Planern (Vite + React + TS, CI auf
   `pull_request`, `avplan.sourceLanguage`, proprietäre Lizenz,
