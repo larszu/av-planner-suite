@@ -857,7 +857,7 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
 * **Was offen bleibt:** die Shell führt weiter ein eigenes, einfacheres Modell.
   Der Seed trägt nur, wofür sie eine Quelle hat; Ports und Datenblatt bleiben
   beim Planer. ~~DMX-Universum~~ (trägt der Seed als `SeedFixture.universe`),
-  ~~Rigging-Höhe~~ **seit 2026-09-09 ebenfalls** (`suite#201`) — und dabei kam
+  ~~Rigging-Höhe~~ **seit 2026-09-09 ebenfalls** (`suite#200`) — und dabei kam
   ein Defekt heraus, der schwerer wog als das fehlende Feld:
 
   **Ein erneuter Seed setzte im Licht-Planer Hänge-Höhe und Ausrichtung
@@ -1895,7 +1895,7 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
      übernommene Seed sofort einen Widerspruch gegen sich selbst.
 
      ~~**Was ausdrücklich NOCH NICHT gebaut ist: die Licht-Seite.**~~
-     **Erledigt 2026-09-09 (`suite#201`).** Der Licht-Planer las den Raum aus
+     **Erledigt 2026-09-09 (`suite#200`).** Der Licht-Planer las den Raum aus
      dem Seed gar nicht: wer in der Suite auf „Licht" wechselte, sah seine
      Scheinwerfer an den richtigen Koordinaten in einer **leeren Fläche** —
      ohne Bühne, ohne Raumgrenze, ohne Anhaltspunkt, wo das alles steht.
@@ -2002,7 +2002,7 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
 
 ### B-59 · Der Seed setzte zurück, was er nicht sagte — in allen drei Planern
 
-* **Status:** **GEBAUT 2026-09-09** — `suite#201`. Befund beim Bau von
+* **Status:** **GEBAUT 2026-09-09** — `suite#200`. Befund beim Bau von
   B-39 Punkt 1 erhoben und daraufhin als Sweep durch alle drei Brücken
   gezogen.
 * **Befund (gemessen am gebauten Stand):** `connectShellSeed` wendet **jede**
