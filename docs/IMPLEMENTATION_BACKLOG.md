@@ -553,7 +553,10 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
 
 ### B-11 · Sechs Kataloge ohne Beleg
 
-* **Status:** offen
+* **Status:** Recherche **offen** (Hersteller-Domänen im Egress-Filter,
+  dreimal nachgemessen) — der Teil, der von hier aus ging, ist **GEBAUT**:
+  seit `cable#806` sagt jeder der sechs Köpfe seine Beleglage, statt sie zu
+  behaupten.
 * **Befund (korrigiert):** Von 17 `*Catalog.ts` führen 8 kein
   `manufacturerUrl` — davon können zwei es gar nicht (`connectorCatalog` hält
   Steckertypen, `wirelessCatalog` hält `WirelessDevice`; das Feld sitzt an
@@ -583,6 +586,40 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
   auf einen Händler (Behringer X32 → Markertek), während der Eintrag 25
   Zeilen darunter auf `behringer.com` zeigt. Seit `cable#672` hält ein Guard
   das fest, mit einer begründeten Ausnahme, die von selbst wegfällt.
+* **Was 2026-09-09 dazukam und GEBAUT ist — `cable#806`:** Beim dritten
+  Nachmessen fiel auf, dass vier der sechs beleglosen Kataloge in ihrem
+  **Kopf** ein Datenblatt behaupten, das kein einziger Eintrag hinterlegt:
+
+  | Katalog | Einträge | Belege | Der Satz, der dort stand |
+  |---|---:|---:|---|
+  | `blackmagicCatalog` | 32 | 0 | „port counts taken from the official datasheets" |
+  | `cameraCatalog` | 20 | 0 | „sourced from official datasheets / manufacturer spec pages" |
+  | `monitorCatalog` | 36 | 0 | „sourced from official datasheets" |
+  | `ubiquitiCatalog` | 40 | 0 | „based on the official datasheets / ui.com spec pages" |
+
+  Zusammen **128 Einträge**. Das ist die Recherche-Lücke nicht kleiner,
+  aber es ist der Teil davon, der von hier aus reparierbar war — und der
+  schlimmere. Wer eine Port-Zahl anzweifelt (der Nutzer meldete am selben
+  Tag „die presets stimmen häufig nicht ganz genau"), liest den Kopf,
+  findet den Satz und hört auf zu suchen. Eine Behauptung ohne Link ist
+  schlechter als ein leeres Feld, weil sie Prüfbarkeit behauptet, die es
+  nicht gibt — **dieselbe Defektform, gegen die dieser Eintrag oben die
+  159 URLs verweigert.** `catalogueEvidence.ts` sichert seit Initiative 11
+  die Zahlen ab; die Prosa darüber lag außerhalb jeder Messung.
+
+  Alle sechs Köpfe tragen jetzt die Zeile
+  `// BELEGLAGE: kein Datenblatt-Link je Eintrag (B-11).`
+  `tests/katalogBeleglage.test.ts` hält die Regel in **beide** Richtungen:
+  0 Belege → Zeile nötig und kein Datenblatt-Anspruch darüber; ≥1 Beleg →
+  Zeile verboten. Die zweite Hälfte ist die wichtigere — sie lässt die
+  Markierung verschwinden, sobald die Belege nachgetragen sind. Eine
+  Markierung, die nach der Reparatur stehen bleibt, lügt wieder, nur in die
+  andere Richtung.
+* **Was den Rest entsperrt — Eigentümer-Sache, eines von dreien:**
+  1. die fünf Hersteller-Domänen im Egress-Filter freigeben,
+  2. die Datenblätter als PDF ins Repo oder in die Sitzung legen,
+  3. entscheiden, dass die 159 Einträge unbelegt bleiben — dann sagt der
+     Kopf es seit `cable#806` wenigstens.
 * **Aufwand:** mittel (Recherche, kein Code) — braucht eine Umgebung mit
   Netzzugang zu den Herstellern
 
