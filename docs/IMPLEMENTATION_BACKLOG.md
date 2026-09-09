@@ -1035,7 +1035,8 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
 
 ### B-26 · `sony-camera-bridge`: eine Oberfläche, zwei Sprachen
 
-* **Status:** offen — **entschieden (E-17, 2026-09-08): Englisch ist die Quellsprache.**
+* **Status:** **ERLEDIGT 2026-09-09** — `sony#22`. Entschieden (E-17,
+  2026-09-08): Englisch ist die Quellsprache.
   **Deklariert und GEDECKELT am 2026-09-08 (`sony#21`):** `package.json` und die
   README nennen `en`, `npm run lang:check` prüft die Übereinstimmung — und misst
   zusätzlich den Sprachmix: **19 mehrwortige deutsche Literale** in
@@ -1044,9 +1045,33 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
   während dieses offenen Punktes nicht WÄCHST. Sie ist in beide Richtungen
   scharf: wer übersetzt und die Grenze nicht heruntersetzt, fällt ebenfalls
   durch — sonst deckte sie ab morgen wieder Zuwachs.
-* **Offen bleibt die Übersetzung selbst.** Die 19 Stellen zu drehen ändert
-  sichtbaren Produkttext an fünfzehn Stellen und gehört in eine eigene Änderung
-  mit eigenem Blick darauf, nicht in den Anhang eines Wächters.
+* ~~**Offen bleibt die Übersetzung selbst.**~~ **ERLEDIGT 2026-09-09** —
+  `sony#22`. `packages/web-rcp/src` ist einsprachig englisch: Einrichtungs-
+  Assistent, Verbindungs-Panel, WIZnet-Assistent und -Liste, Kamera-Plan,
+  MultiCam- und PTZ-Panel und die Herkunfts-Sätze in `origin.ts`. Kommentare
+  bleiben deutsch — die Konvention dieses Repos, und keine Inkonsistenz: sie
+  stehen im Quelltext und nicht auf dem Schirm.
+* **Der Wächter hat dabei zweimal danebengemessen, und das ist der wertvollere
+  Teil dieser Änderung:**
+  1. **Er sah Kommentare für Literale.** Der Lauf schlug auf einem deutschen
+     Kommentar an, der ein englisches Wort in Anführungszeichen zitierte. Die
+     Kommentare sind deutsch, die Oberfläche englisch — ein Lauf, der beides in
+     einen Topf wirft, meldet bei jedem gut kommentierten Commit einen Verstoß,
+     den es nicht gibt, und wird nach dem dritten Mal weggedrückt. Kommentare
+     werden jetzt vor dem Messen entfernt.
+  2. **Er sah die Oberfläche gar nicht, sondern nur ihre Attribute.**
+     Gegenprobe nach dem Übersetzen: eine deutsche Beschriftung wieder
+     eingebaut — **der Lauf blieb grün.** Er las nur Zeichenketten in
+     Anführungszeichen; der größte Teil der sichtbaren Texte steht aber als
+     JSX-Text zwischen den Tags. Die „19" waren der Ausschnitt, den er sehen
+     konnte. Er misst jetzt beides und fand damit sofort **zwölf weitere**
+     deutsche Stellen, die vorher niemand gezählt hatte (`Kamera IP
+     (WiFi/LAN)`, `Ohne Beleg`, `+ Kamera` …).
+  Die Grenze steht damit auf **0** und bleibt in beide Richtungen scharf.
+* **Gegengeprobt (5):** deutsche Beschriftung als JSX-Text, deutsche
+  Beschriftung als Attribut, Grenze wieder auf 19, Kommentar-Filter entfernt,
+  und **kombiniert** JSX-Messung entfernt + Verstoß eingebaut (bleibt grün —
+  genau das belegt, dass die JSX-Messung der Teil ist, der ihn fängt).
 * **Befund (gemessen 2026-09-04):** Die Web-RCP (`packages/web-rcp/src`) hat
   **172** sichtbare Textstellen und **keine i18n** — kein `useTranslation`,
   kein Wörterbuch. Davon sind **32 deutsch**, der Rest englisch, in denselben
@@ -1062,7 +1087,7 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
   deutsch-quellig, `multicam-planner` in der Suite englisch-quellig, die
   Intercom-Web-App zweisprachig per Typ. Erst die Antwort entscheidet, ob
   32 Stellen übersetzt oder 140 umgeschrieben werden.
-* **Aufwand:** klein (vereinheitlichen) / mittel (i18n einziehen)
+* **Aufwand:** klein (vereinheitlichen) — erledigt / mittel (i18n einziehen, weiter offen)
 
 ### B-27 · Die Ableitung liest den Router-Zustand nicht
 
