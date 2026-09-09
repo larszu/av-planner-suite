@@ -1249,6 +1249,59 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
 * **Aufwand:** mittel — die Zeichenketten sind gezählt und liegen beieinander;
   die Wicklung ist mechanisch, das Wörterbuch ist schon da.
 
+### B-62 · Die Kopfzeile eines Backlog-Eintrags altert schneller als sein Rumpf — jetzt mit Wächter
+
+* **Status:** **GEBAUT 2026-09-09** — `scripts/backlog-status-frisch.mjs`,
+  `npm run backlog:check`, im CI.
+* **Anlass:** dieselbe Form ist in dieser Datei **dreimal** von Hand gefunden
+  und jedes Mal nachträglich korrigiert worden — B-4, B-15 und B-52 standen
+  auf „Status: offen", während der Bau längst auf `main` lag. B-4 hält die
+  Lehre sogar ausgeschrieben fest:
+
+  > Ein Backlog-Eintrag ist eine Behauptung über den Code und altert genauso
+  > wie eine. Vor dem Abhaken jeden Punkt neu am Code prüfen, nicht am
+  > eigenen Text.
+
+  Und B-10: *„Ein ‚was offen bleibt', das nach dem Bau der Sache nicht
+  angefasst wird, ist schlimmer als kein Eintrag — er schickt jemanden los,
+  etwas zu bauen, das schon steht."*
+
+  Dreimal derselbe Fehler, dreimal von Hand gefunden. Genau dafür schreibt
+  dieses Repo sonst einen Wächter — und dass es hier keinen gab, ist umso
+  auffälliger, als die Lehre daneben stand.
+* **B-52 war der dritte Fall und wurde beim Bau gefunden:** Kopfzeile „Befund
+  erhoben und beantwortet 2026-09-08, **Bau offen**", während im selben
+  Eintrag „TEIL 1 ERLEDIGT" und „TEIL 2 ERLEDIGT" stehen. Korrigiert.
+* **Was der Lauf prüft, und was ausdrücklich nicht:** NICHT, ob ein Eintrag
+  stimmt — das kann kein Skript. Nur, ob er sich **selbst widerspricht**: eine
+  Kopfzeile, die „offen" sagt, während im Rumpf ein „ERLEDIGT" oder „GEBAUT"
+  steht. Das ist ein rein textlicher Widerspruch und immer ein Fehler —
+  entweder ist der Bau erledigt und die Kopfzeile veraltet, oder der Rumpf
+  behauptet einen Bau, den es nicht gibt.
+* **Zwei Formen zählen bewusst nicht als Verstoss:**
+  * `Status: Kern GEBAUT — der Datei-Import offen` (B-47). Beides steht in der
+    **Kopfzeile**, die Aussage ist also vollständig.
+  * `~~offen~~ **erledigt**` — die übliche Schreibweise dieser Datei für „war
+    offen, ist es nicht mehr". Durchgestrichenes wird vor dem Messen entfernt.
+* **Die Fertig-Marke wird GROSSGESCHRIEBEN geprüft, und das ist gemessen:**
+  eine Fassung ohne Gross-/Kleinschreibung schlug auf B-11 an — wegen des
+  Satzes „gegen die die Belegkette dieses Repos gebaut ist". Ein Wächter, der
+  Prosa für eine Marke hält, ist genau der, den man nach dem dritten
+  Fehlalarm abschaltet.
+* **Ehrlich zum eigenen Filter:** der Durchgestrichen-Filter trägt **heute
+  nichts** — entfernt man ihn, bleibt der Lauf grün, weil kein
+  durchgestrichener Eintrag im Rumpf eine grossgeschriebene Fertig-Marke
+  führt. Er steht trotzdem da: die Form gibt es in der Datei (B-1, B-2,
+  B-3 …) und kann jederzeit auf einen Rumpf mit „ERLEDIGT" treffen; dann wäre
+  jeder korrekt abgehakte Eintrag ein Fehlalarm. Das steht so im Kopf des
+  Skripts, damit niemand die Zeile für einen Messwert hält.
+* **Gegengeprobt (3):** B-52-Kopfzeile zurück auf „Bau offen" → rot mit
+  Fundstelle; Grossschreibung aufgehoben → Fehlalarm auf B-11; CI-Schritt
+  entfernt → `ci:complete` meldet „backlog:check in package.json, nicht im
+  Workflow". Alle drei zurückgebaut → grün.
+* **Stand:** 58 Einträge mit Status-Zeile geprüft, kein Widerspruch.
+* **Aufwand:** klein — erledigt.
+
 ### B-26 · `sony-camera-bridge`: eine Oberfläche, zwei Sprachen
 
 * **Status:** **ERLEDIGT 2026-09-09** — `sony#22`. Entschieden (E-17,
@@ -3119,7 +3172,12 @@ belegbar, dort sind sie erprobt.
 
 ### B-52 · Passive Port-Träger: Verteiler, Steckdosenleiste, Durchgangsbuchse — und wo die Patchblende steckt
 
-* **Status:** Befund erhoben und beantwortet 2026-09-08, **Bau offen**.
+* **Status:** **BEIDE TEILE GEBAUT** — Teil 1 `cable#787`, Teil 2 `cable#788`
+  (Belege stehen unten im Eintrag). Hier stand bis zum 2026-09-09 „Bau offen",
+  während beide Teile bereits auf `main` lagen — derselbe Fehler wie bei B-4
+  und B-15: die Kopfzeile wurde beim Abhaken nicht mitgelesen. Wer eine
+  Hälfte erledigt, fasst die Kopfzeile mit an; sonst schickt der Eintrag
+  jemanden los, etwas zu bauen, das schon steht.
   **Nutzer-Frage, 2026-09-08:** „es gibt noch keinen guten weg um
   stromverteiler in den plan einzuzeichnen und auch noch keine patchblenden
   und durchgangsbuchsen und keine mehrfachsteckdosen. sollten das geräte
