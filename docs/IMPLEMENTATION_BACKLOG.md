@@ -172,7 +172,9 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
 
 ### B-6 · Plan → Tally-Pi: der Transport ist ein Medienbruch
 
-* **Status:** offen — **die Entscheidung ist gefallen (E-7, 2026-09-08): beides, Datei bleibt Vorgabeweg, Direktweg als einzuschaltendes Ziel.** Was bleibt, ist Bauarbeit
+* **Status:** **GEBAUT 2026-09-09** — `cable#797`. Entschieden (E-7,
+  2026-09-08): beides, Datei bleibt Vorgabeweg, Direktweg als einzuschaltendes
+  Ziel.
 * **Befund:** `toTallyPiDevices` liefert `{id, name, input}`,
   `gpio_watcher.py:79` setzt `me` selbst auf 1, `guide_server.py:251` fängt
   `out_gpio`/`gpio` ab. Aber:
@@ -197,7 +199,72 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
 * **DoD (falls Direktweg gewünscht):** Endpunkt in `guide_server.py`,
   Token-geschützt wie der Mobile-Share; Planer-seitig ein Ziel in den
   Einstellungen; Fehlerfall sichtbar; End-to-End-Prüfung.
-* **Aufwand:** mittel
+* **Gebaut (`cable#797`):** `tally:*` als eigene IPC-Domäne
+  (`main/services/tallyPushService.ts` + `main/ipc/tallyIpc.ts`), Ziel und
+  Schalter in den Einstellungen (Integrationen → „Tally-Pi (Direktweg)"), zwei
+  Knöpfe im Export-Dialog neben der Datei — die bleibt.
+  * **Im Main-Prozess, nicht im Renderer.** `guide_server.py` schickt keine
+    CORS-Kopfzeilen; ein `fetch` von drüben scheiterte am Preflight oder wäre
+    — mit `no-cors` — abgeschickt, aber unlesbar. Ein Schreibvorgang, dessen
+    Ergebnis man nicht erfährt, ist **schlimmer als keiner**: der Nutzer
+    glaubt, die Karte sei auf dem Pi. Im Browser wird deshalb gar nicht erst
+    gesendet, sondern geantwortet.
+  * **Erst lesen, dann senden — erzwungen.** `merge_tally_config` behält jedes
+    FELD, das der Post nicht nennt, aber jedes GERÄT, das er nicht nennt,
+    verschwindet — samt GPIO-Zuordnung. `vergleicheMitPi` zeigt vorher, wer
+    verschwindet, und unterscheidet dabei die Rolle mit Pin (rot, das ist
+    Verkabelung am Gehäuse) von der ohne (gelb). Der Sendeknopf bleibt zu, bis
+    für **diese** Adresse gelesen wurde.
+  * **Aus, bis jemand ihn einschaltet** — auch für bestehende Installationen
+    mit hinterlegter Adresse. Ein Feld, das nach dem Update auf AN steht, wäre
+    eine Entscheidung, die niemand getroffen hat, mit Wirkung auf ein Gerät im
+    Netz.
+* **DAS DoD IST IN EINEM PUNKT NICHT ERFÜLLT, UND ZWAR ABSICHTLICH: es gibt
+  keinen Token.** Nachgesehen (2026-09-09): `guide_server.py` prüft an seinen
+  Schreib-Endpunkten **nichts** — kein `Authorization`, kein eigener Kopf, an
+  keinem. Und seine eigene Bedienseite (`setup-guide.html`, vom selben Server
+  ausgeliefert, statisch) schreibt über dieselben offenen Endpunkte.
+  Einen Kopf mitzuschicken, den niemand prüft, wäre die schlechteste der
+  möglichen Antworten: das Feld im Dialog behauptete einen Schutz, den es
+  nicht gibt, und wer es ausfüllt, hielte den Weg für gesichert. Ein Wächter
+  hält fest, dass der Dienst keinen schickt (`tests/tallyDirektweg.test.ts`),
+  und die Einstellungs-Karte **sagt dem Nutzer**, dass der Pi keinen Nachweis
+  verlangt. Der Schutz des Pi ist damit ein eigener Punkt → **B-58**.
+* **Gegengeprobt (7):** `https://` durchgelassen, `out_gpio: null` als
+  Verdrahtung gezählt, `Array.isArray` entfernt (nur `{ devices: 7 }` bringt
+  das zum Werfen — die erste Fassung der Regel blieb grün und war unverdient),
+  Direktweg als Vorgabe AN, Senden ohne Lesen frei, der Post trägt ein zweites
+  Feld, ein Nachweis-Kopf wird mitgeschickt.
+* **Aufwand:** mittel — erledigt.
+
+### B-58 · Der Tally-Pi prüft an seinen Schreib-Wegen nichts
+
+* **Status:** offen — **Befund erhoben 2026-09-09** beim Bau von B-6.
+* **Befund (gemessen, `tally-pi/guide_server.py`):** `do_POST` behandelt
+  `/bindings`, `/tally-config`, `/tally-out/…`, `/cue`, `/cue/clear` und
+  weitere — und **kein** Zweig prüft irgendeine Berechtigung. `grep` über die
+  ganze Datei findet weder `Authorization` noch einen eigenen Kopf. Wer den Pi
+  im Netz erreicht, kann seine Tally-Konfiguration, seine GPIO-Bindungen und
+  die Bühnen-Ansage überschreiben.
+* **Warum das nicht nebenbei in `cable#797` behoben wurde — und das ist der
+  eigentliche Inhalt dieses Eintrags:** Der Pi liefert seine **eigene**
+  Bedienseite aus (`setup-guide.html`, statisch), und die schreibt über
+  dieselben Endpunkte mit relativen `fetch`-Aufrufen ohne Kopf. Einen Token zu
+  verlangen hiesse also entweder, die eigene Seite auszusperren, oder ihr den
+  Token mitzugeben — und dann hat ihn jeder, der die Seite laden kann, also
+  jeder im selben Netz. **Ein Schutz, der genau das nicht verhindert, wogegen
+  er antritt, ist keiner; er ist eine Beschriftung.**
+  Die Entscheidung gehört deshalb über die **ganze HTTP-Fläche** des Pi und
+  nicht über einen Aufruf: Was ist read-only (die Tally-Seiten, die die Crew
+  ansieht), was ist ein Schreibweg, und woher bekommt die eigene Seite ihren
+  Nachweis, ohne ihn im Klartext auszuliefern.
+* **Bis dahin gilt: es wird GESAGT.** Die Einstellungs-Karte im Cable-Planner
+  schreibt beim Eintragen der Adresse hin, dass der Pi keinen Nachweis
+  verlangt und der Direktweg nur in ein Netz gehört, dem man das zutraut. Das
+  ist kein Ersatz für den Schutz, aber es ist der Unterschied zwischen einer
+  bekannten und einer unbekannten Lage.
+* **Aufwand:** mittel (Entscheidung nötig: was gilt als Schreibweg, wie kommt
+  die eigene Seite an ihren Nachweis)
 
 ### B-7 · Intercom-Vokabular existiert zweimal
 
@@ -714,7 +781,13 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
 
 ### B-20 · Die Shell-Vorschau zeigt echte Daten — aus dem falschen Modell
 
-* **Status:** offen — **entschieden (E-13, 2026-09-08): bleibt eigenständig, wird aber als Vorschau kenntlich**
+* **Status:** **das Entschiedene ist gebaut** (E-13, 2026-09-08: bleibt
+  eigenständig, wird aber als Vorschau kenntlich). Der Eintrag stand danach
+  weiter auf „offen" und war darin missverständlich — nachgemessen 2026-09-09:
+  `apps/shell/src/shell/previews.tsx:42` setzt das Abzeichen „Vorschau", und
+  zwar mit **Stand**; ohne den wäre „Vorschau" ein Etikett ohne Datum. Offen
+  bleibt nur, was der Eintrag unten selbst als groß ausweist: das gemeinsame
+  Datenmodell (→ B-39).
 * **Befund (nachgeprüft 2026-09-04):** Die SVG-Vorschau
   (`apps/shell/src/shell/previews.tsx`) ist **kein** Platzhalter: jede Form
   wird aus dem übergebenen `SuiteProject` gerechnet — Knotenkarten aus
