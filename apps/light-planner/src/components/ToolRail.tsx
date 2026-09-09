@@ -32,7 +32,7 @@ const groupsFor = (t: TFn): Group[] => [
   ],
   [
     { id: 'person', icon: 'person', label: t('tool.person', 'Person'), hint: t('tool.person.hint', 'Place a person') },
-    { id: 'stage', icon: 'podium', label: t('tool.stage', 'Riser'), hint: t('tool.stage.hint', 'Draw a rectangular riser') },
+    { id: 'stage', icon: 'podium', label: t('tool.stage', 'Podest'), hint: t('tool.stage.hint', 'Draw a rectangular riser') },
     { id: 'stagepoly', icon: 'stage', label: t('tool.stagepoly', 'Stage (polygon)'), hint: t('tool.stagepoly.hint', 'Draw a stage as a polygon') },
     { id: 'truss', icon: 'truss', label: t('tool.truss', 'Truss'), hint: t('tool.truss.hint', 'Drag a truss') },
     { id: 'wall', icon: 'wall', label: t('tool.wall', 'Wall'), hint: t('tool.wall.hint', 'Draw a wall path') },

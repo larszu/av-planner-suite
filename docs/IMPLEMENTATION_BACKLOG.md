@@ -553,7 +553,8 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
 
 ### B-65 · Das Lagermodul hat zehn gebaute Rechenwerke ohne eine einzige Bedienung
 
-* **Status:** offen — **Befund gemessen 2026-09-09**, Bau noch nicht begonnen.
+* **Status:** **erste Zeile GEBAUT** (`inventory#2`: Inventur-Ansicht, 10 → 7
+  Module ohne Weg), der Rest **offen** — Befund gemessen 2026-09-09.
 * **Auslöser:** Der Eigentümer schickte fünf Bildschirmfotos einer fremden
   Bestands-App („Vorratix", Haushalts-Vorrat) mit dem Satz: „Analysiere diese
   paar Fotos für das Lagermodul. Es fehlen noch einige Funktionen."
@@ -607,6 +608,14 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
   | „Beispieldaten erstellen" | Seed (vorhanden in `@avplan/ui`) | **prüfen**, ob das Lager daran hängt |
   | Bestand exportieren | `inventoryPortable`/`inventoryReport` | **halb**: gebaut, kein Knopf |
 
+* **GEBAUT, erste Zeile — `inventory#2` (2026-09-09):** Die Ansicht
+  **Inventur** als vierter Reiter. Sie hängt `inventoryScan` und
+  `inventoryAudit` an, und `unitIdentity` kam mit (`auditScan` braucht
+  seinen `unitLabel`). **10 → 7.** Die Form ist die aus den Bildschirmfotos:
+  zwei Schritte in dieser Reihenfolge, erwarteter Prefix mit Prüfung *vor*
+  der Suche, und der Weg ohne Scan als Abhak-Liste. Ein Wächter rechnet den
+  Import-Graph nach, statt eine Liste zu pflegen — sonst hätte er zwei
+  gemeldet statt drei.
 * **Die Reihenfolge, und sie ergibt sich aus dem Hauptbefund:** zuerst die
   zehn unerreichbaren Module an eine Oberfläche hängen, dann das Neue bauen.
   Eine elfte Rechnung ohne Knopf wäre der teuerste Weg, das Problem zu
