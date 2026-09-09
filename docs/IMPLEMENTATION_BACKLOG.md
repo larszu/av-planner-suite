@@ -1841,8 +1841,13 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
 
 ### B-39 · Was der Projekt-Fluss noch nicht trägt
 
-* **Status:** offen (nur noch Punkt 5; 1, 2, 3 und 4 erledigt — Punkt 1 seit
-  2026-09-09 samt der Licht-Seite, dem letzten benannten Rest) — **Punkt 1 ist
+* **Status:** ~~offen~~ **erledigt 2026-09-09 — alle fünf Punkte.** Punkt 5
+  (der Cross-Link ohne Sender) fiel mit `suite#199`, Punkt 1 mit `suite#169`
+  und, für die Licht-Seite, mit `suite#200`; 2, 3 und 4 lagen schon vorher. Die
+  Zeile stand danach noch einen halben Tag auf „offen (nur noch Punkt 5)",
+  obwohl Punkt 5 im selben Dokument als erledigt vermerkt war — ein Status, der
+  seiner eigenen Liste widerspricht, ist schlimmer als gar keiner: er lässt
+  Arbeit als offen erscheinen, die niemand mehr findet — **Punkt 1 ist
   am 2026-09-08 gebaut** (`suite#169`): der Raum geht zurück, und zwar durch
   die Konfliktregel aus E-21 (Eigentum je Feld; geteilte Felder melden den
   Widerspruch als Befund, statt still zu überschreiben)
