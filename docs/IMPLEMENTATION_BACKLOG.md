@@ -551,6 +551,78 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
   liest die andere Hälfte des Eintrags mit.
 * **Aufwand:** ~~groß~~ erledigt
 
+### B-65 · Das Lagermodul hat zehn gebaute Rechenwerke ohne eine einzige Bedienung
+
+* **Status:** offen — **Befund gemessen 2026-09-09**, Bau noch nicht begonnen.
+* **Auslöser:** Der Eigentümer schickte fünf Bildschirmfotos einer fremden
+  Bestands-App („Vorratix", Haushalts-Vorrat) mit dem Satz: „Analysiere diese
+  paar Fotos für das Lagermodul. Es fehlen noch einige Funktionen."
+  Die App ist inhaltlich etwas anderes — Lebensmittel statt Rental-Material —,
+  aber die **Bedien-Formen** darin sind genau die, die hier fehlen. Deshalb
+  taugt sie als Vorlage für die Form und nicht für den Inhalt: ein
+  Mindesthaltbarkeitsdatum ist kein Prüftermin nach DGUV V3, aber „was ist
+  diese Woche fällig" ist dieselbe Frage.
+* **Der Hauptbefund, und er ist die eigentliche Nachricht:** von **18**
+  Modulen in `apps/inventory-planner/src/domain/lib/` sind **10 von keiner
+  Oberfläche aus erreichbar** — nachgerechnet über den Import-Graph ab
+  `ui/App.tsx` und `main.tsx`, nicht geschätzt:
+
+  | erreicht (8) | nicht erreicht (10) |
+  |---|---|
+  | `containerCheckout` | `damageRegister` |
+  | `custodyPeriod` | `insuranceSchedule` |
+  | `faultHistory` | `inventoryAudit` |
+  | `handoverSignature` | `inventoryCommitment` |
+  | `inventoryMerge` | `inventoryPortable` |
+  | `ownership` | `inventoryPrint` |
+  | `storageMoves` | `inventoryReport` |
+  | `storageTree` | `inventoryScan` |
+  | | `packList` |
+  | | `unitIdentity` |
+
+  Die App hat drei Reiter (`bestand`, `ausgabe`, `subhire`). Inventur,
+  Schadensregister, Versicherungsfristen, Packliste, Etiketten-Druck,
+  Bericht, Einheiten-Identität und die **Scan-Auflösung** sind gebaut,
+  getestet — und für den Lageristen nicht vorhanden. Das ist dieselbe
+  Defektform wie B-15 (`powerWatts` als Schreib-nur-Feld), nur zehnmal:
+  Code, den kein Weg erreicht, ist für den Nutzer kein Code.
+
+* **Was die Bildschirmfotos an Formen zeigen** — je Zeile: was dort zu sehen
+  ist, was es hier hieße, und ob es das schon gibt.
+
+  | Form in der Vorlage | im Lagermodul | Zustand |
+  |---|---|---|
+  | Geführter Scan in Schritten („Schritt 1: Lagerplatz scannen") | Platz scannen → Artikel scannen → buchen | **fehlt** (`inventoryScan` löst auf, niemand ruft es) |
+  | Erwarteter Prefix (`L#`) als Vorgabe und Prüfung | Lagerplatz-Codes gegen ein Hausschema prüfen | **fehlt** (`prefix`: 0 Fundstellen) |
+  | Ausweg ohne Scan („Ohne Scan einbuchen", Raum/Objekt wählen) | Aufkleber unlesbar, Hand-Eingabe | **fehlt** |
+  | Taschenlampe, Kamerawechsel im Scanner | dunkler Truck, Case über Kopf | **fehlt** (keine Scan-Oberfläche) |
+  | Kennzahlen-Startseite (Bestand, „Unter Ziel", fällig) | Was muss ich heute anfassen? | **fehlt** |
+  | Soll-/Mindestmenge, „Unter Ziel" | Meldebestand je Artikel | **fehlt** (`mindest`/`reorder`: 0) |
+  | „Bald ablaufend / Abgelaufen / Diese Woche fällig" | DGUV-V3-Prüftermin, Kalibrierung, Akku-Alter, Versicherungsende | **halb**: `insuranceSchedule` rechnet, nichts zeigt es, und die übrigen Fristen gibt es nicht |
+  | „Anomalien — auffällige Artikel prüfen" | Inventur-Abweichung, Ware am falschen Platz | **halb**: `inventoryAudit` (390 Zeilen) hat keine Oberfläche |
+  | „Verlauf" | wer hat wann was gebucht | **halb**: `storageMoves` bewegt, eine Historie je Artikel fehlt |
+  | Kassenbon-Import (Foto → Positionen) | Lieferschein/Rechnung → Wareneingang | **fehlt** |
+  | „Einkauf"-Reiter | was muss beschafft oder sub-hired werden | **fehlt** |
+  | Artikelgruppen als gepflegte Liste | Kategorie ist heute freier Text | **fehlt** |
+  | „Beispieldaten erstellen" | Seed (vorhanden in `@avplan/ui`) | **prüfen**, ob das Lager daran hängt |
+  | Bestand exportieren | `inventoryPortable`/`inventoryReport` | **halb**: gebaut, kein Knopf |
+
+* **Die Reihenfolge, und sie ergibt sich aus dem Hauptbefund:** zuerst die
+  zehn unerreichbaren Module an eine Oberfläche hängen, dann das Neue bauen.
+  Eine elfte Rechnung ohne Knopf wäre der teuerste Weg, das Problem zu
+  vergrößern. Konkret zuerst: **Scan-Oberfläche** (`inventoryScan` +
+  `inventoryAudit` sind beide daran) — sie ist der Zugang, an dem in der
+  Vorlage alles hängt, und ohne sie bleibt jede weitere Funktion Tipparbeit.
+* **Nicht entschieden, gehört dem Eigentümer:** ob das Lagermodul
+  Verbrauchsmaterial mit Haltbarkeit führen soll (Batterien, Gaffa, Filter)
+  oder nur Rental-Material mit Prüfterminen. Die Vorlage zeigt Ersteres, das
+  Haus lebt von Letzterem, und die Antwort entscheidet, ob „Ablaufdatum" ein
+  eigenes Feld wird oder ein Fall von „Frist".
+* **Aufwand:** groß — und teilbar: jede Zeile der Tabelle ist für sich
+  lieferbar.
+
+---
+
 ### B-11 · Sechs Kataloge ohne Beleg
 
 * **Status:** Recherche **offen** (Hersteller-Domänen im Egress-Filter,
