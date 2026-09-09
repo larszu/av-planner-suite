@@ -118,8 +118,7 @@
     "typescript": "~6.0",
     "typescript-eslint": "^8.62.0",
     "vite": "^8.1.0",
-    "vitest": "^4.1.9",
-    "slider:check": "node scripts/slider-groesse-check.mjs"
+    "vitest": "^4.1.9"
   },
   "license": "UNLICENSED"
 }
