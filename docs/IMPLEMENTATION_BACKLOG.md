@@ -1954,6 +1954,52 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
 
 ---
 
+### B-59 · Der Seed setzte zurück, was er nicht sagte — in allen drei Planern
+
+* **Status:** **GEBAUT 2026-09-09** — `suite#201`. Befund beim Bau von
+  B-39 Punkt 1 erhoben und daraufhin als Sweep durch alle drei Brücken
+  gezogen.
+* **Befund (gemessen am gebauten Stand):** `connectShellSeed` wendet **jede**
+  höhere Revision an (`seed.revision <= appliedRevision` ist die einzige
+  Sperre), und die Shell zählt sie bei **Projektwechsel, Undo/Redo und
+  Kopf-Änderung** hoch. Alle drei `seedTo*`-Funktionen bauten daraufhin ihre
+  Objekte **neu** — aus Vorgaben und Katalog-Templates. Der Seed nennt aber nur
+  einen kleinen Teil dessen, was diese Planer führen.
+
+  | Planer | was ein Projektwechsel in der Shell wegwarf |
+  | --- | --- |
+  | **Licht** | Hänge-Höhe (zurück auf die UI-Vorgabe), Ausrichtung (Ziel zurück auf die Lampe selbst), Körperdrehung |
+  | **MultiCam** | Schwenk, Neigung, Höhe, Blende, Fokusdistanz, Stativart, Extender, Speedbooster, Sensor-Modus, Bajonett, Farbe |
+  | **Cable** | jede Angabe am Gerät (Leistung, Notizen, Rack-Platz), **die Ports samt Beschriftung** — sie wurden aus dem Template neu geklont |
+
+* **Warum das schwer wiegt und nicht auffiel:** der Schaden entsteht durch eine
+  Handlung, die mit dem Planer nichts zu tun hat („ich benenne das Projekt
+  um"), er trifft die Arbeit von Stunden (zwanzig ausgerichtete Lampen), er ist
+  **still**, und er ist in der betroffenen App **nicht rückgängig zu machen** —
+  das Undo der Shell kennt den Planer-Zustand nicht.
+* **Die Regel, jetzt in allen drei Brücken gleich:** *der Seed setzt, was er
+  **nennt**; was er nicht nennt, behält ein bereits vorhandenes Objekt. Nur ein
+  wirklich neues bekommt die Vorgabe* — dort ist sie der Anfangswert einer
+  Platzierung und keine Aussage über diese Show.
+  * **Licht:** dazu trägt der Seed die Hänge-Höhe jetzt überhaupt
+    (`SeedFixture.rigHeightM`, optional) — sie entscheidet über die Kabellänge
+    zum Scheinwerfer. Ein Ziel, das auf der Lampe selbst lag (also nie
+    ausgerichtet wurde), wandert mit, wenn der Seed sie verschiebt; ein echt
+    gesetztes bleibt liegen.
+  * **Cable:** ein bekanntes Gerät wird **nicht neu aufgelöst**.
+    `katalogTemplate` geht über den Namen — ein in der Shell umbenanntes Gerät
+    träfe sonst vielleicht ein anderes Template, und ein eingerichtetes Gerät
+    würde durch einen Katalog-Standardstand ersetzt, samt anderer Ports.
+    `offen` hängt jetzt an `portsUnknown` und nicht am Katalog-Treffer, damit
+    Regel 2 (Port aus einer Kabel-Aussage) und Regel 3 (auf aufgelösten
+    Geräten keine erfundenen Ports) beide weiter gelten.
+* **Gegengeprobt (16), und zwei Regeln waren zuerst unverdient:** „lässt weg,
+  was der Seed nicht nennt" blieb grün, als die Breite fest auf 0 gesetzt wurde
+  (der gemessene Fall nannte sie ja) — und die `offen`-Regel im Cable-Planer
+  fiel weder bei `false` noch bei `true`, weil kein Test ein Kabel an ein
+  übernommenes Gerät hängte. Beide Lücken sind mit je einem Fall geschlossen,
+  und beide Richtungen fallen jetzt einzeln.
+
 ### B-41 · Der Weg vom Plan auf die Geräte — was er trägt und was nicht
 
 * **Status:** erledigt (alle drei Wege gebaut oder ausgewiesen)
