@@ -104,7 +104,7 @@ describe('jeder Quellen-Kommentar steht auch als Feld im Eintrag', () => {
     // Muster nicht mehr passt und `pairs()` leer zurueckkommt.
     // 253 + 1: `mediaStationCatalog` ist mit EINEM belegten Eintrag
     // dazugekommen (die Medien-Station als Plan-Endpunkt).
-    expect(pairs().length).toBe(325)
+    expect(pairs().length).toBe(365)
   })
 
   it('deckt die neun Kataloge ab, die Belege fuehren', () => {
@@ -115,10 +115,13 @@ describe('jeder Quellen-Kommentar steht auch als Feld im Eintrag', () => {
       'avNetworkCatalog.ts',
       'blackmagicCatalog.ts',
       'broadcastToolsCatalog.ts',
+      'cameraCatalog.ts',
       'greengoCatalog.ts',
       'lynxCatalog.ts',
       'mediaStationCatalog.ts',
       'micCatalog.ts',
+      'miscCatalog.ts',
+      'monitorCatalog.ts',
       'rossCatalog.ts',
       'switcherCatalog.ts',
       'ubiquitiCatalog.ts',
@@ -169,10 +172,7 @@ describe('was der Test NICHT behauptet', () => {
     const mitBeleg = new Set(pairs().map((p) => p.file))
     const ohne = catalogs().filter((f) => !mitBeleg.has(f))
     expect(ohne.sort()).toEqual([
-      'cameraCatalog.ts',
       'connectorCatalog.ts',
-      'miscCatalog.ts',
-      'monitorCatalog.ts',
       'wirelessCatalog.ts',
     ])
   })
@@ -247,6 +247,6 @@ describe('der Beleg zeigt auf den Hersteller, nicht auf einen Haendler', () => {
   it('prueft alle Belege, nicht nur die mit Feld', () => {
     // Ohne diese Zusicherung waere der Haendler-Test auch dann gruen, wenn
     // `pairs()` nichts mehr faende.
-    expect(pairs().filter((p) => p.field).length).toBe(325)
+    expect(pairs().filter((p) => p.field).length).toBe(365)
   })
 })
