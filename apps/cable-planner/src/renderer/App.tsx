@@ -923,7 +923,9 @@ export default function App() {
   // Planner und werden beim ersten Mal nach ihrem Namen gefragt.
   const handleExportViewer = async () => {
     if (!hasDesktopBridge) {
-      await infoDialog('Viewer-Export erfordert die Desktop-App.', { tone: 'warning' })
+      await infoDialog(t('app.viewerExport.desktopOnly', 'Exporting a viewer file needs the desktop app.'), {
+        tone: 'warning',
+      })
       return
     }
     try {
@@ -1286,11 +1288,14 @@ export default function App() {
       .getState()
       .project.cables.filter((c) => c.type === draft.type && c.length === draft.length).length
     if (built > planned) {
-      await infoDialog('Über Rentman-Plan hinaus', {
-        body:
-          `Es sind jetzt ${built} x ${draft.type} ${draft.length} m verbaut, ` +
-          `aber nur ${planned} laut Rentman-Plan vorhanden. ` +
-          `Bitte zusätzliche Kabel in Rentman buchen oder die Verkabelung anpassen.`,
+      await infoDialog(t('app.rentman.overBuiltTitle', 'Beyond the rental plan'), {
+        body: format(
+          t(
+            'app.rentman.overBuiltBody',
+            '{built} x {type} {length} m are now built, but the rental plan lists only {planned}. Book the extra cables in Rentman or adjust the wiring.',
+          ),
+          { built, type: draft.type, length: draft.length, planned },
+        ),
         tone: 'warning',
       })
     }
@@ -2024,7 +2029,7 @@ const CableEditDialog = ({ cable, onClose, onSave }: CableEditDialogProps) => {
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="w-full max-w-lg rounded border border-cp-border bg-cp-surface-1 p-4 text-cp-text">
-        <h3 className="mb-2 text-cp-xl font-semibold">Kabel bearbeiten</h3>
+        <h3 className="mb-2 text-cp-xl font-semibold">{t('cable.edit.title', 'Edit cable')}</h3>
 
         <div className="space-y-2 text-cp-base">
           <label className="block">
@@ -2052,7 +2057,11 @@ const CableEditDialog = ({ cable, onClose, onSave }: CableEditDialogProps) => {
                   onChange={async (e) => {
                     const v = e.target.value
                     if (v === '__new__') {
-                      const name = (await promptDialog('Neuer Stecker-Typ (z.B. "Speakon NL4"):'))?.trim()
+                      const name = (
+                        await promptDialog(
+                          t('app.connector.newPrompt', 'New connector type (e.g. "Speakon NL4"):'),
+                        )
+                      )?.trim()
                       if (name) {
                         useUiStore.getState().addCustomConnectorType(name)
                         setCustomConnectorType(name as ConnectorType)
@@ -2069,7 +2078,7 @@ const CableEditDialog = ({ cable, onClose, onSave }: CableEditDialogProps) => {
                       {customConnectorTypes.includes(type as string) ? ' (custom)' : ''}
                     </option>
                   ))}
-                  <option value="__new__">+ Neuer Stecker-Typ…</option>
+                  <option value="__new__">{t('cable.edit.newConnectorType', '+ New connector type…')}</option>
                 </select>
               </label>
               <label className="block">
@@ -2079,7 +2088,11 @@ const CableEditDialog = ({ cable, onClose, onSave }: CableEditDialogProps) => {
                   onChange={async (e) => {
                     const v = e.target.value
                     if (v === '__new__') {
-                      const name = (await promptDialog('Neuer Signal-Standard (z.B. "Madi 64ch"):'))?.trim()
+                      const name = (
+                        await promptDialog(
+                          t('app.standard.newPrompt', 'New signal standard (e.g. "Madi 64ch"):'),
+                        )
+                      )?.trim()
                       if (name) {
                         useUiStore.getState().addCustomSignalStandard(name)
                         setCustomStandard(name as SignalStandard)
@@ -2099,7 +2112,7 @@ const CableEditDialog = ({ cable, onClose, onSave }: CableEditDialogProps) => {
                       {customSignalStandards.includes(item as string) ? ' (custom)' : ''}
                     </option>
                   ))}
-                  <option value="__new__">+ Neuer Signal-Standard…</option>
+                  <option value="__new__">{t('cable.edit.newSignalStandard', '+ New signal standard…')}</option>
                 </select>
               </label>
             </div>
@@ -2175,7 +2188,7 @@ const CableEditDialog = ({ cable, onClose, onSave }: CableEditDialogProps) => {
               device/port on either side. */}
           <details open className="rounded border border-cp-border bg-cp-surface-3/50">
             <summary className="cursor-pointer select-none px-2 py-1.5 text-cp-xs text-cp-text-secondary hover:bg-cp-surface-2/40">
-              <span className="font-semibold uppercase tracking-wide text-cp-text-muted">Verbindung</span>
+              <span className="font-semibold uppercase tracking-wide text-cp-text-muted">{t('cable.edit.connection', 'Connection')}</span>
               <span className="ml-2 text-cp-text-secondary">
                 {fromDev?.name ?? '?'} · {fromPort?.name ?? cable.fromPortId}
                 <span className="mx-1 text-cp-text-faint">→</span>
@@ -2272,7 +2285,7 @@ const CableEditDialog = ({ cable, onClose, onSave }: CableEditDialogProps) => {
           </details>
 
           <label className="block">
-            Notizen
+            {t('cable.edit.notes', 'Notes')}
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
