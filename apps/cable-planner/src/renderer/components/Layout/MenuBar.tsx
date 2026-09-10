@@ -1295,7 +1295,7 @@ const Menu = ({ label, children }: MenuProps) => {
         className={`rounded px-2 py-1 text-cp-text-bright hover:bg-cp-surface-2 ${open ? 'bg-cp-surface-2' : ''}`}
       >
         {label}
-        <span className="ml-1 text-[11px] text-cp-text-muted" aria-hidden="true">▾</span>
+        <span className="ml-1 text-cp-xs text-cp-text-muted" aria-hidden="true">▾</span>
       </button>
       {open && (
         <div
@@ -1354,7 +1354,7 @@ const MenuItem = ({ onClick, icon, shortcut, disabled, note, children }: MenuIte
       <span className="min-w-0 flex-1">
         <span className="block truncate">{children}</span>
         {note && (
-          <span className="block truncate text-[11px] text-[var(--cp-text-faint)]">{note}</span>
+          <span className="block truncate text-cp-xs text-[var(--cp-text-faint)]">{note}</span>
         )}
       </span>
       {shortcut && (
@@ -1371,7 +1371,7 @@ const MenuSep = () => <div className="my-1 border-t border-cp-border" />
 /** Kleiner, nicht-interaktiver Gruppen-Titel innerhalb eines Menüs. Gliedert
  *  lange Menüs (z. B. Werkzeuge) optisch, ohne echte Flyout-Submenüs. */
 const MenuSectionHeader = ({ children }: { children: React.ReactNode }) => (
-  <div className="px-3 pb-0.5 pt-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--cp-text-faint)] select-none">
+  <div className="px-3 pb-0.5 pt-1.5 text-cp-xs font-semibold uppercase tracking-[0.14em] text-[var(--cp-text-faint)] select-none">
     {children}
   </div>
 )
