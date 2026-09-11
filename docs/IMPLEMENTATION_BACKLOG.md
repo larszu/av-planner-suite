@@ -1594,6 +1594,17 @@ ist damit Arbeit — und wo eine Bedingung bleibt, die kein Beschluss aufhebt
   Zeichenketten erneut anzufassen.
 * **Deshalb nicht geraten:** siehe E-20. Ohne diese Entscheidung wäre jede
   Richtung eine halbe Tageslast, die man im Zweifel wegwirft.
+* **ÜBERHOLT DURCH E-28 (2026-09-09), der Absatz bleibt trotzdem stehen.** Der
+  Satz „`cable-planner` und `light-planner` machen es genau andersherum"
+  stimmte am 2026-09-04 und stimmt heute nicht mehr: der Eigentümer hat die
+  Quellsprache auf **`en` für ALLE Repos** festgelegt, und damit ist sie keine
+  Eigenschaft des einzelnen Repos mehr. Der Absatz ist nicht gelöscht, weil
+  die Abwägung darin die Entscheidung trägt — wer E-28 umdrehen will, findet
+  hier, wogegen er argumentiert. Was aus ihm veraltet ist, ist die
+  Tatsachenbehauptung, nicht die Begründung. Stand 2026-09-11: alle fünf
+  Oberflächen-Repos tragen `avplan.sourceLanguage: en`, zuletzt
+  `inventory-planner` (`inventory#13`) und `larszu-facility-planner`
+  (`facility#8`), die vorher gar keine i18n-Schicht hatten.
 * **Aufwand:** groß
 
 ### B-61 · `multicam-planner`: deutsche Texte in einer englisch-quelligen Oberfläche — und der Wächter sieht sie nicht
@@ -4465,6 +4476,59 @@ eine Antwort:**
   Vendoring liefert nur die erste.
 
 
+### B-71 · `lang:parity` sieht drei von fünf Kopien — und nur deren halbe Logik
+
+* **Status:** offen. **Gemessen am 2026-09-11** beim i18n-Umbau von
+  `inventory-planner` und `larszu-facility-planner` (`inventory#13`,
+  `facility#8`), nicht gesucht.
+* **Der Befund, in einem Satz.** Die Kopie des Quellsprachen-Wächters im
+  `larszu-facility-planner` hing zwei Tage hinter der im
+  `inventory-planner` zurück: ihr fehlte die Korrektur vom 2026-09-09, die
+  `=>` und `>=` vom Tag-Ende ausnimmt. `lang:parity` hat das nicht gemeldet,
+  und zwar aus zwei voneinander unabhängigen Gründen.
+* **Grund 1 — die Liste ist zu kurz.** `KOPIEN` in
+  `scripts/lang-parity.mjs` führt drei Einträge: `cable-planner`,
+  `light-planner`, `multicam-planner`. Die Suite vendoriert aber **fünf**
+  Apps mit einem Quellsprachen-Wächter; `apps/inventory-planner/scripts/`
+  und `apps/larszu-facility-planner/scripts/` liegen im selben Baum und
+  werden nicht angesehen. Ein Wächter, der zwei von fünf Kopien nicht
+  kennt, sagt nicht „die Kopien stimmen überein" — er sagt „die drei, die
+  ich kenne, stimmen überein", und gelesen wird der erste Satz.
+* **Grund 2 — verglichen wird nur die halbe Datei.** Punkt 1 des Vergleichs
+  ist `klassifiziere` samt Wortlisten, Punkt 2 der Sprachmix-Teil
+  (`fallbackMuster`, `SICHTBARE_ATTRIBUTE`, `JSX_TEXT`, `NACH_CODE`,
+  `RUFE`, `sichtbareTexte`, …). Der zweite Teil existiert **nur in den drei
+  grossen Kopien**. Die beiden kleinen führen stattdessen ein eigenes,
+  schwächeres `jsxTextMuster` — und genau das ist auseinandergelaufen.
+  Zwischen den beiden kleinen Kopien vergleicht heute niemand irgendetwas.
+* **Was dabei noch herauskam.** Auch mit der Korrektur von 2026-09-09 blieb
+  in beiden kleinen Kopien eine Lücke: die spitzen Klammern von TypeScript
+  enden ebenfalls auf `>`. `useState<Belegung>('unbekannt')` und
+  `Record<Bauform, string> = {}` liessen den Wächter auf drei einwandfreie
+  Zeilen anschlagen — die Sorte Fehlalarm, die den Wächter kostet, weil ihn
+  danach jemand abschaltet. `ohneGenerics` (beide Repos, mit Gegenproben)
+  behebt das; die drei grossen Kopien haben an dieser Stelle ein strengeres
+  `JSX_TEXT`, das den Fall gar nicht erst hat.
+* **Was zu tun ist, in dieser Reihenfolge:**
+  1. `inventory-planner` und `larszu-facility-planner` in `KOPIEN`
+     aufnehmen. Das allein bringt den Wortlisten-Vergleich für fünf statt
+     drei Kopien — sofort und ohne weitere Vorarbeit.
+  2. Den Sprachmix-Teil in die beiden kleinen Kopien ziehen (oder deren
+     `jsxTextMuster` durch das strengere `JSX_TEXT` der grossen ersetzen),
+     damit Punkt 2 des Vergleichs auch für sie greift. Erst danach ist
+     `lang:parity` wirklich eine Zusicherung über alle fünf.
+  3. Die Gegenprobe, die dieser Eintrag verlangt: eine Kopie absichtlich
+     verstellen und `npm run lang:parity` rot sehen — für JEDE der fünf,
+     nicht nur für eine. Ein Guard, der nur die erste Kopie wirklich prüft,
+     ist die Bauform, gegen die dieser Eintrag geschrieben ist.
+* **Warum das kein Randfall ist.** Der Wächter existiert, weil eine Doku-Zeile
+  überlesen wird und eine Messung fällt. Wenn die Messung selbst in fünf
+  Fassungen vorliegt und nur drei davon verglichen werden, ist die
+  Zusicherung wieder eine Behauptung — nur eine, die nach Arbeit aussieht.
+  Genau diese Form hatte der Guard schon einmal (siehe seinen eigenen Kopf:
+  „Punkt 2 kam spaeter dazu, und das Fehlen war eine echte Luecke").
+
+
 ## Eigentümer-Entscheidungen
 
 **Alle offen gebliebenen Punkte dieser Tabelle sind am 2026-09-08 entschieden
@@ -4500,6 +4564,21 @@ B-65 ausdrücklich als „nicht zu entscheiden ohne den Eigentümer" stehengelas
 worden waren. Der Grund, warum sie hier stehen und nicht nur im Bau-Eintrag:
 eine beantwortete Frage, die nur im Code steht, wird beim nächsten Durchgang
 wieder gestellt.
+
+**E-28 (2026-09-09) steht in dieser Tabelle nicht als eigene Zeile, und das
+war eine Lücke** — nachgetragen am 2026-09-11. Der Eigentümer hat die
+Quellsprache auf **`en` festgelegt, und zwar für alle Repos der Suite**; das
+**hebt E-17 und E-20 auf**, die sie ausdrücklich zu einer Eigenschaft des
+einzelnen Repos gemacht hatten. Die Entscheidung stand bis dahin nur in den
+CLAUDE.md-Dateien der betroffenen Repos — also genau dort, wo sie jemand
+liest, der schon in dem Repo arbeitet, und nirgends dort, wo jemand nachsieht,
+was für die Suite gilt. Am 2026-09-11 hat der Eigentümer sie bestätigt und
+ausgeweitet: „Die Standard Sprache muss immer Englisch sein und über i18n muss
+man auf deutsch übersetzen können." Damit sind auch `inventory-planner` und
+`larszu-facility-planner` englisch-quellig (`inventory#13`, `facility#8`) —
+beide hatten vorher **gar keine** i18n-Schicht, der Umbau war deshalb zwei
+Dinge auf einmal: die Schicht einziehen und die Quelle drehen. Deutsch ist
+seither die erste Übersetzung.
 
 **Eine Zeile ist am 2026-09-10 dazugekommen** — E-29, und sie ist die
 einzige der Tabelle, die einen Fund festhält statt einer Bauentscheidung: die
