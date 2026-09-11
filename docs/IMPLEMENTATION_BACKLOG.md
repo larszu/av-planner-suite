@@ -3971,53 +3971,83 @@ belegbar, dort sind sie erprobt.
   ging das Kürzel verloren.
 * **Aufwand:** klein — erledigt.
 
-### B-70 · Ein Hell-Thema für `multicam-planner` und `light-planner` — und was dagegen steht
+### B-70 · Ein Hell-Thema für `multicam-planner` und `light-planner`
 
-* **Status:** offen. **Herausgefallen aus dem Kopfzeilen-Durchgang vom
-  2026-09-11** (`multicam#129`, `light#116`), nicht aus einer Nutzer-Meldung.
-* **Warum der Eintrag existiert.** Der Eigentümer hat am 2026-09-11 gewählt:
-  die Einstellungen sollen in allen Apps an derselben Stelle stehen, mit
-  demselben Grundstock — **Sprache, Thema, Über**. Zwei der vier gebauten
-  Dialoge führen nur Sprache und Über. Das Thema fehlt, und das steht als
-  eigener Eintrag hier, damit es nicht als „vergessen" durchgeht und nicht
-  als ausgegrauter Punkt im Dialog steht. Ein Umschalter, der eine halb
-  umgefärbte App liefert, ist schlimmer als keiner: er sieht aus wie eine
-  Fähigkeit. Genau davor warnt `IMPLEMENTATION_STATUS.md` in seiner eigenen
-  Legende (PLACEHOLDER).
-* **Gemessen, nicht geschätzt.**
+* **Status:** **erledigt 2026-09-11** — `multicam#131`, `light#117`,
+  nachgezogen in `light#118`; in die Suite vendoriert mit diesem PR.
+  Herausgefallen war der Eintrag aus dem Kopfzeilen-Durchgang vom
+  2026-09-11 (`multicam#129`, `light#116`), nicht aus einer Nutzer-Meldung.
+* **Warum der Eintrag existierte.** Der Eigentümer hat am 2026-09-11
+  gewählt: die Einstellungen sollen in allen Apps an derselben Stelle
+  stehen, mit demselben Grundstock — **Sprache, Thema, Über**. Zwei der
+  vier gebauten Dialoge führten nur Sprache und Über. Ein Umschalter, der
+  eine halb umgefärbte App liefert, ist schlimmer als keiner: er sieht aus
+  wie eine Fähigkeit (PLACEHOLDER, siehe Legende in
+  `IMPLEMENTATION_STATUS.md`). Deshalb stand erst die Umstellung an und
+  dann der Schalter.
+* **Was tatsächlich davorlag** — die Schätzung von morgens stimmte in der
+  Grössenordnung und nicht in der Zahl:
 
-  | App | was einem Hell-Thema im Weg steht |
-  |---|---|
-  | `multicam-planner` | **464 rohe Tailwind-Graustufen** (`text-white`, `text-gray-200/300/400/500/600`, `bg-white`) in **17 Dateien**. Sie hängen an keinem `--color-bc-*`-Token und blieben dunkel. Dazu der 2D-Plan, der seine Farben im Canvas zeichnet, und das FlexLayout-Thema. |
-  | `light-planner` | `App.css` ist **ein einziges dunkles Stilblatt** mit festgeschriebenen Flächen; dazu der 2D-Canvas und die 3D-Szene. |
+  | App | geschätzt | gemessen beim Umbau |
+  |---|---|---|
+  | `multicam-planner` | 464 rohe Tailwind-Graustufen in 17 Dateien | **406** — die Differenz waren Treffer in Kommentaren, die der erste Zähler mitzählte |
+  | `light-planner` | „ein einziges dunkles Stilblatt" | **zur Hälfte falsch.** Die Flächen hingen längst an den Variablen aus ADR-007 Stufe 5; gefehlt haben ein zweiter Satz **Werte** und einzelne Stellen mit rohem Hex |
 
-* **Die Suite hat dafür schon einen Notbehelf — und der ist der Grund, warum
-  es niemandem auffiel.** `apps/multicam-planner/src/index.css` trägt in der
-  vendorierten Kopie einen Block
-  `:root[data-theme="light"] .text-white { … !important }` und sechs
-  Geschwister: die Shell biegt die festen Tailwind-Klassen um, wenn ihr
-  Theme-Schalter umspringt. **Im eingebetteten Modul funktioniert das
-  Hell-Thema also**, in der eigenständigen App nicht. Der Notbehelf ist
-  bewusst suite-only und nicht upstream gewandert; er überschreibt Klassen
-  statt Tokens und wächst mit jeder neuen Graustufe, die jemand einbaut.
-* **Was zu tun wäre**, in dieser Reihenfolge und je für sich lieferbar:
-  1. `multicam-planner`: die 464 Stellen auf die `bc-*`-Token heben. Die
-     Rampe braucht dafür zwei Stufen mehr (heute endet sie bei `--color-bc-muted`),
-     sonst fällt die dreistufige Grau-Hierarchie auf eine zusammen.
-  2. Ein Wächter, der rohe Graustufen ab dann rot macht — sonst kommt die
-     erste neue beim nächsten Feature zurück, und der Notbehelf lebt weiter.
-  3. Die Token für Hell definieren, den Umschalter in den
-     Einstellungen-Dialog, den `!important`-Block in der Suite-Kopie
-     **löschen** (er wäre danach die zweite Rechnung).
-  4. `light-planner` dasselbe, mit dem grösseren Stilblatt und der 3D-Szene.
-* **Was der Eintrag NICHT behauptet:** dass der Canvas-Inhalt mitmuss. Ein
-  Zeichenbereich darf dunkel bleiben, wenn die Bedienoberfläche hell ist —
-  im `cable-planner` ist das Canvas-Thema deshalb eine eigene Einstellung.
-  Wer diese Arbeit anfängt, entscheidet das zuerst und nicht nebenbei.
-* **Bis dahin sagt jeder der beiden Dialoge in seinem Kopf, dass das Thema
-  fehlt, und warum** — mit der Zahl. Und der Repo-eigene `kopfzeile:check`
-  hält fest, dass der Grund dort steht: fällt er, weil jemand die Umstellung
-  gebaut hat, wird die Zeile **geändert** statt gelöscht.
+* **Was der Umbau nebenbei gefunden hat, und das ist der eigentliche
+  Ertrag:** **acht Zustände, die weisse oder navyfarbene Schrift auf die
+  gleichfarbige Aktionsfläche schrieben** — unlesbar, in *jedem* Thema,
+  seit ADR-007 Stufe 5 und niemandem gemeldet. Darunter die Zahl am
+  Reiter, die sagt, wieviel dort offen ist, und der Primärknopf der
+  Kopfzeile, den ADR-007 eigens hervorhebt. `#fff` war gegen den früheren,
+  gesättigten Akzent richtig und ist beim Farbwechsel stehengeblieben.
+  Kein Themenfehler, sondern einer, den die Themenarbeit gefunden hat.
+* **Drei Wächter-Defekte, alle beim Bauen aufgefallen:**
+  1. `farben:check` (`light-planner`) war am **Zeilenanfang verankert** und
+     sah keine Einzeiler — hinter dem blinden Fleck lagen elf Stellen,
+     darunter der achte unlesbare Zustand. Derselbe Fehler sass im
+     Selektor-Finder, weshalb die Ausnahmeliste dort nie gefragt wurde.
+     Die alte Notiz, die Liste sei „länger als ihre Ausbeute", war die
+     richtige Beobachtung mit der falschen Erklärung.
+  2. `--overlay: var(--overlay)` — beim Herausziehen des Wertes in ein
+     Token hat der Umstellungs-Lauf die eben geschriebene **Definition**
+     mit ersetzt. Eine Eigenschaft, die sich selbst nennt, ist zyklisch
+     und damit ungültig; die schwebende Werkzeuggruppe stand ohne
+     Hinterlegung über dem Plan, im Dunkel-Thema. `farben:check` misst die
+     Form jetzt.
+  3. `chrome:parity` (Suite) verlangte für den Menüpunkt „Neu" das Muster
+     `New project|Neues ` und hat die beiden kleinen Apps nach E-28 falsch
+     beschuldigt: aus „Neues Lager" war „New stock list" geworden. Das
+     Muster nennt jetzt das Verb und nicht das Objekt.
+* **Der `!important`-Notbehelf in der Suite ist gelöscht.** Er bog in
+  `apps/multicam-planner/src/index.css` die festen Tailwind-Klassen um,
+  wenn der Theme-Schalter der Shell umsprang — er überschrieb Klassen
+  statt Tokens und wuchs mit jeder neuen Graustufe. Seit die 406 Stellen
+  Token sind, ist er die zweite Rechnung und steht als Kommentar mit
+  Begründung an seiner Stelle.
+* **Eingebettet gehört das Thema der Shell, und das ist die einzige
+  Abweichung der vendorierten Kopien.** `connectShellTheme` setzt
+  `data-theme` **und** schreibt die Palette als Inline-Variablen ans
+  Wurzelelement; inline schlägt jede Regel aus dem Stilblatt. Ein lokaler
+  Schalter könnte dort keine Farbe ändern, und die nächste Theme-Nachricht
+  setzte ihn zurück — wieder ein Bedienelement, das aussieht wie eine
+  Fähigkeit. Beide Kopien zeigen ihn deshalb nur standalone
+  (`{!isEmbedded && …}`), und `main.tsx` wendet die gespeicherte Wahl nur
+  standalone an. Der repo-eigene `kopfzeile:check` misst beides getrennt,
+  weil es zwei verschiedene Fehler sind.
+* **Was NICHT mitspringt, und warum das kein Rest ist:** die
+  Kamera-Vorschau und die 3D-Ansicht im `multicam-planner`, der 2D-Plan
+  und die 3D-Szene im `light-planner`. Sie zeigen einen **simulierten
+  Raum**. Ein „helles" Kamerabild wäre kein anderes Aussehen, sondern eine
+  andere Beleuchtung — also eine Aussage über den Saal, die niemand
+  gemacht hat. Ebenso die Gel-Farben, die Statusfarben und das Signalrot:
+  sie bedeuten etwas, und die Bedeutung hängt nicht am Thema. Papier
+  bleibt weiss, auch nachts (`.label-sheet`).
+* **Drei Zustände, nicht zwei.** „System" ist keine Umschreibung für
+  „dunkel": wer nichts gewählt hat, folgt dem Betriebssystem, wer gewählt
+  hat, gewinnt gegen es. Deshalb `[data-theme]` am Wurzelelement **und**
+  eine Medienabfrage, und die Medienabfrage ist gegen
+  `data-theme='dark'` abgesichert — sonst bekäme, wer ausdrücklich dunkel
+  gewählt hat, auf einem hell eingestellten Rechner trotzdem hell.
 
 ### B-49 · Bedarfs-Audit: die siebzehn, die nirgends stehen
 
