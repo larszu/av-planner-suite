@@ -4529,6 +4529,65 @@ eine Antwort:**
   „Punkt 2 kam spaeter dazu, und das Fehlen war eine echte Luecke").
 
 
+### B-72 · Die MITGELIEFERTEN Presets haben keine Herkunft — und der Wächter misst die andere
+
+* **Status:** offen, und der offene Teil ist eine EIGENTÜMER-FRAGE, keine
+  Bauarbeit. **Gemessen am 2026-09-11.**
+* **Woher der Eintrag kommt.** Die Frage „Geräte-Presets gegen Datenblätter
+  prüfen" stand als Aufgabe da, ohne dass jemand die Ausgangslage gemessen
+  hatte. Das ist jetzt nachgeholt, und die Antwort ist unbequemer als die
+  Frage.
+* **Was `specSource` wirklich ist.** Ein Feld an der EINZELNEN Instanz, das
+  der Planer füllt, wenn er ein Datenblatt in die App reicht: Feld → Wert →
+  Beleg, plus `isStaleSource` (der Nutzer hat den Wert danach geändert) und
+  `isEstimate` (der Beleg sagt selbst, dass er eine Schätzung ist). Diese
+  Maschinerie ist gut und sie funktioniert; `spec:check` prüft sie in beiden
+  Sprachen.
+* **Der Katalog, den die App AUSLIEFERT, hat sie nicht.** Gemessen:
+
+  | Katalog | Einträge | Beleg als FELD | Beleg als Kommentar |
+  |---|---:|---:|---:|
+  | `light-planner` · `fixtureLibrary.ts` | 60 | **0** | 3 |
+  | `multicam-planner` · `cameras.ts` | 60 | **0** | 1 |
+  | `multicam-planner` · `lenses.ts` | 202 | **0** | 1 |
+
+  Drei von 60 Leuchten tragen eine Zeile wie
+  `// Measured with LS 600x Pro at 5600K spot 15°: 137,000 lux @ 1m`. Die
+  übrigen 57 tragen nichts. Ein Kommentar ist kein Beleg: er steht nicht im
+  Modell, kommt nicht in die Oberfläche und wird von keiner Messung erfasst.
+* **Warum das genau die Defektform ist, gegen die `specSource` gebaut wurde.**
+  Die Begründung im Typ sagt es wörtlich: eine GESCHÄTZTE Streuwinkel-Angabe
+  soll von einer abgelesenen unterscheidbar sein, „während genau diese Zahl
+  in die Lichtberechnung und die 3D-Darstellung eingeht". Für die Zahlen,
+  die der Nutzer selbst einträgt, gilt das. Für die 262 Zahlen, die die App
+  MITBRINGT, gilt es nicht — und die sind die Vorgabe, also die, mit denen
+  die meisten Pläne gerechnet werden.
+* **Was der Wächter nicht sieht, und warum er trotzdem grün ist.**
+  `spec:check` misst die Maschinerie um das Instanz-Feld: sind Schätzung und
+  Ablesung unterscheidbar, wird ein veralteter Beleg erkannt, speichert der
+  Editor ihn mit, zeigt das Feld ihn an. Alle vier stimmen. Über den
+  ausgelieferten Katalog sagt er kein Wort — er kennt ihn nicht. Das ist
+  kein Fehler des Laufs, sondern eine Lücke zwischen zwei Läufen, und
+  genau solche Lücken sind schwerer zu sehen als ein roter Test.
+* **Die Entscheidung, die dem Eigentümer gehört** (und die dieser Eintrag
+  NICHT vorwegnimmt):
+  1. Bekommt der ausgelieferte Katalog dasselbe `specSource`-Feld? Dann sind
+     es 262 Einträge, die je einen Beleg brauchen — und ein Beleg, den
+     niemand nachgeschlagen hat, wäre schlimmer als keiner.
+  2. Oder trägt der Katalog als GANZES eine Herkunftsangabe („Herstellerseite,
+     Stand TT.MM.JJJJ") statt je Eintrag? Billiger, gröber, und für die
+     Frage „woher kommt DIESE Zahl" nutzlos.
+  3. Oder bleibt es, wie es ist — dann gehört in die Oberfläche der Satz,
+     dass eine Katalog-Zahl eine Katalog-Zahl ist und kein abgelesenes
+     Datenblatt.
+* **Was ausdrücklich NICHT getan wurde:** Datenblätter nachschlagen und
+  Werte eintragen. Ein Beleg, der aus einem Modell statt aus einem Datenblatt
+  stammt, ist genau die Zahl, gegen die dieses Repo anschreibt — und 262
+  davon wären ein Katalog, der vertrauenswürdig AUSSIEHT. Die Arbeit ist
+  echt, aber sie beginnt mit der Entscheidung oben und nicht mit der ersten
+  Herstellerseite.
+
+
 ## Eigentümer-Entscheidungen
 
 **Alle offen gebliebenen Punkte dieser Tabelle sind am 2026-09-08 entschieden
