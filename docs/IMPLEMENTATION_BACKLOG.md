@@ -4506,57 +4506,72 @@ eine Antwort:**
   Vendoring liefert nur die erste.
 
 
-### B-71 · `lang:parity` sieht drei von fünf Kopien — und nur deren halbe Logik
+### B-71 · `lang:parity` sah drei von fünf Kopien — und nur deren halbe Logik
 
-* **Status:** offen. **Gemessen am 2026-09-11** beim i18n-Umbau von
-  `inventory-planner` und `larszu-facility-planner` (`inventory#13`,
-  `facility#8`), nicht gesucht.
+* **Status:** **erledigt 2026-09-11.** Gemessen wurde der Befund beim i18n-Umbau
+  von `inventory-planner` und `larszu-facility-planner` (`inventory#13`,
+  `facility#8`), gesucht hat ihn niemand. Behoben in `inventory#14`,
+  `facility#9` und diesem PR.
 * **Der Befund, in einem Satz.** Die Kopie des Quellsprachen-Wächters im
-  `larszu-facility-planner` hing zwei Tage hinter der im
-  `inventory-planner` zurück: ihr fehlte die Korrektur vom 2026-09-09, die
-  `=>` und `>=` vom Tag-Ende ausnimmt. `lang:parity` hat das nicht gemeldet,
-  und zwar aus zwei voneinander unabhängigen Gründen.
-* **Grund 1 — die Liste ist zu kurz.** `KOPIEN` in
-  `scripts/lang-parity.mjs` führt drei Einträge: `cable-planner`,
-  `light-planner`, `multicam-planner`. Die Suite vendoriert aber **fünf**
-  Apps mit einem Quellsprachen-Wächter; `apps/inventory-planner/scripts/`
-  und `apps/larszu-facility-planner/scripts/` liegen im selben Baum und
-  werden nicht angesehen. Ein Wächter, der zwei von fünf Kopien nicht
-  kennt, sagt nicht „die Kopien stimmen überein" — er sagt „die drei, die
-  ich kenne, stimmen überein", und gelesen wird der erste Satz.
-* **Grund 2 — verglichen wird nur die halbe Datei.** Punkt 1 des Vergleichs
-  ist `klassifiziere` samt Wortlisten, Punkt 2 der Sprachmix-Teil
-  (`fallbackMuster`, `SICHTBARE_ATTRIBUTE`, `JSX_TEXT`, `NACH_CODE`,
-  `RUFE`, `sichtbareTexte`, …). Der zweite Teil existiert **nur in den drei
-  grossen Kopien**. Die beiden kleinen führen stattdessen ein eigenes,
-  schwächeres `jsxTextMuster` — und genau das ist auseinandergelaufen.
-  Zwischen den beiden kleinen Kopien vergleicht heute niemand irgendetwas.
-* **Was dabei noch herauskam.** Auch mit der Korrektur von 2026-09-09 blieb
-  in beiden kleinen Kopien eine Lücke: die spitzen Klammern von TypeScript
-  enden ebenfalls auf `>`. `useState<Belegung>('unbekannt')` und
-  `Record<Bauform, string> = {}` liessen den Wächter auf drei einwandfreie
-  Zeilen anschlagen — die Sorte Fehlalarm, die den Wächter kostet, weil ihn
-  danach jemand abschaltet. `ohneGenerics` (beide Repos, mit Gegenproben)
-  behebt das; die drei grossen Kopien haben an dieser Stelle ein strengeres
-  `JSX_TEXT`, das den Fall gar nicht erst hat.
-* **Was zu tun ist, in dieser Reihenfolge:**
-  1. `inventory-planner` und `larszu-facility-planner` in `KOPIEN`
-     aufnehmen. Das allein bringt den Wortlisten-Vergleich für fünf statt
-     drei Kopien — sofort und ohne weitere Vorarbeit.
-  2. Den Sprachmix-Teil in die beiden kleinen Kopien ziehen (oder deren
-     `jsxTextMuster` durch das strengere `JSX_TEXT` der grossen ersetzen),
-     damit Punkt 2 des Vergleichs auch für sie greift. Erst danach ist
-     `lang:parity` wirklich eine Zusicherung über alle fünf.
-  3. Die Gegenprobe, die dieser Eintrag verlangt: eine Kopie absichtlich
-     verstellen und `npm run lang:parity` rot sehen — für JEDE der fünf,
-     nicht nur für eine. Ein Guard, der nur die erste Kopie wirklich prüft,
-     ist die Bauform, gegen die dieser Eintrag geschrieben ist.
-* **Warum das kein Randfall ist.** Der Wächter existiert, weil eine Doku-Zeile
-  überlesen wird und eine Messung fällt. Wenn die Messung selbst in fünf
-  Fassungen vorliegt und nur drei davon verglichen werden, ist die
-  Zusicherung wieder eine Behauptung — nur eine, die nach Arbeit aussieht.
-  Genau diese Form hatte der Guard schon einmal (siehe seinen eigenen Kopf:
-  „Punkt 2 kam spaeter dazu, und das Fehlen war eine echte Luecke").
+  `larszu-facility-planner` hing zwei Tage hinter der im `inventory-planner`
+  zurück: ihr fehlte die Korrektur vom 2026-09-09, die `=>` und `>=` vom
+  Tag-Ende ausnimmt. `lang:parity` hat das nicht gemeldet, und zwar aus zwei
+  voneinander unabhängigen Gründen.
+* **Grund 1 — die Liste war zu kurz.** `KOPIEN` führte drei Einträge; die
+  Suite vendoriert **fünf** Apps mit einem Quellsprachen-Wächter.
+* **Grund 2 — verglichen wurde nur die halbe Datei.** Der Sprachmix-Teil
+  existiert nur in den drei grossen Kopien; die beiden kleinen führen
+  stattdessen `jsxTextMuster` und `ohneGenerics`, und zwischen diesen beiden
+  verglich niemand irgendetwas.
+
+* **WAS HINTER DER LÜCKE LAG — und das ist mehr, als der Eintrag erwartet
+  hatte.** Die Wortliste `DEUTSCH` führte in den beiden kleinen Kopien **63**
+  Einträge und in den drei grossen **90**. Die 27 fehlenden sind nicht
+  beliebig: es sind genau die Wörter, an denen eine deutsche **Beschriftung**
+  hängt — `speichern`, `abbrechen`, `bearbeiten`, `einstellungen`, `ansicht`,
+  `auswahl`, `vorlage`, `datei`, `suchen`, `farbe`, `spalte`, `ordner` und
+  Geschwister. Die 63, die dastanden, sind Funktionswörter; die fangen einen
+  deutschen *Satz*. Eine einzelne Beschriftung ist aber kein Satz.
+
+  Gemessen mit einem eingelegten `t('probe.speichern', 'Speichern')`:
+
+  | Repo | mit den 27 | ohne die 27 |
+  |---|---|---|
+  | `inventory-planner` | `1 deutsch, 117 englisch, 760 ohne Merkmal` → fällt | `0 deutsch, 117 englisch, 761 ohne Merkmal` → grün |
+  | `larszu-facility-planner` | `1 deutsch, 66 englisch, 492 ohne Merkmal` → fällt | `0 deutsch, 66 englisch, 493 ohne Merkmal` → grün |
+
+  Der schwächere Lauf hat das Wort also nicht für englisch gehalten, sondern
+  für **merkmallos**. Das ist die stillste Art, an einem Wächter
+  vorbeizukommen: kein Fehlalarm, kein Befund, kein Anlass nachzusehen.
+  Der Bestand beider Repos bleibt mit der vollen Liste bei **0 deutschen
+  Fallbacks** — E-28 hat gehalten, war aber schwächer geprüft als gedacht.
+
+  Zweitens `fallbackMuster`: den beiden kleinen Kopien fehlten `tr|` (der
+  Übersetzer, den Module ausserhalb von React rufen — `\bt\(` trifft `tr(`
+  nicht) und die Absicherung `(?=\s*[,)])`. Heute ruft keines der beiden
+  Repos ein `tr(`; die Lücke war latent und nicht wirksam. Sie stehenzulassen
+  hiesse, auf den Tag zu warten, an dem sie es wird.
+
+* **Wie der Lauf jetzt vergleicht** — drei Runden statt einer:
+
+  | Runde | Stücke |
+  |---|---|
+  | alle fünf | `DEUTSCH`, `ENGLISCH`, `klassifiziere`, `fallbackMuster` |
+  | nur die drei grossen | `SICHTBARE_ATTRIBUTE`, `JSX_TEXT`, `NACH_CODE`, `RUFE`, `ohneKommentare`, `sichtbareTexte`, `ohneAusdruecke`, `PROBE` |
+  | nur die zwei kleinen | `jsxTextMuster`, `ohneGenerics` |
+
+  **Die Runden sind der Punkt, nicht die längere Liste.** Ein Lauf, der
+  stattdessen alles über alle fünf vergliche, fände überall `null` für die
+  fehlenden Stücke — und `null === null` ist grün. Er meldete Ruhe, weil er
+  nichts gefunden hat: dieselbe Bauform von stiller Abschaltung, gegen die
+  der Wächter überhaupt gebaut ist.
+* **Und er sagt jetzt, was er NICHT misst:** dass die fünf gleich *viel*
+  können. Die beiden kleinen tragen den vollen Sprachmix-Teil nicht — das ist
+  ein Unterschied im Umfang, keine Drift, und es steht in ihren eigenen
+  Kopfzeilen.
+* **Gegenprobe, wie der Eintrag sie verlangt hat:** jede der fünf Kopien
+  einzeln verstellt (ein erfundenes Wort in `DEUTSCH`), `lang:parity` je
+  einmal rot gesehen, zurückgedreht, grün. Fünf von fünf.
 
 
 ### B-72 · Die MITGELIEFERTEN Presets haben keine Herkunft — und der Wächter misst die andere
