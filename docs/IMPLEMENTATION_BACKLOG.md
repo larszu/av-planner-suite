@@ -2456,6 +2456,17 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
   `fixture-erreicht-grenze-nicht` sind durchgearbeitet. **Der Sweep ist
   abgeschlossen** — 24 bestätigte und behobene Befunde, jeder gegengeprobt.
 
+* **Eine sechste Form kam später dazu, und dieser Sweep hat sie nicht
+  gesucht:** `fokus-nach-dem-ereignis` (gefunden 2026-09-11, siehe **B-69**)
+  — eine Prüfung, die richtig formuliert ist und trotzdem die falsche
+  Grösse misst, weil zwischen dem Ereignis und der Messung ein anderer
+  Hörer gelaufen ist. Das ändert **nichts** am Ergebnis oben: die fünf
+  Formen sind durch, und was hier steht, ist keine nachträgliche Lücke im
+  Sweep, sondern eine Form, die es zur Laufzeit des Sweeps noch nicht als
+  Begriff gab. Ein Sweep über sie wäre eine eigene Arbeit und ist **nicht
+  gelaufen** — wer B-36 liest und daraus „die Formen sind alle geprüft"
+  mitnimmt, läge bei dieser einen falsch.
+
 * **Aufwand:** ~~mittel (Wiederholung, sobald Kontingent da ist)~~ ~~eine Form
   von fünf ist durch; drei stehen aus~~ ~~zwei Formen von fünf sind durch;
   zwei stehen aus~~ ~~drei Formen von fünf sind durch; eine steht aus~~
@@ -3875,6 +3886,78 @@ belegbar, dort sind sie erprobt.
   `touch-action` auto, 125 px Plan, drei fehlende `gesture*`-Hörer); mit
   global gesetzter Sperre meldet er die beiden nicht mehr scrollenden
   Einstiege.
+* **Aufwand:** klein — erledigt.
+
+### B-69 · „Gerät suchen" und die Ebenen-Leiste liessen sich nicht schliessen — und der Weg zurück fand einen fremden Fokus vor
+
+* **Status:** **erledigt 2026-09-11** — `cable#852`. **Nutzer-Meldung,
+  2026-09-11:** „Man muss ‚Gerät suchen' und die Leiste wo die Ebenen drauf
+  stehen im Cable planner auch schliessen können und über das ‚Ansicht' Menü
+  in der oberen Leiste auch wieder öffnen können."
+* **Befund 1 — die halbe Bedienung.** Beide schwebenden Leisten liegen auf
+  der Zeichenfläche. Die Suche liess sich **einklappen**, aber die Pille
+  blieb stehen; die Werkzeugleiste liess sich gar nicht wegräumen. Auf einem
+  kleinen Bildschirm ist der Platz, den sie belegen, der Plan selbst.
+* **Befund 2 — zwei Hörer auf einem Kürzel.** Gemessen im laufenden Fenster
+  blieb Strg+F nach der Änderung wirkungslos, und zwar genau dort, wo es
+  gebraucht wurde: als Weg zurück aus dem neuen geschlossenen Zustand. Die
+  Ursache lag eine Datei weiter. `LocalEquipmentTab` hängt einen **zweiten**
+  Strg+F-Hörer an dasselbe `window` und fokussiert damit sein
+  Bibliotheks-Suchfeld. Er ist früher dran. Danach steht in
+  `document.activeElement` ein `INPUT`, das vor dem Tastendruck noch nicht
+  dort war — und der Tipp-Schutz der Suche las das als „der Nutzer tippt
+  gerade" und gab auf.
+
+  **Die Form, die dahintersteckt, ist allgemeiner als diese beiden Dateien:
+  ein Tipp-Schutz, der den Fokus NACH dem Ereignis liest, misst das Ergebnis
+  der anderen Hörer mit.** `e.target` ist, wo die Taste wirklich passiert
+  ist, und das verschiebt kein fremder Hörer.
+
+  Sie bekommt hier einen Namen, weil sie wiederkommt:
+  **`fokus-nach-dem-ereignis`** — eine Prüfung, die richtig formuliert ist
+  und trotzdem die falsche Grösse misst, weil zwischen dem Ereignis und der
+  Messung jemand anders gelaufen ist. Sie ist damit die **sechste** Form
+  neben den fünf aus B-36 (`guard-umgangen`, `zwei-rechnungen`,
+  `vertrag-nur-feldnamen`, `fixture-erreicht-grenze-nicht`,
+  `zustand-nach-fehler`) und unterscheidet sich von allen: der Wert ist
+  nicht doppelt gerechnet, der Wächter nicht umgangen, der Vertrag nicht
+  nur dem Namen nach erfüllt — die Zeile liest schlicht einen Zustand, den
+  ein anderer Hörer im selben Zug verändert hat. Wo sie sonst noch steckt,
+  ist **nicht durchsucht**: B-36 ist abgeschlossen, und ein Sweep über die
+  sechste Form wäre eine eigene Arbeit.
+* **Behoben:** zwei Flaggen im `uiStore` (`canvasSearchVisible`,
+  `canvasToolbarVisible`, Vorgabe **sichtbar**, über `applyPatch` persistiert),
+  je ein eigener Schliessen-Knopf an beiden Leisten, zwei Punkte im
+  Ansicht-Menü mit Haken. Bei der Suche steht das Schliessen **neben** dem
+  Einklappen und nicht statt seiner: Einklappen lässt die Pille stehen,
+  Schliessen räumt sie weg. Ein Knopf für beides müsste sich für eine
+  Bedeutung entscheiden, und die andere wäre wieder weg. Esc klappt weiterhin
+  nur ein. `CanvasSearch` bleibt gemountet und zeichnet nichts, statt
+  ausgehängt zu werden — an ihr hängt der Strg+F-Hörer.
+* **Gemessen** (Playwright, echtes Fenster, 1440x900, Beispielprojekt):
+  Schliessen und Wiederöffnen über das Menü für beide Leisten, dann Strg+F
+  ohne Fokus. Schritt 6 stand vor dem `e.target`-Fix auf `Suche=false`,
+  danach auf `Suche=true`.
+* **Wächter:** `tests/leistenSchliessen.test.ts` (23 Prüfungen). Er steht
+  **nicht** gegen das Schliessen — das ist eine Zeile und fällt beim ersten
+  Hinsehen auf, wenn sie fehlt — sondern gegen die **Hälfte** davon: eine
+  Leiste, die sich schliessen lässt und deren Weg zurück jemand vergisst.
+  Der ist unsichtbar. Wer eine geschlossene Leiste sucht und den Menüpunkt
+  nicht findet, hat ein Werkzeug verloren und weiss nicht einmal, ob es je
+  da war. Deshalb prüft er **paarweise**: zu jedem Schliessen ein
+  Menü-Eintrag, zu jedem Eintrag ein Haken.
+* **Was der Wächter nicht kann:** er liest Quelltext. Dass der Knopf im
+  laufenden Fenster wirklich trifft, misst die Messreihe oben, und das steht
+  so in der Datei.
+* **Gegengeprobt:** mit `document.activeElement` statt `e.target` fällt genau
+  eine Prüfung und keine andere.
+* **Offen, bewusst:** die beiden Strg+F-Hörer bleiben zwei. Ein einziger
+  Hörer mit einer Zuständigkeitsregel wäre die sauberere Form, ist aber ein
+  eigener Umbau — die Kürzel-Verwaltung liegt heute je Komponente. Der
+  Wächter hält immerhin fest, dass **beide dasselbe messen** (`e.target`):
+  zwei Tipp-Schutz-Regeln auf einem Kürzel, die verschiedene Dinge lesen,
+  sind zwei Rechnungen derselben Frage — und an genau so einer Abweichung
+  ging das Kürzel verloren.
 * **Aufwand:** klein — erledigt.
 
 ### B-49 · Bedarfs-Audit: die siebzehn, die nirgends stehen
