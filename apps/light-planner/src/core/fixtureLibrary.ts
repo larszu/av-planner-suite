@@ -270,10 +270,34 @@ export const fixtureLibrary: Fixture[] = [
     colorTemp: 0, weight: 9.7, mountType: 'yoke', dmxChannels: 18,
   },
   {
+    id: 'robe-robin-ledbeam-150', name: 'Robin LEDBeam 150', manufacturer: 'Robe', category: 'moving-wash',
+    wattage: 220, lumens: 3550, beamAngle: 3.8, fieldAngle: 60,
+    beamShape: 'circular', beamRatioWH: 1, lensType: 'zoom', zoomRange: [3.8, 60],
+    colorTemp: 0, colorTempRange: [2700, 8000], weight: 5.7, mountType: 'yoke', dmxChannels: 22,
+  },
+  {
     id: 'chauvet-rogue-r2-wash', name: 'Rogue R2 Wash', manufacturer: 'Chauvet Professional', category: 'moving-wash',
     wattage: 270, lumens: 8200, beamAngle: 12, fieldAngle: 49,
     beamShape: 'circular', beamRatioWH: 1, lensType: 'zoom', zoomRange: [12, 49],
     colorTemp: 0, weight: 10.1, mountType: 'yoke', dmxChannels: 21,
+  },
+  {
+    id: 'martin-mac-aura-pxl', name: 'MAC Aura PXL', manufacturer: 'Martin / Harman', category: 'moving-wash',
+    wattage: 560, lumens: 10500, beamAngle: 6, fieldAngle: 59,
+    beamShape: 'circular', beamRatioWH: 1, lensType: 'zoom', zoomRange: [6, 59],
+    colorTemp: 0, colorTempRange: [2000, 10000], weight: 15.6, mountType: 'yoke', dmxChannels: 32,
+  },
+  {
+    id: 'glp-impression-x4', name: 'impression X4', manufacturer: 'GLP', category: 'moving-wash',
+    wattage: 350, lumens: 5085, beamAngle: 7, fieldAngle: 50,
+    beamShape: 'circular', beamRatioWH: 1, lensType: 'zoom', zoomRange: [7, 50],
+    colorTemp: 0, weight: 7.9, mountType: 'yoke',
+  },
+  {
+    id: 'robe-robin-spiider', name: 'Robin Spiider', manufacturer: 'Robe', category: 'moving-wash',
+    wattage: 600, lumens: 11000, beamAngle: 4, fieldAngle: 50,
+    beamShape: 'circular', beamRatioWH: 1, lensType: 'zoom', zoomRange: [4, 50],
+    colorTemp: 0, colorTempRange: [2700, 8000], weight: 13.3, mountType: 'yoke', dmxChannels: 49,
   },
 
   // ═══════════════════════════════════════════════════════════
@@ -308,10 +332,22 @@ export const fixtureLibrary: Fixture[] = [
     colorTemp: 6500, weight: 21.5, mountType: 'yoke', dmxChannels: 30,
   },
   {
+    id: 'robe-robin-pointe', name: 'Robin Pointe', manufacturer: 'Robe', category: 'moving-beam',
+    wattage: 470, lumens: 9870, beamAngle: 2.5, fieldAngle: 20,
+    beamShape: 'circular', beamRatioWH: 1, lensType: 'zoom', zoomRange: [2.5, 20],
+    colorTemp: 7000, cri: 75, weight: 15, mountType: 'yoke', dmxChannels: 30,
+  },
+  {
     id: 'claypaky-mythos2', name: 'Mythos 2', manufacturer: 'Clay Paky', category: 'moving-beam',
     wattage: 470, lumens: 23000, beamAngle: 4, fieldAngle: 50,
     beamShape: 'circular', beamRatioWH: 1, lensType: 'zoom', zoomRange: [4, 50],
     colorTemp: 6000, weight: 26, mountType: 'yoke', dmxChannels: 26,
+  },
+  {
+    id: 'claypaky-sharpy', name: 'Sharpy', manufacturer: 'Clay Paky', category: 'moving-beam',
+    wattage: 189, lumens: 7950, beamAngle: 3.8, fieldAngle: 3.8,
+    beamShape: 'circular', beamRatioWH: 1, lensType: 'fixed',
+    colorTemp: 8000, weight: 19, mountType: 'yoke', dmxChannels: 16,
   },
 
   // ═══════════════════════════════════════════════════════════

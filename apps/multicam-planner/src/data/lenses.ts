@@ -246,6 +246,54 @@ export const LENSES: Lens[] = [
   { id: 'ptz-canon-crn500', manufacturer: 'Canon', model: 'CR-N500 integrated 15x', focalLengthMin: 8.9, focalLengthMax: 133.5, maxApertureWide: 2.8, mount: 'integrated', type: 'integrated', notes: '15x optical zoom' },
   { id: 'ptz-canon-crn300', manufacturer: 'Canon', model: 'CR-N300 integrated 20x', focalLengthMin: 4.3, focalLengthMax: 86, maxApertureWide: 2.0, mount: 'integrated', type: 'integrated', notes: '20x optical zoom' },
   { id: 'ptz-sony-fr7', manufacturer: 'Sony', model: 'FR7 (no integrated lens)', focalLengthMin: 28, focalLengthMax: 135, maxApertureWide: 4, mount: 'E', type: 'zoom', notes: 'Use E-mount lens' },
+  // ══════════════════════════════════════════════
+  //  CINEMA-OPTIKEN (PL/LPL) — T-Blenden laut Hersteller (2026-09)
+  // ══════════════════════════════════════════════
+  // ── Angénieux Optimo (PL, S35) ──
+  { id: 'ang-optimo-24-290', manufacturer: 'Angénieux', model: 'Optimo 24-290 T2.8', focalLengthMin: 24, focalLengthMax: 290, maxApertureWide: 2.8, mount: 'PL', imageCircle: 'S35', type: 'zoom' },
+  { id: 'ang-optimo-28-76', manufacturer: 'Angénieux', model: 'Optimo 28-76 T2.6', focalLengthMin: 28, focalLengthMax: 76, maxApertureWide: 2.6, mount: 'PL', imageCircle: 'S35', type: 'zoom' },
+  { id: 'ang-optimo-15-40', manufacturer: 'Angénieux', model: 'Optimo 15-40 T2.6', focalLengthMin: 15, focalLengthMax: 40, maxApertureWide: 2.6, mount: 'PL', imageCircle: 'S35', type: 'zoom' },
+  { id: 'ang-optimo-17-80', manufacturer: 'Angénieux', model: 'Optimo 17-80 T2.2', focalLengthMin: 17, focalLengthMax: 80, maxApertureWide: 2.2, mount: 'PL', imageCircle: 'S35', type: 'zoom' },
+  // ── ARRI Signature Primes (LPL, Full Frame, T1.8) ──
+  { id: 'arri-sig-25', manufacturer: 'ARRI', model: 'Signature Prime 25mm T1.8', focalLengthMin: 25, focalLengthMax: 25, maxApertureWide: 1.8, mount: 'LPL', imageCircle: 'FF', type: 'prime' },
+  { id: 'arri-sig-35', manufacturer: 'ARRI', model: 'Signature Prime 35mm T1.8', focalLengthMin: 35, focalLengthMax: 35, maxApertureWide: 1.8, mount: 'LPL', imageCircle: 'FF', type: 'prime' },
+  { id: 'arri-sig-47', manufacturer: 'ARRI', model: 'Signature Prime 47mm T1.8', focalLengthMin: 47, focalLengthMax: 47, maxApertureWide: 1.8, mount: 'LPL', imageCircle: 'FF', type: 'prime' },
+  { id: 'arri-sig-75', manufacturer: 'ARRI', model: 'Signature Prime 75mm T1.8', focalLengthMin: 75, focalLengthMax: 75, maxApertureWide: 1.8, mount: 'LPL', imageCircle: 'FF', type: 'prime' },
+  // ── Zeiss CP.3 (PL, Full Frame, T2.1) ──
+  { id: 'zeiss-cp3-25', manufacturer: 'Zeiss', model: 'CP.3 25mm T2.1', focalLengthMin: 25, focalLengthMax: 25, maxApertureWide: 2.1, mount: 'PL', imageCircle: 'FF', type: 'prime', notes: 'Wechselmount PL/EF/E' },
+  { id: 'zeiss-cp3-35', manufacturer: 'Zeiss', model: 'CP.3 35mm T2.1', focalLengthMin: 35, focalLengthMax: 35, maxApertureWide: 2.1, mount: 'PL', imageCircle: 'FF', type: 'prime', notes: 'Wechselmount PL/EF/E' },
+  { id: 'zeiss-cp3-50', manufacturer: 'Zeiss', model: 'CP.3 50mm T2.1', focalLengthMin: 50, focalLengthMax: 50, maxApertureWide: 2.1, mount: 'PL', imageCircle: 'FF', type: 'prime', notes: 'Wechselmount PL/EF/E' },
+  { id: 'zeiss-cp3-85', manufacturer: 'Zeiss', model: 'CP.3 85mm T2.1', focalLengthMin: 85, focalLengthMax: 85, maxApertureWide: 2.1, mount: 'PL', imageCircle: 'FF', type: 'prime', notes: 'Wechselmount PL/EF/E' },
+  // ── Cooke S4/i (PL, S35, T2.0) ──
+  { id: 'cooke-s4i-18', manufacturer: 'Cooke', model: 'S4/i 18mm T2.0', focalLengthMin: 18, focalLengthMax: 18, maxApertureWide: 2.0, mount: 'PL', imageCircle: 'S35', type: 'prime' },
+  { id: 'cooke-s4i-25', manufacturer: 'Cooke', model: 'S4/i 25mm T2.0', focalLengthMin: 25, focalLengthMax: 25, maxApertureWide: 2.0, mount: 'PL', imageCircle: 'S35', type: 'prime' },
+  { id: 'cooke-s4i-32', manufacturer: 'Cooke', model: 'S4/i 32mm T2.0', focalLengthMin: 32, focalLengthMax: 32, maxApertureWide: 2.0, mount: 'PL', imageCircle: 'S35', type: 'prime' },
+  { id: 'cooke-s4i-50', manufacturer: 'Cooke', model: 'S4/i 50mm T2.0', focalLengthMin: 50, focalLengthMax: 50, maxApertureWide: 2.0, mount: 'PL', imageCircle: 'S35', type: 'prime' },
+  { id: 'cooke-s4i-75', manufacturer: 'Cooke', model: 'S4/i 75mm T2.0', focalLengthMin: 75, focalLengthMax: 75, maxApertureWide: 2.0, mount: 'PL', imageCircle: 'S35', type: 'prime' },
+  { id: 'cooke-s4i-100', manufacturer: 'Cooke', model: 'S4/i 100mm T2.0', focalLengthMin: 100, focalLengthMax: 100, maxApertureWide: 2.0, mount: 'PL', imageCircle: 'S35', type: 'prime' },
+  // ── Samyang XEEN (EF, Full Frame, T1.5) ──
+  { id: 'samyang-xeen-24', manufacturer: 'Samyang', model: 'XEEN 24mm T1.5', focalLengthMin: 24, focalLengthMax: 24, maxApertureWide: 1.5, mount: 'EF', imageCircle: 'FF', type: 'prime' },
+  { id: 'samyang-xeen-35', manufacturer: 'Samyang', model: 'XEEN 35mm T1.5', focalLengthMin: 35, focalLengthMax: 35, maxApertureWide: 1.5, mount: 'EF', imageCircle: 'FF', type: 'prime' },
+  { id: 'samyang-xeen-50', manufacturer: 'Samyang', model: 'XEEN 50mm T1.5', focalLengthMin: 50, focalLengthMax: 50, maxApertureWide: 1.5, mount: 'EF', imageCircle: 'FF', type: 'prime' },
+  { id: 'samyang-xeen-85', manufacturer: 'Samyang', model: 'XEEN 85mm T1.5', focalLengthMin: 85, focalLengthMax: 85, maxApertureWide: 1.5, mount: 'EF', imageCircle: 'FF', type: 'prime' },
+  // ── DZOFilm Vespid Prime (PL, Full Frame, T2.1; 90mm Macro T2.8) ──
+  { id: 'dzo-vespid-16', manufacturer: 'DZOFilm', model: 'Vespid 16mm T2.1', focalLengthMin: 16, focalLengthMax: 16, maxApertureWide: 2.1, mount: 'PL', imageCircle: 'FF', type: 'prime' },
+  { id: 'dzo-vespid-25', manufacturer: 'DZOFilm', model: 'Vespid 25mm T2.1', focalLengthMin: 25, focalLengthMax: 25, maxApertureWide: 2.1, mount: 'PL', imageCircle: 'FF', type: 'prime' },
+  { id: 'dzo-vespid-35', manufacturer: 'DZOFilm', model: 'Vespid 35mm T2.1', focalLengthMin: 35, focalLengthMax: 35, maxApertureWide: 2.1, mount: 'PL', imageCircle: 'FF', type: 'prime' },
+  { id: 'dzo-vespid-50', manufacturer: 'DZOFilm', model: 'Vespid 50mm T2.1', focalLengthMin: 50, focalLengthMax: 50, maxApertureWide: 2.1, mount: 'PL', imageCircle: 'FF', type: 'prime' },
+  { id: 'dzo-vespid-75', manufacturer: 'DZOFilm', model: 'Vespid 75mm T2.1', focalLengthMin: 75, focalLengthMax: 75, maxApertureWide: 2.1, mount: 'PL', imageCircle: 'FF', type: 'prime' },
+  { id: 'dzo-vespid-100', manufacturer: 'DZOFilm', model: 'Vespid 100mm T2.1', focalLengthMin: 100, focalLengthMax: 100, maxApertureWide: 2.1, mount: 'PL', imageCircle: 'FF', type: 'prime' },
+  { id: 'dzo-vespid-125', manufacturer: 'DZOFilm', model: 'Vespid 125mm T2.1', focalLengthMin: 125, focalLengthMax: 125, maxApertureWide: 2.1, mount: 'PL', imageCircle: 'FF', type: 'prime' },
+  { id: 'dzo-vespid-90m', manufacturer: 'DZOFilm', model: 'Vespid 90mm Macro T2.8', focalLengthMin: 90, focalLengthMax: 90, maxApertureWide: 2.8, mount: 'PL', imageCircle: 'FF', type: 'prime', notes: 'Makro' },
+  // ── Laowa (Venus Optics) Cine ──
+  { id: 'laowa-probe-24', manufacturer: 'Laowa', model: '24mm T14 2x Macro Probe', focalLengthMin: 24, focalLengthMax: 24, maxApertureWide: 14, mount: 'EF', imageCircle: 'FF', type: 'prime', notes: 'Probe-Makro' },
+  { id: 'laowa-12-t29', manufacturer: 'Laowa', model: '12mm T2.9 Zero-D Cine', focalLengthMin: 12, focalLengthMax: 12, maxApertureWide: 2.9, mount: 'EF', imageCircle: 'FF', type: 'prime' },
+  { id: 'laowa-15-t21', manufacturer: 'Laowa', model: '15mm T2.1 Zero-D Cine', focalLengthMin: 15, focalLengthMax: 15, maxApertureWide: 2.1, mount: 'E', imageCircle: 'FF', type: 'prime' },
+  { id: 'laowa-10-t29', manufacturer: 'Laowa', model: '10mm T2.9 Zero-D VV Cine', focalLengthMin: 10, focalLengthMax: 10, maxApertureWide: 2.9, mount: 'PL', imageCircle: 'FF', type: 'prime' },
+  { id: 'laowa-9-t29', manufacturer: 'Laowa', model: '9mm T2.9 Zero-D Cine', focalLengthMin: 9, focalLengthMax: 9, maxApertureWide: 2.9, mount: 'E', imageCircle: 'S35', type: 'prime' },
+  { id: 'laowa-75-t21', manufacturer: 'Laowa', model: '7.5mm T2.1 Zero-D Cine', focalLengthMin: 7.5, focalLengthMax: 7.5, maxApertureWide: 2.1, mount: 'MFT', imageCircle: 'MFT', type: 'prime' },
+  { id: 'laowa-6-t21', manufacturer: 'Laowa', model: '6mm T2.1 Zero-D Cine', focalLengthMin: 6, focalLengthMax: 6, maxApertureWide: 2.1, mount: 'MFT', imageCircle: 'MFT', type: 'prime' },
+  { id: 'laowa-25-100', manufacturer: 'Laowa', model: '25-100mm T2.9 Cine', focalLengthMin: 25, focalLengthMax: 100, maxApertureWide: 2.9, mount: 'PL', imageCircle: 'S35', type: 'zoom' },
 ];
 
 export function getLensById(id: string, customLenses?: Lens[]): Lens | undefined {
