@@ -910,6 +910,524 @@ export const MISC_CATALOG: MiscEntry[] = [
       width: 200, height: 140,
     },
   },
+  // ── AJA / Blackmagic UltraStudio / Decimator (Beleg: Hersteller-Produktseiten,
+  //    je Modell per curl geprüft, 2026-09) ──
+  // Quelle: https://www.aja.com/products/hi5-12g
+  {
+    match: ['aja', 'hi5-12g'],
+    deviceTypeId: '3c76d498-411e-4ac4-a9e4-80aa1886871a',
+    template: {
+      manufacturerUrl: 'https://www.aja.com/products/hi5-12g',
+      name: 'AJA Hi5-12G',
+      category: 'Konverter',
+      inputs: [
+        sdiIn('SDI In'),
+      ],
+      outputs: [
+        hdmiOut('HDMI Out'),
+        sdiOut('SDI Loop Out'),
+      ],
+      width: 200, height: 140,
+    },
+  },
+  // Quelle: https://www.aja.com/products/ha5-12g
+  {
+    match: ['aja', 'ha5-12g'],
+    deviceTypeId: 'b1a43b69-c438-4f01-a090-2d104e9d88ba',
+    template: {
+      manufacturerUrl: 'https://www.aja.com/products/ha5-12g',
+      name: 'AJA HA5-12G',
+      category: 'Konverter',
+      inputs: [
+        hdmiIn('HDMI In'),
+      ],
+      outputs: [
+        sdiOut('SDI Out 1'),
+        sdiOut('SDI Out 2'),
+      ],
+      width: 200, height: 140,
+    },
+  },
+  // Quelle: https://www.aja.com/products/ha5-4k
+  {
+    match: ['aja', 'ha5-4k'],
+    deviceTypeId: '1ab1b696-87e5-4223-b06d-860ec965857a',
+    template: {
+      manufacturerUrl: 'https://www.aja.com/products/ha5-4k',
+      name: 'AJA HA5-4K',
+      category: 'Konverter',
+      inputs: [
+        hdmiIn('HDMI In'),
+      ],
+      outputs: [
+        sdiOut('SDI Out 1'),
+        sdiOut('SDI Out 2'),
+        sdiOut('SDI Out 3'),
+        sdiOut('SDI Out 4'),
+      ],
+      width: 200, height: 180,
+    },
+  },
+  // Quelle: https://www.aja.com/products/roi-hdmi
+  {
+    match: ['aja', 'roi-hdmi'],
+    deviceTypeId: '2bbc1b6e-19c1-48d5-88cf-5f91c3853d4f',
+    template: {
+      manufacturerUrl: 'https://www.aja.com/products/roi-hdmi',
+      name: 'AJA ROI-HDMI',
+      category: 'Konverter',
+      inputs: [
+        hdmiIn('HDMI In'),
+      ],
+      outputs: [
+        sdiOut('SDI Out (ROI-Scaler)'),
+      ],
+      width: 200, height: 140,
+    },
+  },
+  // Quelle: https://www.aja.com/products/fs-hdr
+  {
+    match: ['aja', 'fs-hdr'],
+    deviceTypeId: 'b6f03080-8696-4e3b-8886-bd78ef0a96ae',
+    template: {
+      manufacturerUrl: 'https://www.aja.com/products/fs-hdr',
+      name: 'AJA FS-HDR',
+      category: 'Video Converter',
+      inputs: [
+        sdiIn('SDI In 1'),
+        sdiIn('SDI In 2'),
+        hdmiIn('HDMI In'),
+        eth('LAN'),
+      ],
+      outputs: [
+        sdiOut('SDI Out 1'),
+        sdiOut('SDI Out 2'),
+        hdmiOut('HDMI Out'),
+      ],
+      width: 240, height: 220,
+    },
+  },
+  // Quelle: https://www.aja.com/products/fs4
+  {
+    match: ['aja', 'fs4'],
+    deviceTypeId: '24fbf338-562e-4653-9c6d-b5156394f74e',
+    template: {
+      manufacturerUrl: 'https://www.aja.com/products/fs4',
+      name: 'AJA FS4',
+      category: 'Video Converter',
+      inputs: [
+        sdiIn('SDI In 1'),
+        sdiIn('SDI In 2'),
+        sdiIn('SDI In 3'),
+        sdiIn('SDI In 4'),
+        eth('LAN'),
+      ],
+      outputs: [
+        sdiOut('SDI Out 1'),
+        sdiOut('SDI Out 2'),
+        sdiOut('SDI Out 3'),
+        sdiOut('SDI Out 4'),
+        hdmiOut('HDMI Monitor'),
+      ],
+      width: 260, height: 240,
+    },
+  },
+  // Quelle: https://www.blackmagicdesign.com/products/ultrastudio-4k-mini
+  {
+    match: ['blackmagic', 'ultrastudio', '4k mini'],
+    deviceTypeId: 'd93e7465-15e3-4a8f-b697-5e804ec976e2',
+    template: {
+      manufacturerUrl: 'https://www.blackmagicdesign.com/products/ultrastudio-4k-mini',
+      name: 'Blackmagic UltraStudio 4K Mini',
+      category: 'Video',
+      inputs: [
+        sdiIn('SDI In'),
+        hdmiIn('HDMI In'),
+        custom('Thunderbolt 3'),
+      ],
+      outputs: [
+        sdiOut('SDI Out'),
+        hdmiOut('HDMI Out'),
+        xlrIn('XLR Audio In 1'),
+        xlrIn('XLR Audio In 2'),
+      ],
+      width: 240, height: 200,
+    },
+  },
+  // Quelle: https://www.blackmagicdesign.com/products/ultrastudio-monitor-3g
+  {
+    match: ['blackmagic', 'ultrastudio', 'monitor'],
+    deviceTypeId: '9bc37443-c79e-4ce5-9fcd-0ccbb7899879',
+    template: {
+      manufacturerUrl: 'https://www.blackmagicdesign.com/products/ultrastudio-monitor-3g',
+      name: 'Blackmagic UltraStudio Monitor 3G',
+      category: 'Video',
+      inputs: [
+        custom('Thunderbolt 3'),
+      ],
+      outputs: [
+        sdiOut('SDI Out'),
+        hdmiOut('HDMI Out'),
+      ],
+      width: 200, height: 140,
+    },
+  },
+  // Quelle: https://www.blackmagicdesign.com/products/ultrastudio-recorder-3g
+  {
+    match: ['blackmagic', 'ultrastudio', 'recorder'],
+    deviceTypeId: '4c7d84f0-991c-4d85-adf0-6cb31f05ff71',
+    template: {
+      manufacturerUrl: 'https://www.blackmagicdesign.com/products/ultrastudio-recorder-3g',
+      name: 'Blackmagic UltraStudio Recorder 3G',
+      category: 'Video',
+      inputs: [
+        sdiIn('SDI In'),
+        hdmiIn('HDMI In'),
+      ],
+      outputs: [
+        custom('Thunderbolt 3'),
+      ],
+      width: 200, height: 140,
+    },
+  },
+  // Quelle: https://decimator.com/Products/MultiViewers/DMON-QUAD%20MultiViewer/DMON-QUAD.html
+  {
+    match: ['decimator', 'dmon-quad'],
+    deviceTypeId: 'ce8397a6-aac5-457b-bc97-8a13e37cdf9f',
+    template: {
+      manufacturerUrl: 'https://decimator.com/Products/MultiViewers/DMON-QUAD%20MultiViewer/DMON-QUAD.html',
+      name: 'Decimator DMON-QUAD',
+      category: 'Monitore',
+      inputs: [
+        sdiIn('SDI In 1'),
+        sdiIn('SDI In 2'),
+        sdiIn('SDI In 3'),
+        sdiIn('SDI In 4'),
+      ],
+      outputs: [
+        sdiOut('SDI Out'),
+        hdmiOut('HDMI Out'),
+      ],
+      width: 220, height: 180,
+    },
+  },
+  // Quelle: https://decimator.com/Products/MultiViewers/DMON-4S%20MultiViewer/DMON-4S.html
+  {
+    match: ['decimator', 'dmon-4s'],
+    deviceTypeId: 'cc024c6d-8b05-43a3-943b-8243c4c41ba5',
+    template: {
+      manufacturerUrl: 'https://decimator.com/Products/MultiViewers/DMON-4S%20MultiViewer/DMON-4S.html',
+      name: 'Decimator DMON-4S',
+      category: 'Monitore',
+      inputs: [
+        sdiIn('SDI In 1'),
+        sdiIn('SDI In 2'),
+        sdiIn('SDI In 3'),
+        sdiIn('SDI In 4'),
+      ],
+      outputs: [
+        sdiOut('SDI Out'),
+        hdmiOut('HDMI Out'),
+      ],
+      width: 220, height: 180,
+    },
+  },
+  // Quelle: https://decimator.com/Products/MultiViewers/DMON-6S%20MultiViewer/DMON-6S.html
+  {
+    match: ['decimator', 'dmon-6s'],
+    deviceTypeId: 'd83dd61e-77b8-443e-8177-44e91998f654',
+    template: {
+      manufacturerUrl: 'https://decimator.com/Products/MultiViewers/DMON-6S%20MultiViewer/DMON-6S.html',
+      name: 'Decimator DMON-6S',
+      category: 'Monitore',
+      inputs: [
+        sdiIn('SDI In 1'),
+        sdiIn('SDI In 2'),
+        sdiIn('SDI In 3'),
+        sdiIn('SDI In 4'),
+        sdiIn('SDI In 5'),
+        sdiIn('SDI In 6'),
+      ],
+      outputs: [
+        sdiOut('SDI Out'),
+        hdmiOut('HDMI Out'),
+      ],
+      width: 220, height: 200,
+    },
+  },
+  // Quelle: https://decimator.com/Products/MultiViewers/DMON-16S%20MultiViewer/DMON-16S.html
+  {
+    match: ['decimator', 'dmon-16s'],
+    deviceTypeId: 'c76fd014-22f9-41cb-956f-c30855d77ced',
+    template: {
+      manufacturerUrl: 'https://decimator.com/Products/MultiViewers/DMON-16S%20MultiViewer/DMON-16S.html',
+      name: 'Decimator DMON-16S',
+      category: 'Monitore',
+      inputs: [
+        sdiIn('SDI In 1'),
+        sdiIn('SDI In 2'),
+        sdiIn('SDI In 3'),
+        sdiIn('SDI In 4'),
+        sdiIn('SDI In 5'),
+        sdiIn('SDI In 6'),
+        sdiIn('SDI In 7'),
+        sdiIn('SDI In 8'),
+      ],
+      outputs: [
+        sdiOut('SDI Out'),
+        hdmiOut('HDMI Out'),
+      ],
+      width: 240, height: 240,
+    },
+  },
+  // ── Kiloview NDI-Encoder/Decoder (Beleg: kiloview.com, je Modell per curl
+  //    geprüft, 2026-09) ──
+  // Quelle: https://www.kiloview.com/en/ndi/n1/
+  {
+    match: ['kiloview', 'n1'],
+    deviceTypeId: 'a577c36b-1a15-4c1d-90df-1ddb6681825c',
+    template: {
+      manufacturerUrl: 'https://www.kiloview.com/en/ndi/n1/',
+      name: 'Kiloview N1',
+      category: 'IP/NDI',
+      inputs: [
+        hdmiIn('HDMI In'),
+      ],
+      outputs: [
+        eth('LAN (NDI)'),
+      ],
+      width: 200, height: 140,
+    },
+  },
+  // Quelle: https://www.kiloview.com/en/ndi/n2/
+  {
+    match: ['kiloview', 'n2'],
+    deviceTypeId: 'bd1d007e-ac69-46da-91d1-85b45530fd6a',
+    template: {
+      manufacturerUrl: 'https://www.kiloview.com/en/ndi/n2/',
+      name: 'Kiloview N2',
+      category: 'IP/NDI',
+      inputs: [
+        sdiIn('SDI In'),
+      ],
+      outputs: [
+        eth('LAN (NDI)'),
+      ],
+      width: 200, height: 140,
+    },
+  },
+  // Quelle: https://www.kiloview.com/en/ndi/n3/
+  {
+    match: ['kiloview', 'n3'],
+    deviceTypeId: '9768ecd9-2670-462d-afa9-eaefa95eb7d1',
+    template: {
+      manufacturerUrl: 'https://www.kiloview.com/en/ndi/n3/',
+      name: 'Kiloview N3',
+      category: 'IP/NDI',
+      inputs: [
+        hdmiIn('HDMI In'),
+      ],
+      outputs: [
+        eth('LAN (NDI)'),
+      ],
+      width: 200, height: 140,
+    },
+  },
+  // Quelle: https://www.kiloview.com/en/ndi/n40/
+  {
+    match: ['kiloview', 'n40'],
+    deviceTypeId: 'd61f8146-3ab2-4be2-9585-9e42e1dacaaa',
+    template: {
+      manufacturerUrl: 'https://www.kiloview.com/en/ndi/n40/',
+      name: 'Kiloview N40',
+      category: 'IP/NDI',
+      inputs: [
+        sdiIn('12G-SDI In'),
+      ],
+      outputs: [
+        eth('LAN (NDI)'),
+      ],
+      width: 200, height: 140,
+    },
+  },
+  // Quelle: https://www.kiloview.com/en/ndi/n60/
+  {
+    match: ['kiloview', 'n60'],
+    deviceTypeId: '483cf205-281d-41ff-b6fe-f7793af15fb0',
+    template: {
+      manufacturerUrl: 'https://www.kiloview.com/en/ndi/n60/',
+      name: 'Kiloview N60',
+      category: 'IP/NDI',
+      inputs: [
+        hdmiIn('HDMI In'),
+        sdiIn('SDI In'),
+      ],
+      outputs: [
+        eth('LAN (NDI)'),
+      ],
+      width: 200, height: 140,
+    },
+  },
+  // Quelle: https://www.kiloview.com/en/ndi/e1/
+  {
+    match: ['kiloview', 'e1'],
+    deviceTypeId: '5f29d11f-98f7-43a2-abe3-1d63e1930be7',
+    template: {
+      manufacturerUrl: 'https://www.kiloview.com/en/ndi/e1/',
+      name: 'Kiloview E1',
+      category: 'IP/NDI',
+      inputs: [
+        sdiIn('SDI In'),
+      ],
+      outputs: [
+        eth('LAN (NDI)'),
+      ],
+      width: 200, height: 140,
+    },
+  },
+  // Quelle: https://www.kiloview.com/en/ndi/e2/
+  {
+    match: ['kiloview', 'e2'],
+    deviceTypeId: '0856b42e-43fa-4bb6-bb2e-7acd0f8e279b',
+    template: {
+      manufacturerUrl: 'https://www.kiloview.com/en/ndi/e2/',
+      name: 'Kiloview E2',
+      category: 'IP/NDI',
+      inputs: [
+        hdmiIn('HDMI In'),
+      ],
+      outputs: [
+        eth('LAN (NDI)'),
+      ],
+      width: 200, height: 140,
+    },
+  },
+  // Quelle: https://www.kiloview.com/en/ndi/e3/
+  {
+    match: ['kiloview', 'e3'],
+    deviceTypeId: '630b9c0b-985c-49ad-96b9-64cd2e486d94',
+    template: {
+      manufacturerUrl: 'https://www.kiloview.com/en/ndi/e3/',
+      name: 'Kiloview E3',
+      category: 'IP/NDI',
+      inputs: [
+        hdmiIn('HDMI In'),
+        sdiIn('SDI In'),
+      ],
+      outputs: [
+        eth('LAN (NDI)'),
+      ],
+      width: 200, height: 140,
+    },
+  },
+  // Quelle: https://www.kiloview.com/en/ndi/p2/
+  {
+    match: ['kiloview', 'p2'],
+    deviceTypeId: '120fbd66-ee2a-43a4-af80-090e8ff512ec',
+    template: {
+      manufacturerUrl: 'https://www.kiloview.com/en/ndi/p2/',
+      name: 'Kiloview P2',
+      category: 'IP/NDI',
+      inputs: [
+        hdmiIn('HDMI In'),
+      ],
+      outputs: [
+        eth('LAN (NDI)'),
+      ],
+      width: 200, height: 140,
+    },
+  },
+  // Quelle: https://www.kiloview.com/en/ndi/p3/
+  {
+    match: ['kiloview', 'p3'],
+    deviceTypeId: '6dd278f8-0f72-4615-822b-56f750c7bb84',
+    template: {
+      manufacturerUrl: 'https://www.kiloview.com/en/ndi/p3/',
+      name: 'Kiloview P3',
+      category: 'IP/NDI',
+      inputs: [
+        hdmiIn('HDMI In'),
+        sdiIn('SDI In'),
+      ],
+      outputs: [
+        eth('LAN (NDI)'),
+      ],
+      width: 200, height: 140,
+    },
+  },
+  // Quelle: https://www.kiloview.com/en/ndi/cv190/
+  {
+    match: ['kiloview', 'cv190'],
+    deviceTypeId: 'b3372685-1aa6-4e08-8359-805de1792334',
+    template: {
+      manufacturerUrl: 'https://www.kiloview.com/en/ndi/cv190/',
+      name: 'Kiloview CV190',
+      category: 'IP/NDI',
+      inputs: [
+        sdiIn('SDI In'),
+        hdmiIn('HDMI In'),
+        eth('LAN (NDI)'),
+      ],
+      outputs: [
+        sdiOut('SDI Out'),
+        hdmiOut('HDMI Out'),
+      ],
+      width: 200, height: 140,
+    },
+  },
+  // Quelle: https://www.kiloview.com/en/ndi/d300/
+  {
+    match: ['kiloview', 'd300'],
+    deviceTypeId: 'f87e4131-7d96-49e5-a550-0533d05a0f54',
+    template: {
+      manufacturerUrl: 'https://www.kiloview.com/en/ndi/d300/',
+      name: 'Kiloview D300',
+      category: 'IP/NDI',
+      inputs: [
+        eth('LAN (NDI)'),
+      ],
+      outputs: [
+        hdmiOut('HDMI Out'),
+        sdiOut('SDI Out'),
+      ],
+      width: 200, height: 140,
+    },
+  },
+  // Quelle: https://www.kiloview.com/en/ndi/d350/
+  {
+    match: ['kiloview', 'd350'],
+    deviceTypeId: 'c7aea796-86ce-4768-9eda-e44797923058',
+    template: {
+      manufacturerUrl: 'https://www.kiloview.com/en/ndi/d350/',
+      name: 'Kiloview D350',
+      category: 'IP/NDI',
+      inputs: [
+        eth('LAN (NDI)'),
+      ],
+      outputs: [
+        hdmiOut('HDMI Out'),
+        sdiOut('SDI Out'),
+      ],
+      width: 200, height: 140,
+    },
+  },
+  // Quelle: https://www.kiloview.com/en/ndi/cube-r1/
+  {
+    match: ['kiloview', 'cube r1'],
+    deviceTypeId: '48c08871-3218-44eb-942d-26619a2a7f97',
+    template: {
+      manufacturerUrl: 'https://www.kiloview.com/en/ndi/cube-r1/',
+      name: 'Kiloview Cube R1',
+      category: 'IP/NDI',
+      inputs: [
+        eth('LAN (NDI)'),
+      ],
+      outputs: [
+        hdmiOut('HDMI Out'),
+      ],
+      width: 200, height: 140,
+    },
+  },
 ]
 
 /** Flat list of all built-in misc templates (seeded into the library). */
