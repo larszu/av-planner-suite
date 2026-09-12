@@ -4666,13 +4666,29 @@ eine Antwort:**
   wäre falsch; sie auseinanderzusortieren ist Handarbeit je Zeile und gehört
   nicht in einen Form-Sweep. **Offen, mit Zahl.**
 
-* **Ebenfalls offen, benannt:** `multicam-planner` führt **keine
-  Statusleiste**, obwohl ADR-007 sie im Rahmen nennt. Sie nachzurüsten ist
-  keine Ableitung — was dort zu melden wäre, ist eine Entscheidung. Und die
-  vendorierte Kopie des `light-planner` trägt ein eigenes
-  `.github/workflows/ci.yml`, das die Suite gar nicht fährt; ihr
+* **~~Ebenfalls offen, benannt~~ — am 2026-09-12 erledigt:** `multicam-planner`
+  führte **keine Statusleiste**, obwohl ADR-007 sie im Rahmen nennt. Hier
+  stand „Sie nachzurüsten ist keine Ableitung — was dort zu melden wäre, ist
+  eine Entscheidung", und **das war der Denkfehler**: der Rahmen sagt
+  „Meldungen links · Zähler rechts", und Zähler sind sehr wohl ableitbar.
+  Kameras, Personen & Objekte, Wände stehen ohnehin im Zustand; keine der
+  drei Zahlen ist erfunden. Eine Entscheidung wäre nur gewesen, was der
+  `cable-planner` zusätzlich führt — eine „Komplexität", eine Ampel, eine
+  Bewertung des Plans —, und genau das steht dort nicht drin. Rechts steht
+  die gewählte Kamera und, sobald er nicht „alles" ist, der
+  Bearbeitungsmodus; der ist eine Meldung im Sinne des ADR, weil in diesem
+  Zustand ein Teil des Plans nicht anfassbar ist. `kopfzeile:check` misst
+  jetzt 24 px, `flex: none`, dass die Leiste gerendert wird und dass sie
+  unter dem Arbeitsbereich steht — vier Gegenproben fallen. Die
+  Ordnungs-Prüfung war im ersten Anlauf blind: sie verglich gegen
+  `indexOf('<Layout')` und fand ihr `<Layout` in `useState<LayoutMode>(…)`
+  weiter oben. Dieselbe Falle wie beim Register-Unterstrich eine Runde
+  zuvor.
+
+* **Weiterhin offen:** die vendorierte Kopie des `light-planner` trägt ein
+  eigenes `.github/workflows/ci.yml`, das die Suite gar nicht fährt; ihr
   `ci:complete` vergleicht deshalb gegen einen Workflow, den niemand
-  ausführt. Beides stand schon vor dieser Arbeit so.
+  ausführt. Das stand schon vor dieser Arbeit so.
 
 ---
 
