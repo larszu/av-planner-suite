@@ -122,7 +122,7 @@ const scanne = (): { befunde: Befund[]; literale: number } => {
       if (spanne) {
         const text = src.slice(node.getStart(sf) + spanne[0], node.getEnd() + spanne[1]);
         literale += 1;
-        const ohnePlatzhalter = text.replace(/\{[^}]*\}/g, ' ');
+        const ohnePlatzhalter = text.replace(/\{[^}]*\}/g, ' ').replace(/https?:\/\/\S+/g, ' ');
         if (!KENNUNGEN.has(text.trim())) {
           // CamelCase AUSEINANDER, bevor ein Wort geprueft wird.
           //

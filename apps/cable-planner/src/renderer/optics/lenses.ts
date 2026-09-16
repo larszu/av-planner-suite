@@ -1,4 +1,4 @@
-import type { Lens } from '../types';
+import type { Lens } from './types';
 
 export const LENSES: Lens[] = [
   // ══════════════════════════════════════════════
