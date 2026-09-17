@@ -27,6 +27,7 @@ Jede ADR hält eine Entscheidung samt Befund fest, der sie ausgelöst hat.
 - [`ADR-005 — Verlustfrei oder laut`](decisions/ADR-005-lossless-or-loud.md)
 - [`ADR-006 — Der Schnitt: was Kern bleibt und was ein eigenes Werkzeug wird`](decisions/ADR-006-werkzeug-schnitt.md)
 - [`ADR-007 — Die Oberflaechen-Regeln der Suite`](decisions/ADR-007-oberflaechen-regeln.md)
+- [`ADR-008 — Die B4-Objektivsteuerung gehört in die Camera Bridge`](decisions/ADR-008-b4-objektivsteuerung-ablage.md)
 
 ## Markt- und Nutzer-Recherche
 
