@@ -428,4 +428,19 @@ export const de: Record<string, string> = {
   'tab.subhire.q': 'Was gehört uns nicht — und wann muss es zurück?',
   'tab.values': 'Werte & Schäden',
   'tab.values.q': 'Was ist es wert, was ist kaputt, und was ist gebunden?',
+  'tab.plan': 'Plan-Bedarf',
+  'tab.plan.q': 'Was braucht der Plan — und wieviel davon liegt hier?',
+
+  'demand.head': 'Bedarf aus dem Plan',
+  'demand.none':
+    'Kein Plan verbunden. Diese Sicht füllt sich, wenn das Lager in der Suite läuft und dort ein Projekt offen ist.',
+  'demand.from': 'Was der Plan „{name}" braucht, gegen das, was hier gezählt ist.',
+  'demand.fromUnnamed': 'Was der Plan braucht, gegen das, was hier gezählt ist.',
+  'demand.model': 'Modell',
+  'demand.needed': 'Gebraucht',
+  'demand.covered': 'Im Bestand',
+  'demand.uncounted': 'nicht gezählt',
+  'demand.take': 'Fehlende Positionen anlegen ({n})',
+  'demand.unknownModel':
+    '{n} Geräte im Plan führen kein Modell — sie werden nicht als Lagerposition angelegt:',
 }

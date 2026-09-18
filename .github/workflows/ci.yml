@@ -156,6 +156,13 @@ jobs:
       - name: Suite-Paket enthaelt jede Laufzeit-Abhaengigkeit
         run: npm run deps:check
 
+      # Ein Planer in der Modul-Leiste ohne Datenweg faellt von selbst nicht
+      # auf: ein Modul, das nichts bekommt, sieht aus wie eines, in dem noch
+      # nichts steht. Gemessen 2026-09-18 traf das Lager und Gebaeude -- beide
+      # seit Wochen eingebettet, beide ohne eine Zeile Projektdaten.
+      - name: Jeder mitgelieferte Planer haengt am Projekt-Fluss
+        run: npm run seed:check
+
       # Der Tag v0.1.0 (Lauf 33970319571) hat NICHTS ans Release gehaengt: der
       # macOS-Universal-Merge brach an einer in beiden Teil-Builds identischen
       # Prebuild-Datei ab und riss ueber `needs: build` die fertige Windows-.exe

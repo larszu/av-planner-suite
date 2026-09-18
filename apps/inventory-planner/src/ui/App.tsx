@@ -34,8 +34,9 @@ import { Inventur } from './Inventur'
 import { Bericht } from './Bericht'
 import { WerteUndSchaeden } from './WerteUndSchaeden'
 import { Wareneingang } from './Wareneingang'
+import { PlanBedarf } from './PlanBedarf'
 
-type Reiter = 'bestand' | 'eingang' | 'inventur' | 'ausgabe' | 'subhire' | 'bericht' | 'werte'
+type Reiter = 'bestand' | 'eingang' | 'inventur' | 'ausgabe' | 'subhire' | 'bericht' | 'werte' | 'plan'
 
 type UebersetzFn = (key: string, en: string) => string
 
@@ -53,6 +54,7 @@ const reiterListe = (t: UebersetzFn): { id: Reiter; titel: string; frage: string
   { id: 'bericht', titel: t('tab.report', 'Report'), frage: t('tab.report.q', 'What is inside — and how does it get out of here?') },
   { id: 'werte', titel: t('tab.values', 'Values & damage'), frage: t('tab.values.q', 'What is it worth, what is broken, and what is committed?') },
   { id: 'subhire', titel: t('tab.subhire', 'Sub-hire'), frage: t('tab.subhire.q', 'What is not ours — and when must it go back?') },
+  { id: 'plan', titel: t('tab.plan', 'Plan demand'), frage: t('tab.plan.q', 'What does the plan need — and how much of it is here?') },
 ]
 
 /**
@@ -147,6 +149,7 @@ export function App() {
         {reiter === 'bericht' && <Bericht />}
         {reiter === 'werte' && <WerteUndSchaeden />}
         {reiter === 'subhire' && <SubHire />}
+        {reiter === 'plan' && <PlanBedarf />}
       </main>
       {/* Die Statusleiste des Rahmens (ADR-007 Abschnitt 6). Links steht,
           welche Frage gerade offen ist, rechts ihre Zahl. */}

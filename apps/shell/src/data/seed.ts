@@ -34,6 +34,7 @@
 import {
   SUITE_SEED_KIND,
   SUITE_SEED_VERSION,
+  deriveBedarf,
   mergeSeedPatch,
   type SeedDomain,
   type SeedPatch,
@@ -84,8 +85,44 @@ export function suiteToSeed(
       fixtures: [],
       devices: [],
       cables: [],
+      bedarf: [],
+      deckung: [],
+      anschluesse: [],
     }
   }
+
+  const cameras = project.cameras.map((c) => ({
+    id: c.id,
+    name: c.name,
+    model: c.model,
+    lens: c.lens,
+    focalMm: c.focalMm,
+    hfovDeg: c.hfovDeg,
+    x: c.x,
+    y: c.y,
+  }))
+  const fixtures = project.fixtures.map((f) => ({
+    id: f.id,
+    name: f.name,
+    model: f.model,
+    purpose: f.purpose,
+    dimmerPct: f.dimmerPct,
+    dmxChannel: f.dmxChannel,
+    x: f.x,
+    y: f.y,
+    // Nur mitschicken, wenn sie jemand gesetzt hat: ein `rigHeightM: 0` im
+    // Seed hiesse „haengt am Boden" und ueberschriebe drueben die Hoehe,
+    // die der Planer selbst fuehrt.
+    ...(f.rigHeightM !== undefined ? { rigHeightM: f.rigHeightM } : {}),
+  }))
+  const devices = project.nodes.map((n) => ({
+    id: n.id,
+    name: n.name,
+    subtitle: n.sub,
+    nx: n.nx,
+    ny: n.ny,
+  }))
+
   return {
     kind: SUITE_SEED_KIND,
     formatVersion: SUITE_SEED_VERSION,
@@ -98,37 +135,9 @@ export function suiteToSeed(
       heightM: project.hall.h,
       stage: project.stage,
     },
-    cameras: project.cameras.map((c) => ({
-      id: c.id,
-      name: c.name,
-      model: c.model,
-      lens: c.lens,
-      focalMm: c.focalMm,
-      hfovDeg: c.hfovDeg,
-      x: c.x,
-      y: c.y,
-    })),
-    fixtures: project.fixtures.map((f) => ({
-      id: f.id,
-      name: f.name,
-      model: f.model,
-      purpose: f.purpose,
-      dimmerPct: f.dimmerPct,
-      dmxChannel: f.dmxChannel,
-      x: f.x,
-      y: f.y,
-      // Nur mitschicken, wenn sie jemand gesetzt hat: ein `rigHeightM: 0` im
-      // Seed hiesse „haengt am Boden" und ueberschriebe drueben die Hoehe,
-      // die der Planer selbst fuehrt.
-      ...(f.rigHeightM !== undefined ? { rigHeightM: f.rigHeightM } : {}),
-    })),
-    devices: project.nodes.map((n) => ({
-      id: n.id,
-      name: n.name,
-      subtitle: n.sub,
-      nx: n.nx,
-      ny: n.ny,
-    })),
+    cameras,
+    fixtures,
+    devices,
     cables: project.cables.map((c) => ({
       id: c.id,
       label: c.label,
@@ -137,11 +146,36 @@ export function suiteToSeed(
       from: c.from,
       to: c.to,
     })),
+    // Der Bedarf wird bei JEDEM Senden neu gerechnet und nie im Projekt
+    // gefuehrt (ADR-001: eine gespeicherte Ableitung ist eine zweite
+    // Wahrheit). Die Knoten, die fuer eine Kamera oder Leuchte stehen, gehen
+    // dabei heraus — sonst fordert das Lager zwei Geraete an, wo eines steht.
+    bedarf: deriveBedarf({ cameras, fixtures, devices }, vertreteneKnoten(project.nodes)),
+    // Die Deckung kommt vom Lager und wird deshalb GEFUEHRT: sie ist keine
+    // Ableitung aus dem Plan, sondern die Antwort einer anderen App. Fehlt
+    // sie, hat noch niemand nachgesehen — nicht „nichts vorhanden".
+    deckung: project.deckung ?? [],
+    // Dasselbe fuer die Anschlusspunkte des Hauses: eine Auskunft des
+    // Gebaeude-Werkzeugs, keine Ableitung aus dem Plan.
+    anschluesse: project.anschluesse ?? [],
     // Wer welches geteilte Feld haelt, faehrt mit: ohne diesen Teil koennte
     // `mergeSeedPatch` keinen Halter erkennen und wuerde jede Setzung
     // durchlassen — die Regel waere gebaut und unwirksam.
     holds: project.seedHolds,
   }
+}
+
+/**
+ * Die Knoten-Ids, die fuer ein Objekt eines anderen Gewerks stehen (B-18).
+ *
+ * Sie stehen hier und nicht in `@avplan/ui`, weil `represents` ein Feld des
+ * SHELL-Modells ist: die Aufloesung ueber die Gewerks-Grenze gehoert in die
+ * Shell, der Planer kennt nur seinen eigenen Id-Raum.
+ */
+function vertreteneKnoten(nodes: readonly SignalNode[]): Set<string> {
+  const out = new Set<string>()
+  for (const n of nodes) if (n.represents) out.add(n.id)
+  return out
 }
 
 /**
@@ -264,6 +298,16 @@ export function applyPatchToSuite(
       venue: alt?.venue ?? true,
       nx: d.nx ?? alt?.nx ?? 0.5,
       ny: d.ny ?? alt?.ny ?? 0.5,
+      // `represents` ging hier bis 2026-09-18 VERLOREN. Der Seed traegt es
+      // nicht (die Aufloesung ueber die Gewerks-Grenze gehoert in die Shell,
+      // B-18), und diese Rueckabbildung baute den Knoten Feld fuer Feld neu
+      // auf — also fiel es bei jeder Meldung des Signal-Planers heraus.
+      //
+      // Die Folge war still und genau die aus B-18: die vier Cross-Link-
+      // Knoepfe sprangen danach nur noch ins Modul, ohne Auswahl, und der
+      // Bedarf zaehlte den Knoten und seine Kamera doppelt. Dasselbe
+      // Erhalten-statt-Neubauen gilt hier wie fuer `group` und `venue`.
+      ...(alt?.represents ? { represents: alt.represents } : {}),
     }
   })
 
@@ -295,6 +339,11 @@ export function applyPatchToSuite(
     meta: { ...project.meta, venue: seed.venue.name || project.meta.venue, saved: false },
     seedHolds: seed.holds,
     seedConflicts: befunde.length ? [...(project.seedConflicts ?? []), ...befunde] : project.seedConflicts,
+    // Die Meldung des Lagers. `mergeSeedPatch` hat sie nur uebernommen, wenn
+    // sie aus der Lager-Domaene kam — hier steht deshalb keine zweite
+    // Zustaendigkeitspruefung, sondern das Ergebnis der ersten.
+    deckung: seed.deckung,
+    anschluesse: seed.anschluesse,
   }
 
   /**

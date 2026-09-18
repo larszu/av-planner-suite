@@ -1,5 +1,5 @@
 // ───────────────────────────────────────────────────────────────────────────
-// `suite-seed` v1 — das neutrale Projektmodell, das die Shell in die
+// `suite-seed` v2 — das neutrale Projektmodell, das die Shell in die
 // eingebetteten Planer schiebt und aus ihnen zurueckbekommt.
 //
 // WARUM ES DAS BRAUCHT. Bis hierher war die Einbettung eine reine
@@ -34,7 +34,19 @@
 // ───────────────────────────────────────────────────────────────────────────
 
 export const SUITE_SEED_KIND = 'suite-seed' as const
-export const SUITE_SEED_VERSION = 1 as const
+/**
+ * 2 seit 2026-09-18: `bedarf`, `deckung` und `anschluesse` sind hinzugekommen,
+ * und alle drei sind PFLICHTFELDER (leere Liste heisst „nichts", nicht
+ * „unbekannt"). Ein Planer, der gegen v1 gebaut ist, weist einen v2-Seed ab —
+ * das ist gewollt: er wuerde das Lager sonst mit einem Seed befuellen, in dem
+ * der Bedarf schlicht fehlt, und ein leeres Lager sieht aus wie ein gedeckter
+ * Bedarf.
+ *
+ * Die Umstellung ist deshalb ungefaehrlich, weil der Seed NUR suite-intern
+ * faehrt: Sender und Empfaenger liegen beide in diesem Repo (`apps/`), die
+ * eigenstaendigen Planer-Repos kennen ihn nicht.
+ */
+export const SUITE_SEED_VERSION = 2 as const
 
 /** Der geteilte Raum. Masse in Metern. */
 export interface SeedVenue {
@@ -148,6 +160,97 @@ export interface SeedHold {
  */
 export type SeedSharedField = 'venue.widthM' | 'venue.heightM' | 'venue.stage'
 
+/**
+ * Eine Bedarfszeile: ein Modell mit einer Menge.
+ *
+ * Die Felder sind absichtlich die Teilmenge von `BedarfsZeile` des
+ * `inventory-planner`, die die Shell BELEGEN kann. Was dort darueber hinaus
+ * steht (`muster`: Mietpreis, Lagerort, Lieferant), fuellt das Lager aus
+ * seinen eigenen Stammdaten — die Shell kennt sie nicht und erfindet sie
+ * nicht.
+ */
+export interface SeedBedarf {
+  /** Stabiler Schluessel: Katalog-Id, sonst der normalisierte Modellname. */
+  key: string
+  /** Katalog-GUID, wenn der Plan sie kennt (ADR-002). */
+  deviceTypeId?: string
+  /** Modellname, sonst der Geraetename — siehe `modellUnbekannt`. */
+  label: string
+  category?: string
+  quantity: number
+  /** Aus welcher Domaene die Zeile stammt. */
+  fromDomain: SeedDomain
+  /**
+   * WAHR, wenn der Plan zu diesem Geraet kein Modell fuehrt und `label` der
+   * INSTANZNAME ist („Kamera 1").
+   *
+   * Der Unterschied ist der Kern von ADR-002. Der alte
+   * `seedFromEquipment` schluesselte ueber den Instanznamen, und damit wurden
+   * aus zwei Kameras desselben Typs zwei Lagerpositionen à 1 Stueck. Hier
+   * werden solche Zeilen deshalb NICHT zusammengefasst — zwei Geraete ohne
+   * Modell sind zwei unbekannte Geraete und nicht zwei Stueck desselben —
+   * und sie tragen die Marke, damit das Lager sie als offenen Punkt zeigt
+   * statt als Position anzulegen.
+   */
+  modellUnbekannt?: true
+}
+
+/**
+ * Was der Bestand von einer Bedarfszeile deckt.
+ *
+ * `gedeckt` ist optional, und das ist die ganze Aussage: fehlt es, hat
+ * NIEMAND GEZAEHLT. „0 vorhanden" waere eine Behauptung ueber etwas, das
+ * nicht nachgesehen wurde — dieselbe Regel wie bei `CableStockEntry.count`
+ * im Cable-Planer und bei `isForeign` im Lager.
+ *
+ * Was fehlt, steht bewusst nicht als Feld hier: es ist `benoetigt - gedeckt`
+ * und damit eine Ableitung, die veralten koennte, sobald eine der beiden
+ * Zahlen sich aendert.
+ */
+export interface SeedDeckung {
+  key: string
+  benoetigt: number
+  gedeckt?: number
+}
+
+/**
+ * Ein Anschlusspunkt des GEBAEUDES — Einspeisung oder Dose.
+ *
+ * Er steht im Seed, weil der Plan ihn braucht und nicht kennt: die Show haengt
+ * an den Dosen des Hauses, und bis 2026-09-18 tippte sie jemand ab. Der Punkt
+ * selbst bleibt beim Gebaeude (ADR-006) — hier faehrt nur, was der Plan
+ * beantwortet haben will.
+ *
+ * `dauerleistungW` ist optional, und das ist keine Bequemlichkeit: der
+ * Nennstrom der Absicherung ist die AUSLOESESCHWELLE und nicht die zulaessige
+ * Dauerlast. Wer die Zahl aus `absicherungA × 230` rechnet, liefert eine
+ * Vermutung, die im Plan wie eine Auskunft des Hauses aussieht — die Regel
+ * steht in der CLAUDE.md des `facility-planner` unter „Die Tuer rechnet nicht
+ * selbst".
+ */
+export interface SeedAnschluss {
+  id: string
+  bezeichnung: string
+  art: 'einspeisung' | 'dose'
+  /** Wie das HAUS den Raum fuehrt (Tuerschild, TIA-606) — nicht unsere Id. */
+  raum?: string
+  /** Steckerform als Klartext des Gebaeudes („CEE 63", „Schuko"). */
+  anschlussart: string
+  /** Nennstrom der Absicherung in Ampere. */
+  absicherungA: number
+  /** Zulaessige Dauerleistung, WENN das Haus sie angibt. */
+  dauerleistungW?: number
+  /**
+   * Der Punkt haengt an einer Schaltstelle oder einem Dimmer.
+   *
+   * `undefined` heisst „nicht angegeben" und NICHT „nein". Eine Dose, von der
+   * niemand weiss, ob sie geschaltet ist, ist keine ungeschaltete Dose — und
+   * eine gedimmte Dose ist fuer ein Netzteil unbrauchbar.
+   */
+  geschaltet?: boolean
+  gedimmt?: boolean
+}
+
 export interface SuiteSeed {
   kind: typeof SUITE_SEED_KIND
   formatVersion: typeof SUITE_SEED_VERSION
@@ -165,6 +268,38 @@ export interface SuiteSeed {
   fixtures: SeedFixture[]
   devices: SeedDevice[]
   cables: SeedCable[]
+  /**
+   * Der Bedarf des Plans — was an Geraeten gebraucht wird, als Modell mit
+   * Menge. ABGELEITET und nie gefuehrt: `suiteToSeed` rechnet ihn bei jedem
+   * Senden aus `cameras`/`fixtures`/`devices` neu aus.
+   *
+   * Dass er trotzdem im Seed steht und nicht erst im Lager gerechnet wird,
+   * ist ADR-006: „Der Plan rechnet seinen Bedarf selbst und reicht
+   * `BedarfsZeile[]` herueber." Rechnete das Lager ihn, muesste es das
+   * Plan-Modell kennen — genau die Grenze, gegen die der Wächter dort steht.
+   *
+   * Dass er nicht im `SuiteProject` liegt, ist ADR-001: eine gespeicherte
+   * Ableitung ist eine zweite Wahrheit, die beim naechsten Geraet veraltet.
+   */
+  bedarf: SeedBedarf[]
+  /**
+   * Was der Bestand davon deckt — die Antwort des Lagers, weitergereicht an
+   * alle anderen Planer.
+   *
+   * Sie steht hier, damit der Signal-Plan „3 von 4 vorhanden" zeigen kann,
+   * ohne das Lager-Modell zu kennen. Das ist die Richtung, die bis 2026-09-18
+   * fehlte: das Lager war ein Modul in der Leiste, aber keine Datenquelle.
+   */
+  deckung: SeedDeckung[]
+  /**
+   * Die Anschlusspunkte des Hauses, gemeldet vom Gebaeude-Werkzeug.
+   *
+   * Sie werden GEFUEHRT und nicht abgeleitet: sie sind die Auskunft einer
+   * anderen App ueber die Anlage, nicht eine Rechnung ueber den Plan. Leer
+   * heisst „keine gemeldet" — wer daraus „das Haus hat keine Dosen" liest,
+   * liest eine Aussage, die niemand gemacht hat.
+   */
+  anschluesse: SeedAnschluss[]
   /**
    * Wer welches geteilte Feld haelt. Fehlt ein Eintrag, haelt es niemand — der
    * naechste Schreiber bekommt es. Optional, damit ein Seed aus der Zeit vor
@@ -204,7 +339,7 @@ export interface SuiteSeed {
  * Welcher Planer welchen Teil besitzt. Ein Planer meldet ausschliesslich
  * seine eigene Domaene zurueck; alles andere reicht er unveraendert durch.
  */
-export type SeedDomain = 'cameras' | 'fixtures' | 'signal'
+export type SeedDomain = 'cameras' | 'fixtures' | 'signal' | 'lager' | 'gebaeude'
 
 /**
  * Rueckweg: was ein Planer nach einer Aenderung ueber seinen Teil meldet.
@@ -236,6 +371,23 @@ export interface SeedPatch {
   fixtures?: SeedFixture[]
   devices?: SeedDevice[]
   cables?: SeedCable[]
+  /**
+   * Die Meldung des Lagers: was der Bestand vom Bedarf deckt.
+   *
+   * Der Bedarf kommt NICHT zurueck — er ist eine Ableitung aus dem Plan, und
+   * das Lager darf ihn nicht umschreiben. Wuerde es das, waere die Grenze aus
+   * ADR-006 in der anderen Richtung durchbrochen: das Lager haette eine
+   * Meinung darueber, was der Plan braucht.
+   */
+  deckung?: SeedDeckung[]
+  /**
+   * Die Meldung des Gebaeudes: welche Anschlusspunkte es gibt.
+   *
+   * Nur das Gebaeude darf sie setzen. Ein Planer, der sie mitschickte, haette
+   * eine Meinung ueber die Hausinstallation — und genau die soll er nicht
+   * haben, sondern nachlesen.
+   */
+  anschluesse?: SeedAnschluss[]
 }
 
 /** Leerer Seed — Ausgangspunkt fuer Tests und fuer „kein Projekt offen". */
@@ -249,7 +401,77 @@ export function emptySeed(revision = 0): SuiteSeed {
     fixtures: [],
     devices: [],
     cables: [],
+    bedarf: [],
+    deckung: [],
+    anschluesse: [],
   }
+}
+
+/**
+ * Den Bedarf aus dem Plan-Inhalt ableiten.
+ *
+ * Zusammengefasst wird ueber das MODELL, nie ueber den Namen. Das ist die
+ * Lehre aus ADR-002: `seedFromEquipment` schluesselte ueber `eq.name`, und
+ * „Kamera 1" und „Kamera 2" wurden dadurch zu zwei Lagerpositionen à 1 Stueck
+ * fuer das, was in Wahrheit ein Modell mit Menge 2 ist.
+ *
+ * Geraete OHNE Modell werden deshalb auch nicht ersatzweise ueber den Namen
+ * zusammengefasst — sie bleiben je Geraet eine Zeile mit `modellUnbekannt`.
+ * Zwei namenlose Geraete sind zwei unbekannte Geraete; sie zu Menge 2 zu
+ * addieren waere dieselbe Falschaussage wie damals, nur in die andere
+ * Richtung.
+ */
+export function deriveBedarf(
+  seed: Pick<SuiteSeed, 'cameras' | 'fixtures' | 'devices'>,
+  /**
+   * Ids aus `devices`, die fuer ein Objekt stehen, das schon in `cameras` oder
+   * `fixtures` steht (`SignalNode.represents`, B-18).
+   *
+   * Ohne sie waere der Bedarf doppelt: der Knoten „CAM 2 — Sony FX9" im
+   * Signalweg und die Kamera „CAM 2" im Kameraplan sind DASSELBE BLECH in
+   * zwei Gewerken, und das Lager bekaeme zwei Geraete angefordert, wo eines
+   * steht. Der Seed traegt `represents` bewusst nicht mit — die Aufloesung
+   * ueber die Gewerks-Grenze gehoert in die Shell (B-18), und deshalb reicht
+   * sie das Ergebnis herein statt der Regel.
+   */
+  vertretene: ReadonlySet<string> = new Set(),
+): SeedBedarf[] {
+  const zeilen = new Map<string, SeedBedarf>()
+  const offen: SeedBedarf[] = []
+
+  const aufnehmen = (
+    fromDomain: SeedDomain,
+    id: string,
+    name: string,
+    model: string | undefined,
+    category?: string,
+  ) => {
+    const modell = model?.trim()
+    if (!modell) {
+      offen.push({
+        key: `unbekannt:${fromDomain}:${id}`,
+        label: name,
+        category,
+        quantity: 1,
+        fromDomain,
+        modellUnbekannt: true,
+      })
+      return
+    }
+    const key = modell.toLowerCase()
+    const vorhanden = zeilen.get(key)
+    if (vorhanden) vorhanden.quantity += 1
+    else zeilen.set(key, { key, label: modell, category, quantity: 1, fromDomain })
+  }
+
+  for (const c of seed.cameras) aufnehmen('cameras', c.id, c.name, c.model, 'camera')
+  for (const f of seed.fixtures) aufnehmen('fixtures', f.id, f.name, f.model, 'fixture')
+  for (const d of seed.devices) {
+    if (vertretene.has(d.id)) continue
+    aufnehmen('signal', d.id, d.name, d.model)
+  }
+
+  return [...zeilen.values(), ...offen]
 }
 
 /** Formprüfung fuer alles, was ueber den Bus hereinkommt. */
@@ -264,7 +486,10 @@ export function isSuiteSeed(value: unknown): value is SuiteSeed {
     Array.isArray(s.cameras) &&
     Array.isArray(s.fixtures) &&
     Array.isArray(s.devices) &&
-    Array.isArray(s.cables)
+    Array.isArray(s.cables) &&
+    Array.isArray(s.bedarf) &&
+    Array.isArray(s.deckung) &&
+    Array.isArray(s.anschluesse)
   )
 }
 
@@ -274,6 +499,9 @@ export function isSuiteSeed(value: unknown): value is SuiteSeed {
  * Smoke-Test misst, damit ein leer bleibender Planer wieder auffaellt.
  */
 export function seedContentCount(seed: SuiteSeed): number {
+  // `bedarf` zaehlt hier bewusst NICHT mit: er ist aus denselben drei Listen
+  // abgeleitet, und ihn mitzuzaehlen hiesse, denselben Inhalt zweimal zu
+  // zaehlen — ein Seed saehe voller aus, als er ist.
   return seed.cameras.length + seed.fixtures.length + seed.devices.length + seed.cables.length
 }
 

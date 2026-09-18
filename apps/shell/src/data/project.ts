@@ -283,6 +283,24 @@ export interface SuiteProject {
   seedConflicts?: SeedConflictRecord[]
   /** Angebotene Uebergaben an die anderen Planer (Nutzer-Auftrag 2026-09-12). */
   seedHandoffs?: SeedHandoffRecord[]
+  /**
+   * Was der Bestand vom Bedarf des Plans deckt — gemeldet vom Lager-Modul.
+   *
+   * Sie wird GEFUEHRT und nicht abgeleitet: der Bedarf faellt aus dem Plan,
+   * die Deckung ist die Antwort einer anderen App darauf. Fehlt das Feld, hat
+   * niemand nachgesehen — das ist nicht dasselbe wie „nichts vorhanden", und
+   * `SeedDeckung.gedeckt` haelt denselben Unterschied noch je Zeile fest.
+   */
+  deckung?: import('@avplan/ui/embed').SeedDeckung[]
+  /**
+   * Die Anschlusspunkte des Hauses — gemeldet vom Gebaeude-Modul.
+   *
+   * Sie stehen im Projekt und nicht im Gebaeude-Werkzeug allein, weil der Plan
+   * an ihnen haengt: bis 2026-09-18 tippte sie jemand aus dem Gebaeudeplan in
+   * die Stromplanung der Show ab. Leer heisst „keine gemeldet" und nicht „das
+   * Haus hat keine".
+   */
+  anschluesse?: import('@avplan/ui/embed').SeedAnschluss[]
 }
 
 /**

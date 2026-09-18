@@ -227,6 +227,20 @@ export function mergeSeedPatch(seed: SuiteSeed, patch: SeedPatch): SeedMerge {
         }
       }
       break
+    case 'lager':
+      // Das Lager meldet die Deckung und sonst nichts. Es besitzt keine
+      // Plan-Liste: wuerde es `devices` mitschicken duerfen, haette es eine
+      // Meinung darueber, was der Plan enthaelt — die Grenze aus ADR-006 in
+      // der Gegenrichtung. `bedarf` bleibt aus demselben Grund aussen vor; er
+      // ist eine Ableitung des Plans und kommt beim naechsten Senden neu.
+      if (patch.deckung) naechster = { ...naechster, deckung: patch.deckung }
+      break
+    case 'gebaeude':
+      // Das Gebaeude meldet seine Anschlusspunkte. Es ist die einzige Quelle
+      // dafuer: ein Planer, der sie mitschickte, haette eine Meinung ueber die
+      // Hausinstallation statt sie nachzulesen.
+      if (patch.anschluesse) naechster = { ...naechster, anschluesse: patch.anschluesse }
+      break
   }
 
   return { seed: naechster, conflicts }
