@@ -16,6 +16,12 @@ Inhaltsverzeichnis; es verlinkte nur niemand.
 | [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) | Was in den zehn Repos tatsächlich läuft — nach Ausführung belegt, nicht nach Plan. Enthält die Ausführungs-Nachweise (Exit-Codes echter Läufe) und den Stand je Bereich. |
 | [`IMPLEMENTATION_BACKLOG.md`](IMPLEMENTATION_BACKLOG.md) | Die offenen Punkte mit Befund, Begründung und Aufwand — plus der Abschnitt „Nicht zu entscheiden ohne den Eigentümer". |
 
+## Die Schnittstellen
+
+| Dokument | Was es ist |
+| --- | --- |
+| [`SCHNITTSTELLEN.md`](SCHNITTSTELLEN.md) | Wo Daten die Werkzeuggrenze überqueren: die sieben Dateiformate, der laufende `suite-seed`-Austausch, die erklärten Verknüpfungen und die Fremdsysteme — und der Abschnitt „Was es NICHT gibt", gemessen statt vermutet. |
+
 ## Architektur-Entscheidungen (ADR)
 
 Jede ADR hält eine Entscheidung samt Befund fest, der sie ausgelöst hat.
