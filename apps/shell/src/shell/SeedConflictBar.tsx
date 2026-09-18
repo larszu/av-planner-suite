@@ -100,6 +100,8 @@ const APP_LABEL = {
   cameras: ['seed.writer.cameras', 'der Kamera-Planer'],
   fixtures: ['seed.writer.fixtures', 'der Licht-Planer'],
   signal: ['seed.writer.signal', 'der Kabel-Planer'],
+  lager: ['seed.writer.lager', 'das Lager'],
+  gebaeude: ['seed.writer.gebaeude', 'das Gebäude'],
 } satisfies Record<SeedWriter, [string, string]>
 
 const appLabel = (t: (k: string, de: string) => string, by: SeedWriter) => t(...APP_LABEL[by])

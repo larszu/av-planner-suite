@@ -2181,6 +2181,81 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
   wird aufaddiert statt der Dauer des letzten Punktes.
 * **Aufwand:** ~~groß~~ erledigt
 
+### B-78 · Zwei Module in der Leiste ohne einen einzigen Datenweg
+
+* **Status:** **ERLEDIGT 2026-09-18** — beide Brücken gebaut, `seed:check` hält
+  es fest.
+* **Woher der Eintrag kommt:** Rückfrage des Eigentümers am 2026-09-18 — „mein
+  Ursprungsauftrag war doch alle Daten überall und AV-Planner als Schnittstelle
+  dazwischen". Die Nachmessung gab ihm recht, und der Befund war schärfer als
+  erwartet.
+* **Befund (gemessen 2026-09-18):**
+  * `packages/ui/src/seed.ts` führte `SeedDomain = 'cameras' | 'fixtures' |
+    'signal'` — **drei** Domänen. In der Modul-Leiste standen **fünf**
+    mitgelieferte Planer: Lager (Modul 5, seit `suite#99`) und Gebäude
+    (Modul 6) waren eingebettete Oberflächen ohne jede Datenverbindung.
+  * `grep` über `apps/shell/src` und `packages/`: **null Treffer** für
+    `bedarf`, `BedarfsZeile` oder `gebaeude` in der Datenschicht der Shell.
+  * `inventory-planner/CLAUDE.md` nennt `seedAusBedarf` „den einzigen
+    Schreibweg vom Plan hierher". Aufgerufen wurde er von **nichts ausser
+    seinen eigenen Tests** — kein Planer erzeugte je eine `BedarfsZeile`.
+* **Warum das die schlimmere Form von B-18 ist.** Dort fehlte ein Sender zu
+  einem vorhandenen Empfänger; hier fehlte die Leitung. Und sie fällt von
+  selbst nicht auf: ein Modul, das nichts bekommt, sieht aus wie eines, in dem
+  noch nichts steht. Der Lagerist tippt die Geräteliste ab, der Planer tippt
+  die Dosen des Hauses ab, und beide halten das für den Normalzustand.
+* **Gebaut (`suite#…`, 2026-09-18):**
+  * **`suite-seed` v2.** `bedarf`, `deckung` und `anschluesse` sind Pflicht-
+    felder; `SeedDomain` kennt `lager` und `gebaeude`. Der Versionssprung ist
+    ungefährlich, weil der Seed **nur suite-intern** fährt — Sender und
+    Empfänger liegen beide unter `apps/`.
+  * **Der Bedarf wird ABGELEITET, nie geführt** (ADR-001): `deriveBedarf` läuft
+    bei jedem Senden über `cameras`/`fixtures`/`devices`. Zusammengefasst wird
+    über das **Modell**, nie über den Namen — das ist ADR-002 wörtlich, und
+    Geräte ohne Modell werden auch nicht ersatzweise über den Namen
+    zusammengefasst: zwei namenlose Geräte sind zwei unbekannte Geräte, und
+    sie tragen `modellUnbekannt`, damit das Lager sie als offenen Punkt zeigt
+    statt als Position anzulegen.
+  * **Knoten mit `represents` zählen nicht doppelt.** Der Knoten „CAM 2 — Sony
+    FX9" und die Kamera „CAM 2" sind dasselbe Blech in zwei Gewerken; ohne die
+    Ausnahme forderte das Lager zwei Geräte an, wo eines steht.
+  * **Die Übernahme ins Lager ist ein KNOPF und kein Effekt.** `seedAusBedarf`
+    legt Positionen an und hebt Mengen — ein Eingriff in den gezählten
+    Bestand. Ein Seed kommt bei jeder Revision erneut; liefe sie von selbst,
+    füllte ein Modulwechsel das Lager mit Geräten, die nur geplant sind. Die
+    Deckung dagegen geht automatisch zurück: sie ändert nichts.
+  * **Das Gebäude meldet seine Anschlusspunkte.** `dauerleistungW` wird dabei
+    **nicht** aus `absicherungA × 230` gerechnet, und `geschaltet`/`gedimmt`
+    bleiben weg, wo das Haus nichts sagt — „Die Tür rechnet nicht selbst",
+    jetzt an der Aussenkante gemessen statt nur im Vertrag.
+* **Nebenbefund, mitgefixt: `SignalNode.represents` ging beim Rückweg
+  verloren.** `applyPatchToSuite` baute den Knoten Feld für Feld neu auf und
+  führte `group` und `venue` mit, `represents` aber nicht. Der Seed trägt es
+  nicht (B-18: die Auflösung gehört in die Shell), also fiel es bei **jeder**
+  Meldung des Signal-Planers heraus. Still. Danach sprangen die vier
+  Cross-Link-Knöpfe nur noch ins Modul ohne Auswahl — der Defekt, den
+  `suite#199` gerade behoben hatte, kam über den Rückweg zurück.
+* **Der Wächter:** `npm run seed:check` (`scripts/seed-anschluss-check.mjs`,
+  in CI). Er misst nicht, ob der Datenweg gut ist, sondern ob es ihn gibt: ein
+  Planer in der Leiste ruft `connectShellSeed` mit einer Domäne, die
+  `SeedDomain` kennt. Er hat beim ersten Lauf genau die zwei gemeldet, um die
+  es hier geht, und beim Bau des Lagers weiter auf das Gebäude gezeigt — eine
+  Ausnahme wäre die falsche Antwort gewesen.
+* **Was NICHT gebaut ist** und als eigener Punkt offen bleibt:
+  * Der Plan zeigt die Deckung noch nirgends an. Die Zahl kommt in der Shell
+    an (`SuiteProject.deckung`) und steht im Seed für alle Planer bereit; eine
+    Anzeige „3 von 4 vorhanden" am Gerät gibt es noch nicht.
+  * Dasselbe für die Anschlusspunkte: sie kommen an, aber die Stromplanung des
+    `cable-planner` liest sie noch nicht.
+  * Die vier Geräte-Repos (tally-pi, pi-media-station, sony-camera-bridge,
+    Broadcast-intercom) hängen weiter nur über eine Adresse in der Leiste
+    (B-35). Sie sind Laufzeiten und keine Zeichenflächen; ob sie einen
+    Projekt-Fluss brauchen, ist eine eigene Frage — `seed:check` stellt sie
+    bewusst nicht, er misst nur die mitgelieferten Planer.
+* **Aufwand:** ~~mittel~~ erledigt; die drei offenen Punkte oben je klein.
+
+---
+
 ### B-35 · Vier der acht Repos sind aus der Suite nicht erreichbar
 
 * **Status:** ~~offen~~ **erledigt 2026-09-05** (`suite#99`)

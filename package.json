@@ -35,6 +35,7 @@
     "devports:check": "node scripts/dev-ports-match.mjs",
     "ci:complete": "node scripts/ci-runs-every-check.mjs",
     "deps:check": "node scripts/shell-deps-complete.mjs",
+    "seed:check": "node scripts/seed-anschluss-check.mjs",
     "release:check": "node scripts/release-artefakte.mjs",
     "actions:check": "node scripts/actions-node-runtime.mjs",
     "ui:smoke": "node scripts/suite-smoke.mjs",

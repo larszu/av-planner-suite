@@ -8,8 +8,11 @@
 import { isSuiteSeed, type SeedDomain, type SeedPatch, type SuiteSeed } from './seed'
 
 export type {
+  SeedAnschluss,
+  SeedBedarf,
   SeedCable,
   SeedCamera,
+  SeedDeckung,
   SeedDevice,
   SeedDomain,
   SeedFixture,
@@ -20,7 +23,14 @@ export type {
   SeedWriter,
   SuiteSeed,
 } from './seed'
-export { SUITE_SEED_KIND, SUITE_SEED_VERSION, emptySeed, isSuiteSeed, seedContentCount } from './seed'
+export {
+  SUITE_SEED_KIND,
+  SUITE_SEED_VERSION,
+  deriveBedarf,
+  emptySeed,
+  isSuiteSeed,
+  seedContentCount,
+} from './seed'
 export type { SeedConflict, SeedMerge, SeedVenueField } from './seedOwnership'
 export { SEED_VENUE_OWNER, acceptProposal, conflictFieldName, mergeSeedPatch } from './seedOwnership'
 
