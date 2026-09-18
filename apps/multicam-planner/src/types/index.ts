@@ -339,7 +339,20 @@ export interface PositionComms {
  */
 export type ControlPath =
   | 'tcp' | 'serial' | 'lumix-http' | 'sony-usb' | 'blackmagic' | 'sony-mnc'
-  | 'canon-ccapi' | 'zcam' | 'panasonic-ptz' | 'visca' | 'jvc' | 'birddog'
+  | 'canon-ccapi' | 'zcam' | 'panasonic-ptz' | 'visca' | 'visca-serial'
+  | 'jvc' | 'birddog'
+  // Gimbals. Sie tragen eine Kamera, sie sind keine: vom Pult aus bewegen
+  // sie den Kopf und stellen NICHTS am Bild. Sie stehen hier trotzdem,
+  // weil man sie aufbaut und also plant -- anders als `demo`, das es in
+  // einem echten Aufbau nicht gibt.
+  | 'dji-osmo' | 'dji-ronin'
+  // Ein B4-OBJEKTIV, keine Kamera: das ESP32-S3-Interface aus
+  // `packages/firmware-b4` der sony-camera-bridge, im 12-poligen
+  // Hirose-Kabel zwischen Kamera und Optik. Es steht hier, weil man es
+  // aufbaut und also plant -- und weil es die Frage beantwortet, die
+  // sonst in der Probe kommt: ob sich die Blende dieser Position vom
+  // Pult aus stellen laesst.
+  | 'b4-lens'
   | 'none';
 
 export interface VenueCamera {
