@@ -31,7 +31,7 @@ const xlrOut = (n: string) => port(n, 'XLR')
 const eth    = (n: string) => port(n, 'Ethernet/RJ45')
 const custom = (n: string) => port(n, 'Custom')
 
-const SYNC  = 'Sync/Referenz'
+const SYNC  = 'Sync/Reference'
 const AUDIO = 'Audio'
 const VIDEO = 'Video'
 

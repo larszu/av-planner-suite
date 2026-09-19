@@ -27,6 +27,7 @@ import { CAMERAS } from '../data/cameras';
 import { LENSES } from '../data/lenses';
 import type { Camera, Lens, VenueCamera, Venue } from '../types';
 import { horizontalFov } from './fov';
+import { kameraFuerTyp, typIdFuer } from './typRegister';
 
 const CAMERA_COLORS = ['#38bdf8', '#f472b6', '#a3e635', '#fbbf24', '#c084fc', '#fb7185'];
 
@@ -72,8 +73,20 @@ const modellKandidaten = (text: string | undefined): string[] => {
  */
 const bezeichnetEinModell = (kandidat: string): boolean => !/^[0-9]+$/.test(kandidat);
 
-/** Genau ein Treffer oder null. Mehrdeutig zaehlt ausdruecklich als kein Treffer. */
-export function katalogKamera(seed: Pick<SeedGeraet, 'model' | 'name'>): Camera | null {
+/**
+ * Genau ein Treffer oder null. Mehrdeutig zaehlt ausdruecklich als kein Treffer.
+ *
+ * ZUERST DIE KATALOG-IDENTITAET (ADR-012). Traegt das Geraet eine `typId`,
+ * ist die Zuordnung eine Tatsache — und zwar dieselbe, die der Cable-Planer
+ * und das Lager benutzen. Der Namensvergleich darunter bleibt fuer Geraete,
+ * die aus keinem Katalog stammen; er ist die schlechtere Auskunft und steht
+ * deshalb hinten. Bis hierher war er die einzige, und „Sony FX9" gegen
+ * „Sony PXW-FX9" entschied, ob eine Kamera ueberhaupt ankam.
+ */
+export function katalogKamera(seed: Pick<SeedGeraet, 'model' | 'name' | 'typId'>): Camera | null {
+  const ueberId = kameraFuerTyp(seed.typId);
+  if (ueberId) return ueberId;
+
   const kandidaten = [
     ...modellKandidaten(seed.model),
     ...(seed.name && seed.name.trim().length > 0 ? [normalisiere(seed.name)] : []),
@@ -267,6 +280,10 @@ export function camerasToSeedPatch(
         name: v.label,
         kategorie: 'Cameras',
         ...(camDef ? { model: `${camDef.manufacturer} ${camDef.model}` } : {}),
+        // Die Katalog-Identitaet faehrt mit: sie ist die Basis, ueber die der
+        // Cable-Planer sein Datenblatt und das Lager seine Position findet
+        // (ADR-012). Ohne sie blieb drueben nur der Modellname.
+        ...(camDef ? (() => { const t = typIdFuer(camDef); return t ? { typId: t } : {}; })() : {}),
         x: v.x,
         y: v.y,
         kamera: {

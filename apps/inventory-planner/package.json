@@ -20,6 +20,7 @@
     "grenze:check": "node --experimental-strip-types scripts/plan-grenze-check.ts"
   },
   "dependencies": {
+    "@avplan/device-catalog": "1.0.0",
     "@avplan/ui": "*",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

@@ -100,10 +100,29 @@ export interface Geraetetyp {
    * sich widersprechen. Ohne die Herkunft hiesse der Befund „irgendwo".
    */
   quellen: readonly string[]
+  /**
+   * Wie die QUELLE diesen Typ bei sich nennt — Quellenname auf deren eigene Id.
+   *
+   * WARUM DIE RUECKRICHTUNG UEBERHAUPT GEBRAUCHT WIRD (2026-09-19, ADR-012).
+   * Jede Liste hat eine eigene Id: die Kameraliste `sony-hdc-3500`, die
+   * Leuchten-Bibliothek `etc-s4-19`, die Katalogdateien des Cable-Planers eine
+   * GUID. Der Katalog rechnet daraus EINE Identitaet — aber ein Planer, der
+   * seinen eigenen Eintrag in der Hand haelt, konnte bis hierher nicht fragen,
+   * welcher Katalog-Typ das ist, ohne den Namen zu vergleichen. Ein
+   * Namensvergleich ist genau das, was ADR-002 verbietet.
+   *
+   * Steht hier und nicht in der Quellliste, weil es GERECHNET ist: der
+   * Generator kennt beide Seiten, ein von Hand gepflegtes Feld in 928
+   * Eintraegen driftet.
+   */
+  refs?: Readonly<Record<string, string>>
 }
 
 /** Ein Eintrag, wie ihn eine Quelle liefert — ohne Herkunft, die setzt der Merge. */
-export type TypEingabe = Omit<Geraetetyp, 'quellen'>
+export type TypEingabe = Omit<Geraetetyp, 'quellen' | 'refs'> & {
+  /** Die Id, unter der die Quelle diesen Typ fuehrt. Der Merge macht daraus `refs`. */
+  quellRef?: string
+}
 
 /** Eine benannte Katalog-Quelle. */
 export interface TypQuelle {

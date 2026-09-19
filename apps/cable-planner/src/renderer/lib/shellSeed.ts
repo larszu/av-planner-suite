@@ -105,7 +105,17 @@ export function kandidaten(device: Pick<SeedGeraet, 'name' | 'model'>): string[]
  * meist nicht. Treffen mehrere, ist das Ergebnis ausdruecklich null: bei
  * Mehrdeutigkeit raten waere schlimmer als nicht aufloesen.
  */
-export function katalogTemplate(device: Pick<SeedGeraet, 'name' | 'model'>): EquipmentTemplate | null {
+export function katalogTemplate(
+  device: Pick<SeedGeraet, 'name' | 'model' | 'typId'>,
+): EquipmentTemplate | null {
+  // ZUERST DIE ID, DANN DER NAME (ADR-012). Traegt das Geraet eine
+  // Katalog-Identitaet, ist die Zuordnung eine Tatsache; alles darunter ist
+  // ein Namensvergleich, den ADR-002 nur deshalb duldet, weil es fuer
+  // handgelegte Geraete nichts Besseres gibt. Wer beides hat und den Namen
+  // nimmt, wirft die Tatsache weg.
+  const ueberId = resolveDeviceType(device.typId)
+  if (ueberId) return ueberId.template
+
   const typen = listDeviceTypes()
   for (const kandidat of kandidaten(device)) {
     const treffer = typen.filter((typ) => {
@@ -388,6 +398,11 @@ export function cableToSeedPatch(project: {
         name: e.name,
         ...(e.subtitle ? { sub: e.subtitle } : {}),
         ...(modell ? { model: modell } : {}),
+        // Die Katalog-Identitaet faehrt MIT (ADR-012). Fuer diesen Planer ist
+        // sie `deviceTypeId` — dieselbe Id, unter der der gemeinsame Katalog
+        // den Typ fuehrt. Damit muss der Kameraplan drueben nicht mehr
+        // „Sony FX9" gegen „Sony PXW-FX9" halten.
+        ...(e.deviceTypeId ? { typId: e.deviceTypeId } : {}),
         ...(kategorie ? { kategorie } : {}),
         nx: Math.min(1, Math.max(0, e.x / CANVAS_W)),
         ny: Math.min(1, Math.max(0, e.y / CANVAS_H)),
