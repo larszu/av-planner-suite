@@ -22,7 +22,28 @@
 //
 // REIN: keine Datei, kein Netz, keine Uhr.
 // ───────────────────────────────────────────────────────────────────────────
+import { normalisiere } from './identitaet'
 import type { Geraetetyp, TypEingabe, TypQuelle } from './typ'
+
+/**
+ * Zwei Schreibweisen desselben Namens — oder wirklich zwei Namen?
+ *
+ * Der Cable-Katalog führt „Sony PMW-F5" in EINEM Feld, die Kameraliste
+ * `manufacturer: 'Sony'` und `model: 'PMW-F5'` getrennt. Das sieht im
+ * Feldvergleich aus wie ein Widerspruch und ist keiner: es ist dieselbe
+ * Angabe in zwei AUFLÖSUNGEN.
+ *
+ * ADR-005 Regel 2 entscheidet den Fall wörtlich: „Wo dieselbe Information in
+ * zwei Auflösungen in derselben Datei liegt, gewinnt die höhere." Die höhere
+ * ist die getrennte — sie beantwortet „wer stellt das her?", die andere
+ * nicht. Sie zieht deshalb ein, und es entsteht KEIN Befund.
+ *
+ * Ohne diese Regel meldete der Katalog am 2026-09-19 zwölf Widersprüche, die
+ * keine waren — und ein Befundhaufen aus Nicht-Befunden ist genau die Sorte
+ * Meldung, die nach dem dritten Mal niemand mehr liest.
+ */
+const gleicheAngabeFeiner = (grob: string, hersteller: string, modell: string): boolean =>
+  normalisiere(grob) === normalisiere(`${hersteller} ${modell}`)
 
 /** Zwei Quellen sagen etwas Verschiedenes über dasselbe Feld. */
 export interface TypBefund {
@@ -61,9 +82,18 @@ export function fuehreZusammen(quellen: readonly TypQuelle[]): KatalogErgebnis {
       }
 
       let zusammen: Geraetetyp = { ...bisher, quellen: [...bisher.quellen, name] }
+
+      // ADR-005 Regel 2: die höhere Auflösung gewinnt, bevor Feld für Feld
+      // verglichen wird. Danach stimmen `hersteller` und `modell` überein,
+      // und der Vergleich unten meldet nichts mehr.
+      if (bisher.hersteller === undefined && e.hersteller !== undefined &&
+          gleicheAngabeFeiner(bisher.modell, e.hersteller, e.modell)) {
+        zusammen = { ...zusammen, hersteller: e.hersteller, modell: e.modell }
+      }
+
       for (const feld of FELDER) {
         const neu = e[feld]
-        const alt = bisher[feld]
+        const alt = zusammen[feld]
         if (neu === undefined || neu === '') continue
         if (alt === undefined || alt === '') {
           // Ergänzung, kein Widerspruch — genau wofür dieses Paket da ist.

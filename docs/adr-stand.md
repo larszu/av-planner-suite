@@ -47,13 +47,24 @@ Cable-Planer keine Identität.** Das Feld, dem ADR-002 genau einen Eigentümer z
 Die Vertagung war also nie eine Vertagung, sondern eine Beschreibung eines Zustands, der schon
 gegen ADR-002 stand.
 
-**Seit 2026-09-19 in Arbeit:** `@avplan/device-catalog` führt die Identität eines Modells (Id,
+**Seit 2026-09-19 gebaut:** `@avplan/device-catalog` führt die Identität eines Modells (Id,
 Hersteller, Modell, Kategorie, Datenblatt) für alle Planer. Die fachlichen Fakten bleiben bei dem
 Planer, der sie versteht — ein Paket, das Ports führte, zöge den halben Kabelgraph mit und wäre
-der Cable-Planer mit anderem Namen. Die 377 Kameratypen werden aus der Kameraliste **erzeugt**
-(`npm run katalog:erzeugen`), und `katalog:parity` ist als CI-Gate die Zusicherung, dass sie es
-bleiben. Offen: die Katalog-Einträge des Cable-Planers und des Licht-Planers anschließen, und die
-Planer auf den gemeinsamen Katalog umstellen.
+der Cable-Planer mit anderem Namen.
+
+Beide Quellen sind drin und werden **erzeugt** (`npm run katalog:erzeugen`): 467 Einträge aus den
+19 Katalogen des Cable-Planers, 377 Kameramodelle aus der Kameraliste. `katalog:parity` ist als
+CI-Gate die Zusicherung, dass sie es bleiben — wer eine Kamera ergänzt und das Erzeugen vergisst,
+wird rot.
+
+Was das Zusammenführen dabei zutage gefördert hat, ist selbst ein Befund: **neun echte
+Widersprüche** zwischen den beiden Katalogen. Fünfmal nennen sie verschiedene Herstellerseiten für
+dasselbe Gerät (US gegen Europa/Asien), viermal heißt dasselbe Modell verschieden („Canon EOS C70"
+gegen „C70"). Sie werden **gemeldet und nicht entschieden** — ein Mensch sagt, welche Seite gilt.
+Zwölf weitere Meldungen waren keine: „Sony PMW-F5" in einem Feld gegen `manufacturer` + `model`
+getrennt ist dieselbe Angabe in zwei Auflösungen, und ADR-005 Regel 2 entscheidet sie ohne Befund.
+
+Offen: den Licht-Planer anschließen, und die Planer auf den gemeinsamen Katalog umstellen.
 
 ### B · ADR-001 galt im Planer und nicht dazwischen
 

@@ -41,6 +41,11 @@ export const normalisiere = (text: string): string =>
  * eine Sony, aber „CM-1" gibt es bei mehreren Häusern. Wer nur das Modell
  * nähme, führte zwei verschiedene Geräte unter einer Id zusammen — und das
  * ist der Fehler, den eine Identität am teuersten macht.
+ *
+ * Eine Quelle ohne getrennten Hersteller kann diese Funktion deshalb nicht
+ * benutzen. Das ist kein Loch: die Einträge des Cable-Planers tragen alle
+ * eine gewachsene GUID, und wo weder das eine noch das andere vorliegt, soll
+ * es auffallen statt still eine halbe Id zu erzeugen.
  */
 export const abgeleiteteTypId = (hersteller: string, modell: string): string =>
   `abgeleitet:${normalisiere(hersteller).replace(/ /g, '-')}:${normalisiere(modell).replace(/ /g, '-')}`

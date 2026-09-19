@@ -60,7 +60,23 @@ export interface Geraetetyp {
    * gewachsene Id existiert — siehe `identitaet.ts`.
    */
   id: string
-  hersteller: string
+  /**
+   * Der Hersteller — OPTIONAL, weil ihn nicht jede Quelle getrennt führt.
+   *
+   * Die Kameraliste des MultiCam-Planers tut es (`manufacturer` + `model`).
+   * Die Katalog-Einträge des Cable-Planers nicht: dort steht „AJA KUMO
+   * 1616-12G" in EINEM Feld. Das auseinanderzuschneiden wäre Raten an genau
+   * der Stelle, an der ADR-002 es verbietet — „Blackmagic Design ATEM Mini"
+   * und „ATEM Mini" trennen sich nicht nach derselben Regel wie „AJA KUMO",
+   * und ein Fehlschnitt erzeugte zwei Hersteller, die es nicht gibt.
+   *
+   * Es fehlt also, weil die Quelle es nicht sagt, und nicht, weil der
+   * Hersteller unbekannt wäre. Für die Id ist das folgenlos: jeder der 467
+   * Cable-Einträge trägt eine gewachsene `deviceTypeId`, es muss dort also
+   * nichts abgeleitet werden.
+   */
+  hersteller?: string
+  /** Das Modell, wie die Quelle es führt — bei manchen Quellen mit Hersteller darin. */
   modell: string
   /**
    * Die Kategorie, die das Modell den Plänen zuordnet („Cameras", „Video
