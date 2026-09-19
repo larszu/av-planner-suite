@@ -34,7 +34,11 @@
 import {
   SUITE_SEED_KIND,
   SUITE_SEED_VERSION,
+  alsKameras,
+  alsLeuchten,
+  alsSignalGeraete,
   deriveBedarf,
+  geraeteAus,
   mergeSeedPatch,
   type SeedDomain,
   type SeedPatch,
@@ -81,6 +85,7 @@ export function suiteToSeed(
       revision,
       ...(origin ? { origin } : {}),
       venue: { name: '' },
+      geraete: [],
       cameras: [],
       fixtures: [],
       devices: [],
@@ -91,42 +96,33 @@ export function suiteToSeed(
     }
   }
 
-  const cameras = project.cameras.map((c) => ({
-    id: c.id,
-    name: c.name,
-    model: c.model,
-    lens: c.lens,
-    focalMm: c.focalMm,
-    hfovDeg: c.hfovDeg,
-    x: c.x,
-    y: c.y,
-  }))
-  const fixtures = project.fixtures.map((f) => ({
-    id: f.id,
-    name: f.name,
-    model: f.model,
-    purpose: f.purpose,
-    dimmerPct: f.dimmerPct,
-    dmxChannel: f.dmxChannel,
-    x: f.x,
-    y: f.y,
-    // Nur mitschicken, wenn sie jemand gesetzt hat: ein `rigHeightM: 0` im
-    // Seed hiesse „haengt am Boden" und ueberschriebe drueben die Hoehe,
-    // die der Planer selbst fuehrt.
-    ...(f.rigHeightM !== undefined ? { rigHeightM: f.rigHeightM } : {}),
-  }))
-  const devices = project.nodes.map((n) => ({
-    id: n.id,
-    name: n.name,
-    subtitle: n.sub,
-    nx: n.nx,
-    ny: n.ny,
-    // Faehrt mit, obwohl die Shell die Aussage nicht selbst trifft: sonst
-    // verlaere sie ein Planer, der den Seed neu aufbaut, beim naechsten
-    // Melden wieder — derselbe stille Verlust, den `represents` hatte.
-    ...(n.gewerk ? { gewerk: n.gewerk } : {}),
-    ...(n.model ? { model: n.model } : {}),
-  }))
+  // ── EINE Liste, drei Sichten (ADR-011) ───────────────────────────────────
+  //
+  // Bis 2026-09-19 standen hier drei `map`s nebeneinander, und dasselbe Blech
+  // stand in zweien davon: die Kamera `cam2` und ihr Knoten `n_cam2` waren
+  // zwei Datensaetze. Genau die zweite Wahrheit, gegen die ADR-001
+  // geschrieben ist — nur eine Ebene hoeher als dort gemessen.
+  //
+  // Zusammengelegt wird ueber die ERKLAERTE Entsprechung (`represents`) und
+  // nur ueber sie. Wo niemand sie erklaert hat, bleiben es zwei Geraete; das
+  // ist die richtige Antwort und kein Mangel.
+  const geraete = geraeteAus(
+    project.nodes.map((n) => ({
+      id: n.id,
+      name: n.name,
+      subtitle: n.sub,
+      nx: n.nx,
+      ny: n.ny,
+      ...(n.kategorie ? { kategorie: n.kategorie } : {}),
+      ...(n.model ? { model: n.model } : {}),
+      ...(n.represents ? { represents: n.represents } : {}),
+    })),
+    project.cameras,
+    project.fixtures,
+  )
+  const cameras = alsKameras(geraete)
+  const fixtures = alsLeuchten(geraete)
+  const devices = alsSignalGeraete(geraete)
 
   return {
     kind: SUITE_SEED_KIND,
@@ -140,6 +136,7 @@ export function suiteToSeed(
       heightM: project.hall.h,
       stage: project.stage,
     },
+    geraete,
     cameras,
     fixtures,
     devices,
@@ -292,8 +289,27 @@ export function applyPatchToSuite(
     }
   })
 
+  // ── Der Signalplan sieht jetzt ALLE Geraete, aendern darf er nur SEINE ──
+  //
+  // Seit ADR-011 traegt die Sicht `devices` auch die Kameras und Leuchten:
+  // genau das war der Auftrag („alle Kameras aus Multicam planner sind auch
+  // in Cable planner"). Auf dem Rueckweg kommen sie mit zurueck — und wuerden
+  // hier zu KNOTEN, weil diese Abbildung `seed.devices` auf `project.nodes`
+  // legt. Beim naechsten Senden stuenden Kamera und Knoten wieder als zwei
+  // Datensaetze da, ohne erklaerte Verbindung: die zweite Wahrheit, die das
+  // ADR gerade abgeschafft hat, nach einem Rundlauf zurueck.
+  //
+  // Das ist keine Sonderregel, sondern die Eigentumsregel an der Stelle, an
+  // der sie ohnehin gilt: der Signal-Planer darf `cameras` und `fixtures`
+  // nicht schreiben (`mergeSeedPatch`). Eine Kamera, die als Geraet
+  // zurueckkommt, ist deshalb nicht seine — sie wird gelesen und nicht
+  // uebernommen.
+  const fremdeIds = new Set([
+    ...project.cameras.map((c) => c.id),
+    ...project.fixtures.map((f) => f.id),
+  ])
   const alteKnoten = new Map(project.nodes.map((n) => [n.id, n]))
-  const nodes: SignalNode[] = seed.devices.map((d) => {
+  const nodes: SignalNode[] = seed.devices.filter((d) => !fremdeIds.has(d.id)).map((d) => {
     const alt = alteKnoten.get(d.id)
     return {
       id: d.id,
@@ -319,7 +335,7 @@ export function applyPatchToSuite(
       // Die Typaussage kommt aus dem Seed, wenn der Planer sie trifft, und
       // bleibt sonst stehen. Sie geht NICHT verloren, wenn ein Planer sie
       // einmal nicht mitschickt — dieselbe Regel wie oben.
-      ...((d.gewerk ?? alt?.gewerk) ? { gewerk: d.gewerk ?? alt?.gewerk } : {}),
+      ...((d.kategorie ?? alt?.kategorie) ? { kategorie: d.kategorie ?? alt?.kategorie } : {}),
       ...((d.model ?? alt?.model) ? { model: d.model ?? alt?.model } : {}),
     }
   })

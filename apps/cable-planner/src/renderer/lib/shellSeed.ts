@@ -309,29 +309,23 @@ export function seedToCable(seed: SuiteSeed, vorhandene: EquipmentItem[] = []): 
 }
 
 /**
- * Die Kategorien des Katalogs, deren Geraete zugleich Kameras des
- * Kameraplans sind.
+ * Die Kategorie aus dem KATALOG, nicht aus dem Namen.
  *
- * Eine LISTE und kein Vergleich auf „enthaelt Kamera": die Kategorie kommt
- * aus dem Datenblatt-Template, und sie soll genau dann zaehlen, wenn sie
- * wirklich eine Kamera bezeichnet. `Video Converter` enthaelt „Video",
- * `Microphones` enthaelt nichts davon — und ein Vergleich auf Teiltexte
- * waere wieder das Raten aus Zeichenketten, gegen das ADR-002 steht.
- */
-const KAMERA_KATEGORIEN = new Set(['Cameras'])
-
-/**
- * Ist dieses Geraet laut KATALOG eine Kamera?
+ * Sie ordnet das Geraet in der Suite den Plaenen zu (ADR-011): eine Kamera
+ * steht im Kameraplan UND im Signalplan, ein Mischer nur im Signalplan.
+ * Welche Kategorie in welchen Plan gehoert, entscheidet die Tabelle in
+ * `@avplan/ui/embed` — dieser Planer sagt nur, was sein Katalog sagt, und
+ * nicht, wohin es gehört. Zwei Stellen mit dieser Zuordnung wären eine zu
+ * viel.
  *
- * `undefined` heisst „keine Aussage" und ist ausdruecklich nicht `false`:
- * ein von Hand angelegtes oder importiertes Geraet traegt keine
- * `deviceTypeId`, also gibt es zu seinem Typ nichts zu sagen. Die Shell
- * schlaegt dafuer nichts vor, statt aus „Kamera 1" eine Kamera zu machen.
+ * `undefined` heisst „keine Aussage" und ausdruecklich nicht „gehoert
+ * nirgends hin": ein von Hand angelegtes oder importiertes Geraet traegt
+ * keine `deviceTypeId`. Das freie `category`-Feld am `EquipmentItem` wird
+ * NICHT ersatzweise gelesen — es tippt der Nutzer, und damit ist es keine
+ * Typaussage (ADR-002).
  */
-const gewerkAus = (e: EquipmentItem): 'camera' | undefined => {
-  const kategorie = resolveDeviceType(e.deviceTypeId)?.template.category
-  return kategorie && KAMERA_KATEGORIEN.has(kategorie) ? 'camera' : undefined
-}
+const kategorieAus = (e: EquipmentItem): string | undefined =>
+  resolveDeviceType(e.deviceTypeId)?.template.category
 
 /** Rueckweg: das native Modell als Seed-Domaene „signal". */
 export function cableToSeedPatch(project: {
@@ -346,13 +340,13 @@ export function cableToSeedPatch(project: {
       // `deviceTypeId` (ADR-002). Der Kameraplan loest sein Katalog-Modell
       // daraus auf — mit dem Instanznamen koennte er es nicht.
       const modell = resolveDeviceType(e.deviceTypeId)?.template.name
-      const gewerk = gewerkAus(e)
+      const kategorie = kategorieAus(e)
       return {
         id: e.id,
         name: e.name,
         ...(e.subtitle ? { subtitle: e.subtitle } : {}),
         ...(modell ? { model: modell } : {}),
-        ...(gewerk ? { gewerk } : {}),
+        ...(kategorie ? { kategorie } : {}),
         nx: Math.min(1, Math.max(0, e.x / CANVAS_W)),
         ny: Math.min(1, Math.max(0, e.y / CANVAS_H)),
       }

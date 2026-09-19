@@ -1,5 +1,5 @@
 // ───────────────────────────────────────────────────────────────────────────
-// `suite-seed` v2 — das neutrale Projektmodell, das die Shell in die
+// `suite-seed` v3 — das neutrale Projektmodell, das die Shell in die
 // eingebetteten Planer schiebt und aus ihnen zurueckbekommt.
 //
 // WARUM ES DAS BRAUCHT. Bis hierher war die Einbettung eine reine
@@ -33,6 +33,8 @@
 // (`portsUnknown` im Cable-Planer), statt Ports zu erfinden.
 // ───────────────────────────────────────────────────────────────────────────
 
+import type { SeedGeraet } from './geraet'
+
 export const SUITE_SEED_KIND = 'suite-seed' as const
 /**
  * 2 seit 2026-09-18: `bedarf`, `deckung` und `anschluesse` sind hinzugekommen,
@@ -46,7 +48,7 @@ export const SUITE_SEED_KIND = 'suite-seed' as const
  * faehrt: Sender und Empfaenger liegen beide in diesem Repo (`apps/`), die
  * eigenstaendigen Planer-Repos kennen ihn nicht.
  */
-export const SUITE_SEED_VERSION = 2 as const
+export const SUITE_SEED_VERSION = 3 as const
 
 /** Der geteilte Raum. Masse in Metern. */
 export interface SeedVenue {
@@ -115,26 +117,27 @@ export interface SeedDevice {
   x?: number
   y?: number
   /**
-   * Zu welchem ANDEREN Gewerk dieses Geraet ausserdem gehoert.
+   * Die Kategorie, wie der Katalog des fuehrenden Planers sie fuehrt
+   * („Cameras", „Video Mixer", „Monitors").
    *
-   * Eine Kamera, die im Signalplan angelegt wird, ist dort ein Geraet mit
-   * Anschluessen — und zugleich das Blech, das der Kameraplan als Kamera
-   * fuehrt. Ohne diese Aussage kann die Shell die beiden nicht verbinden:
-   * `devices` und `cameras` sind getrennte Listen mit getrennten Eigentuemern
-   * (`mergeSeedPatch`), und der Cable-Planer darf `cameras` nicht schreiben.
+   * Sie ordnet das Geraet den PLAENEN zu (`gewerkeFuer` in `geraet.ts`) —
+   * eine Kamera steht im Kameraplan und im Signalplan, ein Mischer nur im
+   * Signalplan. Ohne sie koennte die Shell die Listen nicht zusammenfuehren:
+   * `devices` und `cameras` waeren wieder zwei Datensaetze fuer dasselbe
+   * Blech, die nur eine Namensaehnlichkeit verbindet.
    *
-   * DEKLARIERT, NICHT GERATEN (ADR-002). Der fuehrende Planer setzt das Feld
-   * aus seinem KATALOG — beim Cable-Planer aus `deviceTypeId` ueber die
-   * Kategorie des Datenblatt-Templates. Aus dem Namen abgeleitet waere es
-   * dieselbe Falle wie `seedFromEquipment` damals: „Kamera 1" ist ein
-   * Instanzname und keine Typaussage.
+   * DEKLARIERT, NICHT GERATEN (ADR-002). Der fuehrende Planer setzt sie aus
+   * seinem Katalog — beim Cable-Planer aus `deviceTypeId` ueber das
+   * Datenblatt-Template. Aus dem Namen abgeleitet waere es dieselbe Falle wie
+   * `seedFromEquipment` damals: „Kamera 1" ist ein Instanzname und keine
+   * Typaussage.
    *
-   * Fehlt das Feld, hat NIEMAND etwas gesagt. Das ist nicht „gehoert zu
-   * keinem anderen Gewerk" — ein von Hand angelegtes Geraet ohne
-   * Katalog-Zuordnung hat schlicht keine Typaussage, und die Shell schlaegt
-   * dafuer nichts vor, statt zu raten.
+   * Fehlt sie, hat NIEMAND etwas gesagt. Das ist nicht „gehoert nirgends
+   * hin": ein von Hand angelegtes Geraet ohne Katalog-Zuordnung faellt auf
+   * die Vorgabe `['signal']` und steht damit im Plan, der seine Anschluesse
+   * fuehrt.
    */
-  gewerk?: 'camera'
+  kategorie?: string
 }
 
 export interface SeedCable {
@@ -285,8 +288,27 @@ export interface SuiteSeed {
   /** Name des Projekts in der Shell — nur zur Anzeige im Planer. */
   projectName?: string
   venue: SeedVenue
+  /**
+   * DIE Geraeteliste — eine, nicht drei (Eigentuemer-Entscheidung 2026-09-19,
+   * ADR-011).
+   *
+   * Hier steht jedes Geraet genau einmal, mit allen Feldern aller Planer und
+   * seiner Kategorie. Die drei Listen darunter sind seit Formatversion 3
+   * SICHTEN darauf (`alsKameras`, `alsLeuchten`, `alsSignalGeraete`) und
+   * keine eigenen Wahrheiten mehr.
+   */
+  geraete: SeedGeraet[]
+  /**
+   * Sicht des Kameraplans auf `geraete`.
+   *
+   * ABGELEITET, nicht gefuehrt. Sie bleibt, bis der Kameraplan auf `geraete`
+   * steht — ein Umbau, der alle drei Planer gleichzeitig austauscht, waere
+   * ein Tag ohne lauffaehigen Stand.
+   */
   cameras: SeedCamera[]
+  /** Sicht des Lichtplans auf `geraete`. Abgeleitet, nicht gefuehrt. */
   fixtures: SeedFixture[]
+  /** Sicht des Signalplans auf `geraete`. Abgeleitet, nicht gefuehrt. */
   devices: SeedDevice[]
   cables: SeedCable[]
   /**
@@ -418,6 +440,7 @@ export function emptySeed(revision = 0): SuiteSeed {
     formatVersion: SUITE_SEED_VERSION,
     revision,
     venue: { name: '' },
+    geraete: [],
     cameras: [],
     fixtures: [],
     devices: [],

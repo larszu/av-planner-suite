@@ -3,9 +3,10 @@
 //
 // Beides hängt an derselben Stelle: `applyPatchToSuite` baut die Knoten Feld
 // für Feld neu auf. Genau daran ging `represents` bis zum 2026-09-18
-// verloren, still und mit derselben Folge (B-18). `gewerk` und `model` sind
-// dieselbe Art Feld — eine Aussage, die der Seed trägt und die Shell braucht
-// —, also gehören sie unter denselben Wächter.
+// verloren, still und mit derselben Folge (B-18). `kategorie` und `model`
+// sind dieselbe Art Feld — eine Aussage, die der Seed trägt und aus der die
+// Shell die Zuordnung zu den Plänen RECHNET (ADR-011) —, also gehören sie
+// unter denselben Wächter.
 // ───────────────────────────────────────────────────────────────────────────
 import { describe, expect, it } from 'vitest'
 import { applyPatchToSuite, suiteToSeed } from '../src/data/seed'
@@ -24,12 +25,12 @@ const basis: SuiteProject = {
 const melde = (p: SuiteProject, devices: Parameters<typeof applyPatchToSuite>[1]['devices']) =>
   applyPatchToSuite(p, { domain: 'signal', revision: 0, devices }, 0).project
 
-describe('Gewerks-Aussage und Modell im Rückweg', () => {
+describe('Kategorie und Modell im Rückweg', () => {
   it('der Signal-Planer darf sie setzen', () => {
     const next = melde(basis, [
-      { id: 'n1', name: 'CAM 1', subtitle: '3x SDI Out', gewerk: 'camera', model: 'Sony FX9', nx: 0.1, ny: 0.2 },
+      { id: 'n1', name: 'CAM 1', subtitle: '3x SDI Out', kategorie: 'Cameras', model: 'Sony FX9', nx: 0.1, ny: 0.2 },
     ])
-    expect(next.nodes[0].gewerk).toBe('camera')
+    expect(next.nodes[0].kategorie).toBe('Cameras')
     expect(next.nodes[0].model).toBe('Sony FX9')
   })
 
@@ -37,7 +38,7 @@ describe('Gewerks-Aussage und Modell im Rückweg', () => {
     // Genau der Fall, an dem `represents` scheiterte: eine spätere Meldung
     // ohne das Feld baute den Knoten neu — und das Feld war weg.
     const mit = melde(basis, [
-      { id: 'n1', name: 'CAM 1', gewerk: 'camera', model: 'Sony FX9', nx: 0.1, ny: 0.2 },
+      { id: 'n1', name: 'CAM 1', kategorie: 'Cameras', model: 'Sony FX9', nx: 0.1, ny: 0.2 },
     ])
     const ohne = applyPatchToSuite(
       mit,
@@ -45,16 +46,16 @@ describe('Gewerks-Aussage und Modell im Rückweg', () => {
       0,
     ).project
     expect(ohne.nodes[0].name).toBe('CAM 1 neu')
-    expect(ohne.nodes[0].gewerk).toBe('camera')
+    expect(ohne.nodes[0].kategorie).toBe('Cameras')
     expect(ohne.nodes[0].model).toBe('Sony FX9')
   })
 
   it('und sie fährt zu den Planern zurück', () => {
     const mit = melde(basis, [
-      { id: 'n1', name: 'CAM 1', gewerk: 'camera', model: 'Sony FX9', nx: 0.1, ny: 0.2 },
+      { id: 'n1', name: 'CAM 1', kategorie: 'Cameras', model: 'Sony FX9', nx: 0.1, ny: 0.2 },
     ])
     const seed = suiteToSeed(mit, 1)
-    expect(seed.devices[0].gewerk).toBe('camera')
+    expect(seed.devices[0].kategorie).toBe('Cameras')
     expect(seed.devices[0].model).toBe('Sony FX9')
   })
 

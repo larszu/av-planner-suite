@@ -2181,6 +2181,67 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
   wird aufaddiert statt der Dauer des letzten Punktes.
 * **Aufwand:** ~~groß~~ erledigt
 
+### B-80 · Drei Listen für dasselbe Blech — ADR-001 galt im Planer und nicht dazwischen
+
+* **Status:** Stufe 1 von 4 gebaut am 2026-09-19 (ADR-011); Stufen 2–4 offen und
+  dort benannt.
+
+* **Die Entscheidung.** Eigentümer, 2026-09-19: „Es gibt nur ein universelles
+  device pro Gerät und nicht pro planner. Dieses device hat alle Felder und
+  Inhalte von Cable planner, multicam planner, light planner und allen
+  anderen Planern. So sollte es auch im Plan gestanden haben."
+
+* **Er hatte recht, und das Papier gab ihm schon recht.** ADR-001, erster
+  Absatz: „Jedes reale Ding bekommt genau einen Datensatz […], nie eine zweite
+  Wahrheit." Der `suite-seed` hielt sich daran INNERHALB eines Planers und
+  brach es DAZWISCHEN: `cameras`, `fixtures` und `devices` waren drei Listen,
+  und die Kamera `cam2` und ihr Knoten `n_cam2` zwei Datensätze für dasselbe
+  Blech.
+
+* **Wie es dazu kam — nicht aus Nachlässigkeit.** `mergeSeedPatch` teilt das
+  Eigentum **je Liste** zu. Das verhindert, dass zwei Planer sich gegenseitig
+  überschreiben, und diese Zusicherung bleibt. Die Regel brauchte nur Listen,
+  um zu greifen — und wer Listen braucht, baut Listen.
+
+* **Gebaut (Stufe 1).** `packages/ui/src/geraet.ts`: `SeedGeraet` mit `id`,
+  `kategorie`, gemeinsamen Feldern und je einer Gruppe `kamera`/`licht`; die
+  Kategorie ordnet einem Gerät **mehrere** Pläne zugleich zu (`gewerkeFuer`).
+  `geraeteAus` legt die drei Listen der Shell über die **erklärte**
+  Entsprechung (`represents`) zusammen — wo niemand sie erklärt hat, bleiben
+  es zwei Geräte, und das ist die richtige Antwort. `alsKameras`,
+  `alsLeuchten` und `alsSignalGeraete` sind seither die einzigen Erzeuger der
+  drei Listen im Seed.
+
+* **Was damit sofort anders ist:** der Signalplan bekommt **alle** Geräte,
+  Kameras und Leuchten eingeschlossen — der sichtbare Teil des Auftrags.
+
+* **Das Gerüst, das dazugehört, und warum es Gerüst ist.** `altIds` trägt die
+  alte Id je Sicht durch die Übergangszeit; ohne sie wäre jede Kamera in jedem
+  bestehenden Projekt eine neue, samt verlorener Ausrichtung und Brennweite.
+  Und `applyPatchToSuite` übernimmt aus der Signal-Meldung keine Geräte, deren
+  Id einer Kamera oder Leuchte gehört — sonst käme die Kamera als Knoten
+  zurück und stünde beim nächsten Senden wieder doppelt da. Das ist keine
+  Sonderregel, sondern die Eigentumsregel an der Stelle, an der sie ohnehin
+  gilt. **Beides fällt mit Stufe 2 bzw. 3.**
+
+* **`SeedDevice.gewerk` aus B-79 ist entfallen.** Es war die enge Fassung
+  derselben Idee („ist das auch eine Kamera?"), und die Kategorie beantwortet
+  sie allgemeiner. Beides zu führen wären zwei Wahrheiten über dieselbe
+  Sache — in einem Umbau gegen zweite Wahrheiten.
+
+* **Offen, und im ADR als Stufen benannt:** das Shell-Projekt führt weiter
+  drei Listen (Stufe 2), die Planer lesen weiter ihre Sicht (Stufe 3), und
+  erst danach fallen die Sichten und das Gerüst weg (Stufe 4). Solange Stufe 2
+  aussteht, bleibt die Übergabe aus B-79 die Brücke: eine im Signalplan
+  angelegte Kamera wird erst zur Kamera des Kameraplans, wenn jemand die
+  Entsprechung erklärt.
+
+* **Guards.** `packages/ui/test/geraet.test.ts` (7),
+  `apps/shell/test/kategorieAussage.test.ts` (4), zwei Fälle in
+  `apps/cable-planner/tests/shellSeed.test.ts`.
+
+---
+
 ### B-79 · Die Kamera aus dem Signalplan kam im Kameraplan nie an
 
 * **Status:** erledigt am 2026-09-19.

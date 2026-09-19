@@ -46,13 +46,13 @@ describe('Kamera-Übergabe Signalplan → Kameraplan', () => {
   it('1. nur die Katalog-Aussage zählt, nicht der Name', () => {
     const p = leer([
       knoten({ id: 'n1', name: 'Kamera 1' }),
-      knoten({ id: 'n2', name: 'Irgendwas', gewerk: 'camera' }),
+      knoten({ id: 'n2', name: 'Irgendwas', kategorie: 'Cameras' }),
     ])
     expect(kameraVorschlaege(p).map((v) => v.nodeId)).toEqual(['n2'])
   })
 
   it('2. was entschieden ist, wird nicht wieder gefragt', () => {
-    const n = knoten({ id: 'n1', name: 'CAM 1', gewerk: 'camera' })
+    const n = knoten({ id: 'n1', name: 'CAM 1', kategorie: 'Cameras' })
 
     // Zuordnung steht schon.
     expect(
@@ -65,7 +65,7 @@ describe('Kamera-Übergabe Signalplan → Kameraplan', () => {
     // Die Ablehnung ist idempotent — zweimal „nein" ist ein Eintrag.
     expect(lehneKameraAb(abgelehnt, 'n1')).toBe(abgelehnt)
     // Und sie lässt die Katalog-Aussage stehen: abgelehnt ist die ÜBERNAHME.
-    expect(abgelehnt.nodes[0].gewerk).toBe('camera')
+    expect(abgelehnt.nodes[0].kategorie).toBe('Cameras')
 
     // Die Kamera existiert bereits unter der abgeleiteten Id (Zustand nach
     // einem Undo, bei dem `represents` zurückfiel).
@@ -76,7 +76,7 @@ describe('Kamera-Übergabe Signalplan → Kameraplan', () => {
   })
 
   it('3. übernehmen legt die Kamera an UND erklärt die Zuordnung', () => {
-    const p = leer([knoten({ id: 'n1', name: 'CAM 1', gewerk: 'camera', model: 'Sony FX9' })])
+    const p = leer([knoten({ id: 'n1', name: 'CAM 1', kategorie: 'Cameras', model: 'Sony FX9' })])
     const next = uebernimmKamera(p, 'n1')
 
     expect(next.cameras).toHaveLength(1)
@@ -92,7 +92,7 @@ describe('Kamera-Übergabe Signalplan → Kameraplan', () => {
   it('4. keine Position wird geraten', () => {
     // Der Knoten steht rechts unten auf der Zeichenfläche. Mal Hallenbreite
     // gerechnet ergäbe das Meter — und die wären eine Behauptung.
-    const p = leer([knoten({ id: 'n1', name: 'CAM 1', gewerk: 'camera', nx: 0.9, ny: 0.8 })])
+    const p = leer([knoten({ id: 'n1', name: 'CAM 1', kategorie: 'Cameras', nx: 0.9, ny: 0.8 })])
     const cam = uebernimmKamera(p, 'n1').cameras[0]
     expect(cam.x).toBeUndefined()
     expect(cam.y).toBeUndefined()
@@ -105,8 +105,8 @@ describe('Kamera-Übergabe Signalplan → Kameraplan', () => {
 
   it('5. das Modell und nicht der Instanzname', () => {
     const p = leer([
-      knoten({ id: 'n1', name: 'CAM 1', sub: '3x SDI Out', gewerk: 'camera', model: 'Sony FX9' }),
-      knoten({ id: 'n2', name: 'CAM 2', sub: '3x SDI Out', gewerk: 'camera' }),
+      knoten({ id: 'n1', name: 'CAM 1', sub: '3x SDI Out', kategorie: 'Cameras', model: 'Sony FX9' }),
+      knoten({ id: 'n2', name: 'CAM 2', sub: '3x SDI Out', kategorie: 'Cameras' }),
     ])
     // `sub` ist eine Beschreibung und taugt drüben zu nichts.
     expect(uebernimmKamera(p, 'n1').cameras[0].model).toBe('Sony FX9')
@@ -118,7 +118,7 @@ describe('Kamera-Übergabe Signalplan → Kameraplan', () => {
   })
 
   it('6. zweimal übernehmen legt nicht zweimal an', () => {
-    const p = leer([knoten({ id: 'n1', name: 'CAM 1', gewerk: 'camera' })])
+    const p = leer([knoten({ id: 'n1', name: 'CAM 1', kategorie: 'Cameras' })])
     const einmal = uebernimmKamera(p, 'n1')
     // Unverändert zurück, nicht als neues Objekt: der Aufrufer erkennt daran,
     // dass nichts passiert ist, und schreibt keinen Historien-Eintrag.
@@ -133,8 +133,8 @@ describe('Kamera-Übergabe Signalplan → Kameraplan', () => {
 
   it('7. derselbe Baum ergibt dieselbe Liste, in der Ordnung des Plans', () => {
     const p = leer([
-      knoten({ id: 'b', name: 'CAM 2', gewerk: 'camera' }),
-      knoten({ id: 'a', name: 'CAM 1', gewerk: 'camera' }),
+      knoten({ id: 'b', name: 'CAM 2', kategorie: 'Cameras' }),
+      knoten({ id: 'a', name: 'CAM 1', kategorie: 'Cameras' }),
     ])
     expect(kameraVorschlaege(p)).toEqual(kameraVorschlaege(p))
     expect(kameraVorschlaege(p).map((v) => v.nodeId)).toEqual(['b', 'a'])

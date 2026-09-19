@@ -198,15 +198,16 @@ describe('shellSeed — Rueckweg', () => {
   })
 
   // ─────────────────────────────────────────────────────────────────────────
-  // DIE TYPAUSSAGE KOMMT AUS DEM KATALOG, NIE AUS DEM NAMEN.
+  // DIE KATEGORIE KOMMT AUS DEM KATALOG, NIE AUS DEM NAMEN.
   //
-  // Sie ist der einzige Weg, auf dem die Shell erfaehrt, dass ein Geraet im
-  // Signalplan zugleich eine Kamera des Kameraplans ist — `mergeSeedPatch`
-  // laesst diesen Planer `cameras` nicht schreiben, und das soll so bleiben.
-  // Aus dem Namen abgeleitet waere es dieselbe Falle wie
-  // `seedFromEquipment` damals (ADR-002): „Kamera 1" ist ein Instanzname.
+  // Sie ist der Weg, auf dem die Shell ein Geraet den Plaenen zuordnet
+  // (ADR-011): eine Kamera steht im Kameraplan UND im Signalplan. Aus dem
+  // Namen abgeleitet waere es dieselbe Falle wie `seedFromEquipment` damals
+  // (ADR-002): „Kamera 1" ist ein Instanzname und keine Typaussage. Und das
+  // freie `category`-Feld am `EquipmentItem` taugt auch nicht: das tippt der
+  // Nutzer.
   // ─────────────────────────────────────────────────────────────────────────
-  it('meldet die Gewerks-Aussage und das Modell aus dem Katalog', () => {
+  it('meldet die Kategorie und das Modell aus dem Katalog', () => {
     const kamera = listDeviceTypes().find((d) => d.category === 'Cameras')
     expect(kamera, 'Katalog ohne Kamera-Eintrag').toBeDefined()
 
@@ -216,7 +217,7 @@ describe('shellSeed — Rueckweg', () => {
     expect(equipment[0].deviceTypeId, 'Katalog-Treffer erwartet').toBe(kamera!.id)
 
     const [gemeldet] = cableToSeedPatch({ equipment }).devices
-    expect(gemeldet.gewerk).toBe('camera')
+    expect(gemeldet.kategorie).toBe('Cameras')
     // Das MODELL aus dem Datenblatt, nicht der Instanzname auf dem Canvas.
     expect(gemeldet.model).toBe(kamera!.name)
   })
@@ -235,7 +236,7 @@ describe('shellSeed — Rueckweg', () => {
       y: 100,
     } as unknown as EquipmentItem
     const [gemeldet] = cableToSeedPatch({ equipment: [vonHand] }).devices
-    expect(gemeldet.gewerk).toBeUndefined()
+    expect(gemeldet.kategorie).toBeUndefined()
     expect(gemeldet.model).toBeUndefined()
     // Der Name faehrt weiter mit — er ist die Beschriftung, nur eben keine
     // Typaussage.

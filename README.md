@@ -166,23 +166,30 @@ embedded.
 # If a planner isn't running, the shell shows a fallback instead of a dead frame.
 ```
 
-### One camera, two trades
+### One device, many plans
 
-The project itself travels as a `suite-seed`, and each list in it belongs to exactly one
-planner: the cabling planner owns `devices` and `cables`, the camera planner owns `cameras`,
-the lighting planner owns `fixtures`. That ownership is what keeps two planners from
-overwriting each other — so a camera created in the **cabling** planner is a signal node
-there, not a camera in the camera plan.
+There is **one** device per piece of kit — not one per planner (ADR-011). The project travels as
+a `suite-seed` whose single `geraete` list holds every device exactly once, with its category and
+the fields of *all* planners. `cameras`, `fixtures` and `devices` still appear in the seed, but
+as **views** on that one list, and they will disappear once every planner reads it directly.
 
-The bridge across that line belongs to the shell. The owning planner declares from its
-**catalogue** that a device is also a camera (`SeedDevice.gewerk`, resolved via the data-sheet
-template — never guessed from the name), and the shell then offers to create it in the camera
-plan. It offers rather than does: a camera that only serves as a signal source has no business
-in the shot plan. Accepting creates the camera **and** records the correspondence
-(`SignalNode.represents`), so the bill of materials counts one device and not two.
+The **category** does the assigning, and it assigns to several plans at once: a camera belongs to
+the camera plan *and* to the signal plan, because it has a standpoint *and* connectors. A mixer
+belongs to the signal plan only. The category is declared from the owning planner's **catalogue**
+(via the data-sheet template) — never guessed from the name, and never taken from the free-text
+category field a user types. Without one, a device still belongs to the signal plan: “not stated”
+is not “nowhere”.
 
-No position is invented in the process. A node's `nx`/`ny` are diagram coordinates, not metres
-in the hall; the new camera therefore has none until the camera planner places it.
+Seeing a device is not the same as writing to it. Ownership moves from *per list* to *per field
+group*: focal length belongs to the camera plan, the DMX address to the lighting plan, the ports
+to the signal plan. Nothing a planner does not own can be overwritten by it.
+
+Where the shell still keeps three lists, they are merged over the **declared** correspondence
+(`SignalNode.represents`) and over nothing else. Two records nobody has connected are two things,
+however similar their names. For a camera created in the cabling planner the shell therefore
+*offers* to create it in the camera plan rather than doing it silently — and accepting records the
+correspondence, so the bill of materials counts one device and not two. No position is invented
+on the way: a node's `nx`/`ny` are diagram coordinates, not metres in the hall.
 
 ---
 

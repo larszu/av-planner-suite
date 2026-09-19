@@ -36,6 +36,7 @@ Jede ADR hält eine Entscheidung samt Befund fest, der sie ausgelöst hat.
 - [`ADR-008 — Die B4-Objektivsteuerung gehört in die Camera Bridge`](decisions/ADR-008-b4-objektivsteuerung-ablage.md)
 - [`ADR-009 — Die B4-Firmware läuft unter ESP-IDF`](decisions/ADR-009-b4-runtime-esp-idf.md)
 - [`ADR-010 — Die Ladeplanung ist ein Modul des Lagers`](decisions/ADR-010-ladeplanung-im-lager.md)
+- [`ADR-011 — Ein universelles Gerät, nicht eines je Planer`](decisions/ADR-011-universelles-geraet.md)
 
 ## Markt- und Nutzer-Recherche
 

@@ -258,17 +258,17 @@ export interface SignalNode {
    */
   represents?: { kind: 'camera' | 'fixture'; id: string }
   /**
-   * Zu welchem anderen Gewerk dieses Geraet laut dem fuehrenden Planer
-   * ausserdem gehoert (`SeedDevice.gewerk`).
+   * Die Kategorie, wie der Katalog des fuehrenden Planers sie fuehrt
+   * („Cameras", „Video Mixer") — `SeedDevice.kategorie`.
    *
-   * Der Unterschied zu `represents` ist der ganze Punkt: `gewerk` sagt „das
-   * ist eine Kamera", `represents` sagt „und zwar GENAU DIESE hier". Das
-   * erste ist eine Typaussage des Katalogs, das zweite eine Zuordnung, die
-   * jemand getroffen hat. Aus dem ersten folgt das zweite nicht von selbst —
-   * dazwischen steht die Uebergabe, die der Nutzer bestaetigt
+   * Der Unterschied zu `represents` ist der ganze Punkt: die Kategorie sagt
+   * „das ist eine Kamera", `represents` sagt „und zwar GENAU DIESE hier".
+   * Das erste ist eine Typaussage des Katalogs, das zweite eine Zuordnung,
+   * die jemand getroffen hat. Aus dem ersten folgt das zweite nicht von
+   * selbst — dazwischen steht die Uebergabe, die der Nutzer bestaetigt
    * (`kameraUebergabe.ts`).
    */
-  gewerk?: 'camera'
+  kategorie?: string
   /**
    * Das Katalog-MODELL hinter diesem Knoten, falls der fuehrende Planer es
    * genannt hat — nicht `sub`.

@@ -43,6 +43,7 @@
 //
 // REIN: keine Datei, kein Netz, keine Uhr.
 // ───────────────────────────────────────────────────────────────────────────
+import { gehoertZu } from '@avplan/ui/embed'
 import type { Camera, SignalNode, SuiteProject } from './project'
 
 /** Ein Geraet aus dem Signalplan, das im Kameraplan noch fehlt. */
@@ -72,8 +73,15 @@ export interface KameraVorschlag {
  */
 export const kameraIdFuer = (nodeId: string): string => `cam_${nodeId}`
 
-/** Steht dieser Knoten laut Katalog fuer eine Kamera? */
-const istKameraKnoten = (n: SignalNode): boolean => n.gewerk === 'camera'
+/**
+ * Steht dieser Knoten laut Katalog fuer eine Kamera?
+ *
+ * Die Frage beantwortet die KATEGORIE-Tabelle (`gewerkeFuer` in
+ * `@avplan/ui/embed`) und nicht diese Datei. Ein Vergleich auf
+ * `kategorie === 'Cameras'` waere eine zweite Stelle, an der steht, welche
+ * Kategorie in welchen Plan gehoert — und die zweite altert.
+ */
+const istKameraKnoten = (n: SignalNode): boolean => gehoertZu(n.kategorie, 'kamera')
 
 /**
  * Was der Shell zur Uebernahme vorliegt.
@@ -167,7 +175,7 @@ export function uebernimmKamera(project: SuiteProject, nodeId: string): SuitePro
  * Den Vorschlag ablehnen.
  *
  * Der Knoten bleibt, wie er ist — abgelehnt wird die UEBERNAHME, nicht die
- * Katalog-Aussage. `gewerk` stehenzulassen ist wichtig: kaeme der Nutzer
+ * Katalog-Aussage. Die Kategorie stehenzulassen ist wichtig: kaeme der Nutzer
  * spaeter auf die andere Entscheidung, muesste er sonst das Geraet neu
  * anlegen, damit die Aussage zurueckkehrt.
  */
