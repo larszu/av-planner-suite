@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest'
 import {
   CABLE_TYPEN,
   KAMERA_TYPEN,
+  LICHT_TYPEN,
   alleTypen,
   istAbgeleitet,
   katalog,
@@ -22,9 +23,11 @@ describe('Der Katalog der Suite', () => {
   it('führt jedes Modell genau einmal', () => {
     const ids = alleTypen().map((t) => t.id)
     expect(new Set(ids).size).toBe(ids.length)
-    // 467 aus dem Cable-Planer + 377 Kameras − die gemeinsamen.
+    // 467 aus dem Cable-Planer + 377 Kameras + 84 Leuchten − die gemeinsamen.
     const gemeinsam = mehrfachGefuehrt(alleTypen())
-    expect(alleTypen()).toHaveLength(CABLE_TYPEN.length + KAMERA_TYPEN.length - gemeinsam.length)
+    expect(alleTypen()).toHaveLength(
+      CABLE_TYPEN.length + KAMERA_TYPEN.length + LICHT_TYPEN.length - gemeinsam.length,
+    )
   })
 
   it('und die 12 gemeinsamen sind genau die mit gewachsener Id', () => {
@@ -87,9 +90,29 @@ describe('Der Katalog der Suite', () => {
 
   it('„kein Datenblatt" ist eine Aussage und wird gezählt', () => {
     const ohne = ohneBeleg(alleTypen())
-    expect(ohne.length).toBe(50)
+    expect(ohne.length).toBe(134)
     // 45 aus dem Cable-Planer (467 − 422) und 5 aus der Kameraliste.
     expect(ohne.filter((t) => t.quellen.includes('cable'))).toHaveLength(45)
+
+    // UND 84 AUS DEM LICHT-PLANER — seine ganze Fixture-Bibliothek. Sie führt
+    // keinen einzigen Herstellerlink; die Photometrie steht teils als
+    // gemessener Wert im Kommentar, aber nichts davon ist eine Fundstelle.
+    //
+    // Das ist der Befund, nicht der Fehler dieses Tests: die Zahl steht hier,
+    // damit sie jemand senken kann. Sie zu verstecken machte aus einem
+    // bekannten Loch ein unbekanntes.
+    expect(ohne.filter((t) => t.quellen.includes('light'))).toHaveLength(84)
+  })
+
+  it('die Leuchten des Licht-Planers stehen im Katalog', () => {
+    // Das Gegenstück zur Kamera-Zeile: eine im Licht-Planer gepflegte Leuchte
+    // ist jetzt auch im Signalplan ein bekanntes Modell — sie hängt schliesslich
+    // an einem Kabel.
+    expect(typenDerKategorie('Lights')).toHaveLength(84)
+    const s4 = alleTypen().find((t) => t.modell === 'Source Four 19°')
+    expect(s4, 'Source Four 19° sollte im Katalog stehen').toBeDefined()
+    expect(s4!.hersteller).toBe('ETC')
+    expect(s4!.quellen).toEqual(['light'])
   })
 
   it('kein Modell steht unter zwei Ids', () => {

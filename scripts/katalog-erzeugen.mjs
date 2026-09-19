@@ -24,6 +24,8 @@ const QUELLE = join(WURZEL, 'apps/multicam-planner/src/data/cameras.ts')
 const ZIEL = join(WURZEL, 'packages/device-catalog/src/kameraTypen.ts')
 const CABLE_LIB = join(WURZEL, 'apps/cable-planner/src/renderer/lib')
 const CABLE_ZIEL = join(WURZEL, 'packages/device-catalog/src/cableTypen.ts')
+const LICHT_QUELLE = join(WURZEL, 'apps/light-planner/src/core/fixtureLibrary.ts')
+const LICHT_ZIEL = join(WURZEL, 'packages/device-catalog/src/lichtTypen.ts')
 
 // Das Plus bleibt: „Ninja V+" und „Ninja V" sind zwei Geraete. Begruendet in
 // packages/device-catalog/src/identitaet.ts — dieselbe Regel, zwei Stellen,
@@ -195,6 +197,65 @@ ${eintraege.map(zeileCable).join('\n')}
 `
 }
 
+/**
+ * Die Fixture-Bibliothek des Licht-Planers -> Typ-Eintraege.
+ *
+ * Die Kategorie wird auf `Lights` vereinheitlicht: dort steht sie als
+ * Bauform („profile", „moving-spot", „fresnel"), und das ist eine Angabe des
+ * LICHT-Planers ueber das Geraet, keine Zuordnung zu einem Plan. Die
+ * Zuordnung macht `KATEGORIE_GEWERKE` in `@avplan/ui`, und die braucht
+ * „gehoert in den Lichtplan" — nicht „ist ein Profiler".
+ *
+ * KEIN DATENBLATT: die Bibliothek fuehrt keinen einzigen Herstellerlink. Das
+ * ist eine Aussage und kein Versehen dieses Skripts — `ohneBeleg` zaehlt die
+ * 84 Eintraege, und die Zahl steht im Test. Wer sie senken will, traegt
+ * Links ein; wer sie versteckt, macht aus einem bekannten Loch ein
+ * unbekanntes.
+ */
+export function liesLicht(quelltext, bekannt = []) {
+  const jeName = new Map(bekannt.map((e) => [normalisiere(e.modell), e.id]))
+  const treffer = [...quelltext.matchAll(
+    /id: '([^']+)', name: '([^']+)', manufacturer: '([^']+)'/g,
+  )]
+  return treffer.map((m) => {
+    const gleichnamig = jeName.get(normalisiere(`${m[3]} ${m[2]}`))
+    return {
+      id: gleichnamig ?? abgeleiteteTypId(m[3], m[2]),
+      hersteller: m[3],
+      modell: m[2],
+      kategorie: 'Lights',
+    }
+  })
+}
+
+const zeileLicht = (e) =>
+  `  { id: ${JSON.stringify(e.id)}, hersteller: ${JSON.stringify(e.hersteller)}, ` +
+  `modell: ${JSON.stringify(e.modell)}, kategorie: 'Lights' },`
+
+export function baueLicht(eintraege) {
+  return `// ───────────────────────────────────────────────────────────────────────────
+// ERZEUGT von scripts/katalog-erzeugen.mjs aus
+// apps/light-planner/src/core/fixtureLibrary.ts — NICHT von Hand aendern.
+//
+// Nur die IDENTITAET: Id, Hersteller, Modell, Kategorie. Lichtstrom,
+// Abstrahlwinkel, Photometrie und Bauform bleiben im Licht-Planer — sie
+// versteht sonst niemand.
+//
+// OHNE DATENBLATT-LINK, weil die Bibliothek keinen fuehrt. Das ist eine
+// Aussage: \`ohneBeleg\` zaehlt diese ${eintraege.length} Eintraege.
+//
+// \`npm run katalog:parity\` besteht darauf, dass diese Datei noch aus jener
+// stammt.
+// ───────────────────────────────────────────────────────────────────────────
+import type { TypEingabe } from './typ'
+
+/** ${eintraege.length} Leuchtenmodelle aus der Bibliothek des Licht-Planers. */
+export const LICHT_TYPEN: readonly TypEingabe[] = [
+${eintraege.map(zeileLicht).join('\n')}
+]
+`
+}
+
 function cableEintraege() {
   const dateien = readdirSync(CABLE_LIB).filter((f) => f.endsWith('Catalog.ts')).sort()
   return dateien.flatMap((f) => liesCable(readFileSync(join(CABLE_LIB, f), 'utf8')))
@@ -202,6 +263,7 @@ function cableEintraege() {
 
 const cable = cableEintraege()
 const eintraege = lies(readFileSync(QUELLE, 'utf8'), cable)
+const licht = liesLicht(readFileSync(LICHT_QUELLE, 'utf8'), cable)
 if (eintraege.length < 300) {
   console.error(`katalog:erzeugen: nur ${eintraege.length} Kameras erkannt — die Quelle hat sich geaendert.`)
   process.exit(1)
@@ -211,8 +273,14 @@ if (cable.length < 400) {
   process.exit(1)
 }
 
+if (licht.length < 60) {
+  console.error(`katalog:erzeugen: nur ${licht.length} Leuchten erkannt — die Quelle hat sich geaendert.`)
+  process.exit(1)
+}
+
 const inhalt = baue(eintraege)
 const inhaltCable = baueCable(cable)
+const inhaltLicht = baueLicht(licht)
 
 if (process.argv.includes('--pruefen')) {
   let rot = false
@@ -224,13 +292,18 @@ if (process.argv.includes('--pruefen')) {
     console.error('katalog:parity: cableTypen.ts stammt nicht mehr aus den Katalogen des Cable-Planers.')
     rot = true
   }
+  if (readFileSync(LICHT_ZIEL, 'utf8') !== inhaltLicht) {
+    console.error('katalog:parity: lichtTypen.ts stammt nicht mehr aus der Fixture-Bibliothek.')
+    rot = true
+  }
   if (rot) {
     console.error('  Erzeugen mit: npm run katalog:erzeugen')
     process.exit(1)
   }
-  console.log(`katalog:parity ok — ${eintraege.length} Kameratypen + ${cable.length} Cable-Typen, beide erzeugt.`)
+  console.log(`katalog:parity ok — ${cable.length} Cable-, ${eintraege.length} Kamera-, ${licht.length} Licht-Typen, alle erzeugt.`)
 } else {
   writeFileSync(ZIEL, inhalt)
   writeFileSync(CABLE_ZIEL, inhaltCable)
-  console.log(`katalog:erzeugen ok — ${eintraege.length} Kameratypen, ${cable.length} Cable-Typen.`)
+  writeFileSync(LICHT_ZIEL, inhaltLicht)
+  console.log(`katalog:erzeugen ok — ${cable.length} Cable-, ${eintraege.length} Kamera-, ${licht.length} Licht-Typen.`)
 }

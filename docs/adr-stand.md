@@ -64,7 +64,17 @@ gegen „C70"). Sie werden **gemeldet und nicht entschieden** — ein Mensch sag
 Zwölf weitere Meldungen waren keine: „Sony PMW-F5" in einem Feld gegen `manufacturer` + `model`
 getrennt ist dieselbe Angabe in zwei Auflösungen, und ADR-005 Regel 2 entscheidet sie ohne Befund.
 
-Offen: den Licht-Planer anschließen, und die Planer auf den gemeinsamen Katalog umstellen.
+Der Licht-Planer ist seit demselben Tag drin: 84 Leuchtenmodelle. Dabei fiel ein eigener Befund
+an — **seine Fixture-Bibliothek führt keinen einzigen Herstellerlink**. Die Photometrie steht
+teils als gemessener Wert im Kommentar, aber nichts davon ist eine Fundstelle. Die Zahl steht im
+Test, damit sie jemand senken kann.
+
+**Stand: 916 Gerätetypen**, eine Id je Modell. Der Cable-Planer bietet sie zur Auswahl an; was er
+nicht als Datenblatt führt, wird als solches benannt („Modell bekannt, Anschlüsse nicht") und
+kommt mit `portsUnknown` in den Plan statt mit erfundenen Ports.
+
+Offen: die Planer schreiben ihre Typen noch selbst — MultiCam und Licht lesen den gemeinsamen
+Katalog noch nicht zurück.
 
 ### B · ADR-001 galt im Planer und nicht dazwischen
 
