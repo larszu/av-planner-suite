@@ -267,7 +267,7 @@ export function BoardCanvas({
     mutate((b) => ({ ...b, cards: [...b.cards, base] }))
     selectOnly(base.id)
     if (type === 'note' || type === 'heading' || type === 'link' || type === 'column') setEditingId(base.id)
-  }, [cards.length, mutate, t])
+  }, [cards.length, mutate, selectOnly, t])
 
   const applyTpl = useCallback((id: TemplateId) => {
     const { cards: tc, connections: tcx } = applyTemplate(id, nextId)
@@ -311,7 +311,7 @@ export function BoardCanvas({
       img.src = src
     }
     reader.readAsDataURL(file)
-  }, [mutate])
+  }, [mutate, selectOnly])
 
   const handleFiles = useCallback((files: FileList | null, at?: Point) => {
     if (!files) return
@@ -766,7 +766,7 @@ export function BoardCanvas({
       <div
         ref={scrollRef}
         className="av-scroll relative min-h-0 flex-1 overflow-auto"
-        style={{ cursor: spaceDown ? (panRef.current ? 'grabbing' : 'grab') : undefined }}
+        style={{ cursor: spaceDown ? 'grab' : undefined }}
         onPointerDown={onSurfacePointerDown}
         onPointerMove={onSurfacePointerMove}
         onPointerUp={onSurfacePointerUp}

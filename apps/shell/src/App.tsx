@@ -199,25 +199,28 @@ export function App() {
   const [seedOrigin, setSeedOrigin] = useState<SeedDomain | undefined>(undefined)
 
   /**
-   * Noch auszuliefernde Uebergaben, eine je meldender Domaene.
+   * Eine Uebergabe hinausschicken — je meldender Domaene eine, und jede in
+   * ihrem eigenen Durchlauf.
    *
-   * Sie steht hier als SCHLANGE und nicht als Schleife im Knopf, weil eine
-   * Uebergabe ein Rendern kostet: der Seed entsteht aus `seedOrigin` und
-   * `seedRevision`, und React fasst mehrere Aenderungen desselben Durchlaufs
-   * zusammen. Drei `setSeedOrigin` hintereinander ergaeben also EINEN Seed mit
-   * der zuletzt gesetzten Herkunft — und damit genau den Hall, gegen den
-   * `origin` geschrieben ist.
+   * WARUM NICHT EINFACH IN EINER SCHLEIFE: der Seed entsteht aus
+   * `seedOrigin` und `seedRevision`, und React fasst mehrere Aenderungen
+   * desselben Durchlaufs zusammen. Drei `setSeedOrigin` hintereinander
+   * ergaeben EINEN Seed mit der zuletzt gesetzten Herkunft — und damit genau
+   * den Hall, gegen den `origin` geschrieben ist: zwei der drei Melder
+   * bekaemen ihren eigenen Stand zurueck und ueberschrieben damit, was sie
+   * seither gearbeitet haben.
    *
-   * Der Effekt nimmt deshalb einen Eintrag je Durchlauf. Jeder bekommt seine
-   * eigene Revision und seine eigene Herkunft, wie beim Klicken nacheinander.
+   * Ein Bildabstand dazwischen ist genug: jeder Durchlauf schiebt seinen Seed
+   * in die Rahmen, bevor der naechste die Herkunft wechselt.
    */
-  const [handoffQueue, setHandoffQueue] = useState<SeedDomain[]>([])
-  useEffect(() => {
-    if (handoffQueue.length === 0) return
-    setSeedOrigin(handoffQueue[0])
-    bumpSeed()
-    setHandoffQueue((q) => q.slice(1))
-  }, [handoffQueue, bumpSeed])
+  const uebergabeSenden = useCallback((domaenen: SeedDomain[]) => {
+    domaenen.forEach((d, i) => {
+      window.setTimeout(() => {
+        setSeedOrigin(d)
+        bumpSeed()
+      }, i * 16)
+    })
+  }, [bumpSeed])
   // Seed = die Teilmenge des Projekts, die einen Planer etwas angeht.
   const plannerSeed = useMemo(
     () => suiteToSeed(project, seedRevision, seedOrigin),
@@ -278,14 +281,14 @@ export function App() {
     // sie bekaemen ihren eigenen Stand zurueck und ueberschrieben damit, was
     // sie seither gearbeitet haben. Der Sammelknopf tut deshalb genau das,
     // was das Klicken nacheinander taete.
-    setHandoffQueue((q) => [...q, ...uebergabeAbschluss(records, ids).domaenen])
+    uebergabeSenden(uebergabeAbschluss(records, ids).domaenen)
     pushToast(
       records.length === 1
         ? tt('seed.handoff.toast', 'An die anderen Planer übergeben')
         : format(tt('seed.handoff.toastMany', '{n} Meldungen übergeben'), { n: records.length }),
       { tone: 'ok', actionLabel: tt('config.action.undo', 'Rückgängig'), onAction: undo },
     )
-  }, [pushToast, tt, undo])
+  }, [pushToast, tt, undo, uebergabeSenden])
 
   /**
    * Eine Uebergabe ablehnen: der Stand bleibt im Suite-Projekt stehen, die
