@@ -66,10 +66,20 @@ bewegte Achse**, Phase 6 kommt danach.
 | [#42](https://github.com/larszu/sony-camera-bridge/issues/42)–[#45](https://github.com/larszu/sony-camera-bridge/issues/45) Breakout, UART-Mitschnitt, Abnahme Objektivname | Frame-Decoder mit CRC, Mitschnitt-Vergleich (`B4CaptureDiff`) | aufgetrenntes 12-Pin-Kabel, Pegelwandler, eine Optik |
 | [#47](https://github.com/larszu/sony-camera-bridge/issues/47), [#48](https://github.com/larszu/sony-camera-bridge/issues/48) Kommandocode-Widerspruch, Sendepfad | beide Codetabellen dokumentiert, Encoder vorhanden | Mitlesen an einer echten Kamera; TX bleibt hinter Compile-Flag **und** Jumper |
 | [#49](https://github.com/larszu/sony-camera-bridge/issues/49)–[#52](https://github.com/larszu/sony-camera-bridge/issues/52) Demand als Quelle | SPC-7000-Belegung transkribiert, WebSocket-Bus und HID-Fläche vorhanden | ein Demand (Zoom-Wippe / Fokus-Rad) |
+| [#35](https://github.com/larszu/sony-camera-bridge/issues/35) Lens-Backend am Command-Bus | untere Haelfte gebaut (`protocol/B4Lens.ts`: Framing, CRC, Objektivname, Blendenzahl), `b4-lens` als Verbindungsart, Abnahmekriterien unstrittig | **haengt an #47**, nicht an Zeit: ein Backend auf eine geratene Kommandocode-Lesart zu setzen hiesse, sie als implementiert auszugeben — an genau der Stelle, an der ein bestaetigter Wert von einem kommandierten unterschieden wird |
 | [#37](https://github.com/larszu/sony-camera-bridge/issues/37) SPC-7000 als zweite Quelle | Transkription samt Abweichungsanalyse | **Pin 6 (`Detect`) an einem echten B/C-Demand nachmessen** |
 | [#55](https://github.com/larszu/sony-camera-bridge/issues/55) Zoom/Fokus auf 0–4095 | Kalibriertabelle, Monotonie geprüft, „ohne Tabelle kein Wert" | eine Optik, über den vollen mechanischen Weg gefahren |
 | [#56](https://github.com/larszu/sony-camera-bridge/issues/56) Interop gegen Unreal Live Link | Encoder + Sender | ein Rechner mit Unreal und Live Link |
 | [#57](https://github.com/larszu/sony-camera-bridge/issues/57), [#59](https://github.com/larszu/sony-camera-bridge/issues/59) Achsabstraktion, erste Achse | **Zustandsautomat vollständig**, 19 Tests, jeder Abschaltpfad einzeln | ein Motor. Ob eine Bremse in der Zeit löst, die ihr Profil angibt, zeigt nur die echte Achse |
+
+Eine Ausnahme in dieser Gruppe, die keine Hardware braucht, sondern einen
+Anlass: [#53](https://github.com/larszu/sony-camera-bridge/issues/53) haelt
+fest, dass **OSC bewusst zurueckgestellt** ist — `stagecue` existiert nicht,
+OSC kommt im ganzen Konto nirgends vor, und WebSocket und HID erreichen alles,
+was es gibt. Das Issue oeffnet, wenn ein konkreter Abnehmer benannt ist, der
+OSC spricht und die beiden vorhandenen Wege nicht nutzen kann. Ein Prompt:
+„Abnehmer *…* braucht OSC, erwarteter Adressraum *…*. Bau den Ausgang in der
+Bridge."
 
 **Ein Prompt, wenn die Hardware da ist:** „Ich habe *…* angeschlossen. Hier ist
 der Mitschnitt / das Messprotokoll. Werte es gegen `docs/b4/…` aus, markiere
@@ -134,6 +144,10 @@ Damit dieser Zettel nicht als Ausrede gelesen wird — gezählt am 2026-09-19:
 | inventory-planner | 2 |
 | cable-planner | 6 |
 | sony-camera-bridge | 22 |
+
+Eins davon — sony-camera-bridge#58, das Geraeteprofil-Format — ist seit dem
+Stand dieser Seite geschlossen; die Zahlen oben sind die vom Zeitpunkt der
+Zaehlung.
 
 **Jedes einzelne dieser 31 Issues steht oben.** Es gibt keine offene Zeile, die
 hier fehlt und auch keine, die auf Programmierarbeit wartet — die Restliste ist
