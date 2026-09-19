@@ -9,7 +9,11 @@ import {
   receiptTargetPath,
 } from '../src/main/services/receiptStore'
 import mainSrc from '../src/main/services/receiptStore.ts?raw'
-import rendererSrc from '../src/renderer/types/receipt.ts?raw'
+// Seit ADR-006 Schritt 2 liegt die Renderer-Fassung im Paket
+// `@avplan/crew-core` — der Beleg gehoert zu „Crew & Geld". Die Klammer
+// zeigt deshalb dorthin: `src/renderer/types/receipt.ts` ist nur noch ein
+// Durchreicher und traegt keine Felder mehr, die man vergleichen koennte.
+import rendererSrc from '../../../packages/crew-core/src/receipt.ts?raw'
 
 const wurzeln: string[] = []
 const projekt = async () => {
@@ -179,11 +183,15 @@ describe('einen Beleg zurückholen', () => {
 })
 
 // ───────────────────────────────────────────────────────────────────────────
-// Main und Renderer teilen in dieser App keine Typen — main kennt
-// `src/renderer/` nicht. `ReceiptAttachment` steht deshalb zweimal da, und
-// zwei Abschriften laufen auseinander. Dieser Test ist die Klammer: wer
-// drueben ein Feld ergaenzt und hier nicht, faellt hier auf und nicht erst
-// beim Nutzer, dessen Beleg dann ein Feld verliert.
+// Main und Renderer teilen in dieser App keine Typen — main kennt weder
+// `src/renderer/` noch die Pakete der Suite. `ReceiptAttachment` steht
+// deshalb zweimal da, und zwei Abschriften laufen auseinander. Dieser Test
+// ist die Klammer: wer drueben ein Feld ergaenzt und hier nicht, faellt hier
+// auf und nicht erst beim Nutzer, dessen Beleg dann ein Feld verliert.
+//
+// Die Renderer-Seite ist seit ADR-006 Schritt 2 das Paket `@avplan/crew-core`.
+// Die Klammer wird dadurch nicht schwaecher, sondern genauer: sie haelt jetzt
+// die EINE Renderer-Fassung gegen main statt eine von zweien.
 // ───────────────────────────────────────────────────────────────────────────
 const felderVon = (quelle: string, name: string): string[] => {
   const i = quelle.indexOf(`interface ${name} {`)

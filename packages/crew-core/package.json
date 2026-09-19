@@ -1,0 +1,29 @@
+{
+  "name": "@avplan/crew-core",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Crew & Geld — Saetze, Stunden, Buchungen, Auslagen, Belege. Kennt kein Plan-Modell (ADR-006).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run && npm run grenze:check",
+    "grenze:check": "node scripts/plan-grenze-check.mjs"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.9"
+  },
+  "license": "UNLICENSED"
+}

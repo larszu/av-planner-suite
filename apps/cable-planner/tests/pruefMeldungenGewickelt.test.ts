@@ -50,6 +50,21 @@ import { join, relative } from 'node:path'
 
 const WURZEL = join(process.cwd(), 'src', 'renderer')
 
+/**
+ * Die Domaenen-Pakete der Suite, die dieser Planer benutzt (ADR-006).
+ *
+ * WARUM SIE HIER MITLAUFEN (2026-09-19). `lib/labourCost.ts` trug sieben
+ * gewickelte Meldungen und ist seit ADR-006 Schritt 2 ein Durchreicher auf
+ * `@avplan/crew-core`. Ohne diese Zeile faellt die Datei aus dem Bestand und
+ * die Meldungen aus der Pruefung — der Umzug haette eine Zusicherung
+ * abgeraeumt, ohne dass jemand es merkt. Genau die Form, gegen die dieser
+ * Test geschrieben ist, nur eine Ebene hoeher.
+ *
+ * Nicht vorhanden heisst nicht geprueft: ein Pfad, den es nicht gibt, faellt
+ * hier auf und wird nicht stillschweigend uebersprungen.
+ */
+const PAKETE = [join(process.cwd(), '..', '..', 'packages', 'crew-core', 'src')]
+
 const dateien = (dir: string): string[] =>
   readdirSync(dir).flatMap((eintrag) => {
     const voll = join(dir, eintrag)
@@ -97,7 +112,7 @@ const BESTAND: Record<string, number> = {
   'lib/tallyPosition.ts': 8,
   'lib/costComparison.ts': 8,
   'lib/namingScheme.ts': 7,
-  'lib/labourCost.ts': 7,
+  '../../packages/crew-core/src/labourCost.ts': 7,
   'lib/tallyMap.ts': 6,
   'lib/multicastPlan.ts': 6,
   'lib/micAssignment.ts': 6,
@@ -146,9 +161,20 @@ const GEWICKELT = [
 
 const zaehle = (): Map<string, number> => {
   const treffer = new Map<string, number>()
-  for (const datei of dateien(WURZEL)) {
-    const rel = relative(WURZEL, datei).split('\\').join('/')
-    if (!rel.startsWith('lib/') && !rel.startsWith('types/')) continue
+  // Die Pakete kommen mit derselben Regel dran, nur ohne den lib/types-Filter:
+  // dort IST alles Domaene, und der Pfad steht relativ zum Planer im Bestand.
+  const alle = [
+    ...dateien(WURZEL).map((d) => ({ datei: d, rel: relative(WURZEL, d).split('\\').join('/') })),
+    ...PAKETE.flatMap((wurzel) =>
+      dateien(wurzel).map((d) => ({
+        datei: d,
+        rel: relative(process.cwd(), d).split('\\').join('/'),
+      })),
+    ),
+  ]
+  for (const { datei, rel } of alle) {
+    const imPaket = rel.startsWith('../')
+    if (!imPaket && !rel.startsWith('lib/') && !rel.startsWith('types/')) continue
     // Das Woerterbuch IST eine Sammlung von Literalen — das ist sein Zweck.
     if (rel.includes('i18n')) continue
     const quelle = ohneKommentare(readFileSync(datei, 'utf8'))
