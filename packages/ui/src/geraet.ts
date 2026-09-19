@@ -188,10 +188,37 @@ import type { SeedCamera, SeedDevice, SeedFixture } from './seed'
 const wenn = <T>(wert: T | undefined, feld: string): Record<string, T> =>
   wert === undefined ? {} : ({ [feld]: wert } as Record<string, T>)
 
+/**
+ * Steht dieses Geraet im Plan dieses Gewerks?
+ *
+ * ZWEI GRUENDE, und der zweite ist der, den ein Wächter am 2026-09-19 aus dem
+ * Headless-Smoke herausgeholt hat:
+ *
+ *  1. Die KATEGORIE sagt es (`gewerkeFuer`).
+ *  2. Das Geraet TRAEGT die Felder dieses Gewerks. Wer eine Brennweite hat,
+ *     steht im Kameraplan — was immer in seiner Kategorie steht.
+ *
+ * Ohne den zweiten Grund verschwand die Kamera `CAM 1` aus dem Kameraplan,
+ * sobald der Signal-Planer den Knoten einmal zurueckgemeldet hatte: seine
+ * Meldung traegt die Kategorie, die ER fuehrt (fuer ein nicht aufgeloestes
+ * Geraet „Other"), und die ueberschrieb die Zuordnung, die aus der
+ * ERKLAERTEN Entsprechung stammte. Eine Kategorie ist eine Auskunft ueber
+ * den Typ; `represents` ist eine Entscheidung eines Menschen darueber, dass
+ * dieses Blech jene Kamera IST. Die Entscheidung wiegt schwerer, und die
+ * Feldgruppe ist ihre Spur im Datensatz.
+ *
+ * Die Vereinigung und nicht der Vorrang: ein Geraet kann aus beiden Gruenden
+ * dazugehoeren, und keiner von beiden nimmt dem anderen etwas weg.
+ */
+const imPlan = (g: SeedGeraet, gewerk: Gewerk): boolean =>
+  gehoertZu(g.kategorie, gewerk) ||
+  (gewerk === 'kamera' && g.kamera !== undefined) ||
+  (gewerk === 'licht' && g.licht !== undefined)
+
 /** Sicht des Kameraplans. */
 export function alsKameras(geraete: readonly SeedGeraet[]): SeedCamera[] {
   return geraete
-    .filter((g) => gehoertZu(g.kategorie, 'kamera'))
+    .filter((g) => imPlan(g, 'kamera'))
     .map((g) => ({
       id: g.altIds?.kamera ?? g.id,
       name: g.name,
@@ -207,7 +234,7 @@ export function alsKameras(geraete: readonly SeedGeraet[]): SeedCamera[] {
 /** Sicht des Lichtplans. */
 export function alsLeuchten(geraete: readonly SeedGeraet[]): SeedFixture[] {
   return geraete
-    .filter((g) => gehoertZu(g.kategorie, 'licht'))
+    .filter((g) => imPlan(g, 'licht'))
     .map((g) => ({
       id: g.altIds?.licht ?? g.id,
       name: g.name,
@@ -233,7 +260,7 @@ export function alsLeuchten(geraete: readonly SeedGeraet[]): SeedFixture[] {
  */
 export function alsSignalGeraete(geraete: readonly SeedGeraet[]): SeedDevice[] {
   return geraete
-    .filter((g) => gehoertZu(g.kategorie, 'signal'))
+    .filter((g) => imPlan(g, 'signal'))
     .map((g) => ({
       id: g.id,
       name: g.name,

@@ -100,6 +100,26 @@ describe('ADR-011 — ein Gerät, viele Pläne', () => {
     expect('focalMm' in sicht).toBe(false)
   })
 
+  it('8. die erklärte Entsprechung überlebt eine fremde Kategorie', () => {
+    // GEFUNDEN VOM HEADLESS-SMOKE, 2026-09-19. Sobald der Signal-Planer den
+    // Knoten einmal zurückgemeldet hatte, trug er DESSEN Kategorie („Other"
+    // für ein nicht aufgelöstes Gerät) — und CAM 1 verschwand aus dem
+    // Kameraplan, obwohl ein Mensch die Entsprechung erklärt hatte.
+    //
+    // Eine Kategorie ist eine Auskunft über den Typ; `represents` ist eine
+    // Entscheidung darüber, dass dieses Blech jene Kamera IST. Die
+    // Entscheidung wiegt schwerer.
+    const g = geraeteAus(
+      [{ ...knoten, kategorie: 'Other', represents: { kind: 'camera' as const, id: 'cam2' } }],
+      [kamera],
+      [],
+    )
+    expect(g[0].kategorie).toBe('Other')
+    expect(alsKameras(g).map((c) => c.id)).toEqual(['cam2'])
+    // Und die Optik fährt mit — sie ist der Grund, aus dem es eine Kamera ist.
+    expect(alsKameras(g)[0].focalMm).toBe(85)
+  })
+
   it('7. derselbe Baum ergibt dieselbe Liste, in der Ordnung des Plans', () => {
     const bau = () => geraeteAus([mischer], [kamera], [leuchte])
     expect(bau()).toEqual(bau())
