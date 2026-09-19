@@ -23,7 +23,7 @@
 // sie vollstaendig ist: ein neues Feld in `VenueCamera` faellt automatisch ins
 // Fach, ein neues GETEILTES Feld muss hier eingetragen werden.
 // ───────────────────────────────────────────────────────────────────────────
-import type { VenueCamera } from '../types';
+import type { Camera, Lens, VenueCamera } from '../types';
 
 /** Der Name dieses Gewerks im geteilten Geraet. */
 export const GEWERK = 'cameras';
@@ -47,7 +47,19 @@ export const GETEILT = [
 type Geteilt = (typeof GETEILT)[number];
 
 /** Was nur dieser Planer versteht — alles ausser den geteilten Feldern. */
-export type KameraFach = Omit<VenueCamera, Geteilt>;
+export type KameraFach = Omit<VenueCamera, Geteilt> & {
+  /**
+   * Ein SELBST angelegtes Kameramodell (ADR-014).
+   *
+   * Nur fuer ein Modell, das der gemeinsame Katalog NICHT kennt. Dieselbe
+   * Regel wie beim selbst angelegten Scheinwerfer im Licht-Planer: ohne diese
+   * Angabe waere die Kamera nach einem Umweg ueber einen anderen Planer ein
+   * Geraet ohne Modell — und fiele hier als „nicht eindeutig" heraus.
+   */
+  eigenesModell?: Camera;
+  /** Ein selbst angelegtes Objektiv, aus demselben Grund. */
+  eigenesObjektiv?: Lens;
+};
 
 /** Die Fachdaten einer Kamera fuer den Rueckweg. */
 export function fachAus(cam: VenueCamera): Record<string, unknown> {

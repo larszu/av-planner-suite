@@ -203,6 +203,13 @@ plan, photometrics to the lighting plan, ports to the signal plan. Pick a type a
 owns and you get it along with the statement that those facts are missing, instead of the model
 being hidden from you.
 
+You can also invent a device. A model you create yourself travels with the device (ADR-014) — the
+catalogue does not know it, so the device itself carries it, and it comes back intact on another
+machine. And a device you create by hand in one planner, with a category but no model, is no
+longer dropped in silence by the others: they list it and say what it is missing. What they will
+not do is guess it. Without a sensor there is no field of view, without photometrics there is no
+light calculation, and a computed number would look perfectly right.
+
 Owning them is not the same as being the only one who keeps them. Every device carries one
 **compartment per trade** (`fachdaten`, ADR-013): each planner writes its own in full, nobody
 reads another's, and nobody may lose one. That is what makes a→b→c→a work — take a project from

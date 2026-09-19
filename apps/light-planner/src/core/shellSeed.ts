@@ -82,8 +82,15 @@ export function katalogFixture(
 
 export interface FixtureUebernahme {
   fixtures: PlacedFixture[];
-  /** Was nicht platziert werden konnte — gehoert sichtbar gemacht. */
-  ausgelassen: { id: string; name: string; grund: string }[];
+  /**
+   * Was nicht platziert werden konnte — und das GERAET dazu (ADR-014).
+   *
+   * Es faehrt mit, damit die Oberflaeche es zeigen und anbieten kann, ihm ein
+   * Modell zu geben. Vorher stand hier nur ein Grund, den die Bruecke in die
+   * Konsole schrieb — ein im Signalplan angelegter Scheinwerfer war damit
+   * fuer diesen Planer unsichtbar.
+   */
+  ausgelassen: { id: string; name: string; grund: string; geraet: SeedGeraet }[];
 }
 
 /**
@@ -124,7 +131,10 @@ export function seedToFixtures(
       ausgelassen.push({
         id: f.id,
         name: f.name,
-        grund: `Modell „${f.model ?? f.name}" ist in der Bibliothek nicht eindeutig`,
+        grund: f.model
+          ? `Modell „${f.model}" ist in der Bibliothek nicht eindeutig`
+          : 'kein Modell angegeben',
+        geraet: f,
       });
       continue;
     }

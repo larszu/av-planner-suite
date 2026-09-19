@@ -254,6 +254,8 @@ export const sidebar: Record<string, string> = {
   'sidebar.hideAllFov': 'Bildwinkel aller Kameras ausblenden',
   'sidebar.showAllFov': 'Bildwinkel aller Kameras einblenden',
   'sidebar.add': 'Neu',
+  'sidebar.noModel.head': 'Im Projekt, hier ohne Modell',
+  'sidebar.noModel.why': 'Diese Geräte kommen aus einem anderen Planer. Gib ihnen ein Modell, dann lassen sie sich platzieren — ohne Modell gibt es keinen Sensor und ohne Sensor keinen Bildwinkel.',
   'sidebar.noCameras': 'Noch keine Kamera. Über „Neu" anlegen oder eine Vorlage laden.',
   'sidebar.clearConfirm': 'Wirklich alles löschen? Dies kann nicht rückgängig gemacht werden.',
   'sidebar.clearAll': 'Alles löschen',

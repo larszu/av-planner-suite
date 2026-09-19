@@ -112,6 +112,12 @@ function serializeFloorPlan(fp: FloorPlan): Omit<FloorPlan, 'image'> {
 const App: React.FC = () => {
   const { t } = useTranslation();
   const [fixtures, setFixtures] = useState<PlacedFixture[]>([]);
+  /**
+   * Geraete aus dem geteilten Projekt, die hier noch kein Modell haben
+   * (ADR-014). Nicht persistiert — die Liste wird bei jedem Seed neu
+   * gerechnet und ist leer, sobald jedes Geraet ein Modell hat.
+   */
+  const [ohneModell, setOhneModell] = useState<{ id: string; name: string; grund: string }[]>([]);
   const [shapes, setShapes] = useState<Shape[]>([]);
   const [persons, setPersons] = useState<Person[]>([]);
   const [foreignCameras, setForeignCameras] = useState<ForeignCamera[]>([]);
@@ -277,6 +283,7 @@ const App: React.FC = () => {
     setVenueForeign: (v) => {
       preservedVenueRef.current = v;
     },
+    setOhneModell,
   });
   // E-11 — der Cross-Link reicht bis hier herein: die Shell zeigt auf eine
   // Seed-Id, dieser Planer waehlt den Scheinwerfer aus. Kennt er die Id nicht,
@@ -1941,6 +1948,36 @@ const App: React.FC = () => {
           eingeklappt={inspektorZu}
           onUmschalten={(zu) => { setInspektorZu(zu); if (!schmal) merke('lp-inspektor-zu', zu); }}
         >
+        {/*
+          GERAETE AUS DEM PROJEKT, DIE HIER NOCH KEIN MODELL HABEN (ADR-014).
+
+          Sie sind kein Fehler: jemand hat sie in einem anderen Planer
+          angelegt und der Kategorie „Licht" zugeordnet. Bis 2026-09-19 schrieb
+          die Bruecke dafuer eine Zeile in die Konsole, und hier stand nichts —
+          der Scheinwerfer war fuer diesen Planer einfach nicht da.
+
+          Was hier NICHT passiert: Photometrie raten. Ohne Lichtstrom und
+          Abstrahlwinkel gibt es keine Rechnung, und eine erfundene Zahl saehe
+          voellig richtig aus. Es steht da, es sagt was fehlt.
+        */}
+        {ohneModell.length > 0 && (
+          <div className="lp-block" style={{ margin: '8px', padding: '8px' }}>
+            <strong style={{ fontSize: 12 }}>
+              {t('nomodel.head', 'In the project, without a model here')}
+            </strong>
+            <p style={{ fontSize: 11, opacity: 0.75, margin: '4px 0 0' }}>
+              {t('nomodel.why', 'These devices come from another planner. Give them a model from the library to place them — without one there are no photometrics, and without those no calculation.')}
+            </p>
+            <ul style={{ fontSize: 11, margin: '6px 0 0', paddingLeft: 14 }}>
+              {ohneModell.map((o) => (
+                <li key={o.id}>
+                  <strong>{o.name}</strong>
+                  <span style={{ opacity: 0.75 }}> — {o.grund}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <PropertyPanel
           fixtures={fixtures}
           persons={persons}

@@ -138,6 +138,22 @@ interface AppState {
 
   // Cameras placed in venue
   cameras: VenueCamera[];
+  /**
+   * Geraete aus dem geteilten Projekt, die hier NICHT platziert werden
+   * konnten (ADR-014) — weil ihnen ein Modell fehlt, das dieser Planer
+   * kennt.
+   *
+   * Sie sind kein Fehler und kein Muell: jemand hat sie im Signalplan
+   * angelegt und der Kategorie „Cameras" zugeordnet. Bis 2026-09-19 schrieb
+   * die Bruecke dafuer eine Zeile in die Konsole, und der Nutzer sah in
+   * diesem Planer gar nichts — sein Geraet war einfach nicht da.
+   *
+   * NICHT PERSISTIERT: die Liste wird bei jedem Seed neu gerechnet. Sobald
+   * ein Modell zugeordnet ist, ist das Geraet eine richtige Kamera und
+   * verschwindet hier.
+   */
+  ohneModell: { id: string; name: string; grund: string }[];
+  setOhneModell: (liste: { id: string; name: string; grund: string }[]) => void;
   favoriteCameraIds: string[];
   favoriteLensIds: string[];
   selectedCameraId: string | null;
@@ -425,6 +441,8 @@ const defaultVenue: Venue = {
 };
 
 export const useStore = create<AppState>((set, get) => ({
+  ohneModell: [],
+  setOhneModell: (liste) => set({ ohneModell: liste }),
   venue: defaultVenue,
   sourceListText: '',
   // Kein `projectVersion++`: die eingelesene Liste ist kein Teil des Projekts,

@@ -27,6 +27,19 @@ export interface ShellSeedArgs {
    * zweite Wahrheit, und beim Speichern gaebe es zwei Kandidaten fuer ein Feld.
    */
   setVenueForeign: (v: { widthM?: number; heightM?: number; name?: string }) => void;
+  /**
+   * Geraete aus dem geteilten Projekt, die hier NICHT platziert werden
+   * konnten (ADR-014) — weil ihnen ein Modell fehlt, das dieser Planer kennt.
+   *
+   * Sie sind kein Fehler: jemand hat sie im Signalplan angelegt und der
+   * Kategorie „Licht" zugeordnet. Bis 2026-09-19 schrieb diese Datei dafuer
+   * eine Zeile in die Konsole, und der Nutzer sah hier gar nichts — sein
+   * Scheinwerfer war einfach nicht da.
+   *
+   * Optional, damit der Aufrufer sie nicht fuehren MUSS; ohne sie verhaelt
+   * sich der Hook wie vorher.
+   */
+  setOhneModell?: (liste: { id: string; name: string; grund: string }[]) => void;
 }
 
 export function useShellSeed(args: ShellSeedArgs): void {
@@ -56,9 +69,8 @@ export function useShellSeed(args: ShellSeedArgs): void {
         // Ein leerer Seed darf einen gefuellten Plan nicht loeschen.
         if (imLichtplan(seed.geraete).length === 0 && a.fixtures.length > 0) return false;
         const { fixtures, ausgelassen } = seedToFixtures(seed, a.haengehoehe, a.eigene, a.fixtures);
-        for (const x of ausgelassen) {
-          console.warn(`[shellSeed] Scheinwerfer „${x.name}" nicht platziert — ${x.grund}`);
-        }
+        // SICHTBAR statt in der Konsole (ADR-014).
+        a.setOhneModell?.(ausgelassen.map(({ id, name, grund }) => ({ id, name, grund })));
         a.setFixtures(fixtures);
         console.info(`[shellSeed] ${fixtures.length}/${imLichtplan(seed.geraete).length} Scheinwerfer übernommen`);
         return true;

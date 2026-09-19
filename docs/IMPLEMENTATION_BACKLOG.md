@@ -2181,6 +2181,43 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
   wird aufaddiert statt der Dauer des letzten Punktes.
 * **Aufwand:** ~~groß~~ erledigt
 
+### B-83 · Ein selbst angelegtes Gerät verschwand — und eines von Hand kam nie an
+
+* **Status:** erledigt am 2026-09-19 (ADR-014).
+
+* **Die Meldung.** Eigentümer, 2026-09-19: „Ich muss aber auch selber Geräte anlegen können und
+  dann in anderen Planern öffnen können."
+
+* **Befund 1 — das eigene Modell verschwand.** Der MultiCam-Planer hat `customCameras` und
+  `customLenses`; der Rückweg suchte aber nur im festen Katalog (`CAMERAS.find`). Die Meldung ging
+  deshalb OHNE `model` hinaus, das Gerät stand modellos im geteilten Projekt, und beim nächsten
+  Seed fiel es als „im Katalog nicht eindeutig" heraus. Wer sich eine Kamera selbst anlegte,
+  verlor sie beim nächsten Projektwechsel — der Normalfall, kein Seiteneffekt.
+
+* **Befund 2 — das Gerät von Hand kam nie an.** Ein im Signalplan angelegtes Gerät mit der
+  Kategorie „Cameras" erreicht den Seed korrekt und wurde vom Kameraplan VERWORFEN. Der Grund
+  stand in der Konsole; in der Oberfläche stand nichts. Aus Sicht des Nutzers war sein Gerät
+  einfach nicht da.
+
+* **Gebaut.** Ein selbst angelegtes Modell fährt als `eigenesModell`/`eigenesObjektiv` im Fach mit
+  (dieselbe Regel wie beim selbst angelegten Scheinwerfer, ADR-013); ein Modell AUS dem Katalog
+  nicht. `ausgelassen` trägt jetzt das Gerät statt nur einen Grund, beide Planer führen die Liste
+  im Zustand und zeigen sie.
+
+* **Was NICHT gebaut wurde.** Ein Platzhalter auf dem Plan. Ohne Sensorbreite gibt es keinen
+  Bildwinkel, ohne Photometrie keine Lichtrechnung, und eine gerechnete Zahl sähe völlig richtig
+  aus (ADR-002). Dieselbe Form wie `portsUnknown` im Cable-Planer: das Gerät ist da, sein
+  unbekannter Teil ist markiert.
+
+* **Nebenbefund, mitgefixt.** Der Grund unterscheidet jetzt „kein Modell angegeben" von einem
+  Modell, das der Katalog nicht eindeutig kennt. Vorher stand für beides derselbe Satz da — mit
+  dem Instanznamen als vermeintlichem Modell.
+
+* **Guards.** `apps/multicam-planner/src/__tests__/eigenesGeraet.test.ts` (4),
+  `apps/shell/test/eigenesGeraetDurchgereicht.test.ts` (4).
+
+---
+
 ### B-82 · Die Fachdaten überlebten den Weg von Planer zu Planer nicht
 
 * **Status:** erledigt am 2026-09-19 (ADR-013).

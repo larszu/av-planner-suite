@@ -113,8 +113,20 @@ export function katalogObjektiv(text: string | undefined, lenses: Lens[]): Lens 
 
 export interface KameraUebernahme {
   cameras: VenueCamera[];
-  /** Was nicht platziert werden konnte — gehoert sichtbar gemacht. */
-  ausgelassen: { id: string; name: string; grund: string }[];
+  /**
+   * Was nicht platziert werden konnte — und das GERAET dazu (ADR-014).
+   *
+   * Bis 2026-09-19 stand hier nur Id, Name und Grund, und die Bruecke schrieb
+   * beides in die Konsole. Ein Geraet, das jemand im Signalplan angelegt und
+   * der Kategorie „Cameras" zugeordnet hatte, war damit fuer diesen Planer
+   * unsichtbar: es kam an, fiel heraus und hinterliess eine Zeile, die
+   * niemand liest.
+   *
+   * Das Geraet faehrt deshalb MIT. Nur so kann die Oberflaeche es zeigen und
+   * anbieten, ihm ein Modell zu geben — und danach ist es eine richtige
+   * Kamera, in diesem Plan und in allen anderen.
+   */
+  ausgelassen: { id: string; name: string; grund: string; geraet: SeedGeraet }[];
 }
 
 /**
@@ -161,15 +173,30 @@ export function seedToCameras(
   // Geraet, das im Signalplan angelegt wurde und die Kategorie „Cameras"
   // traegt, steht damit hier, ohne dass jemand es uebergeben muss.
   imKameraplan(seed.geraete).forEach((c, i) => {
-    const camDef = katalogKamera(c);
+    // Ein selbst angelegtes Modell steht in keinem Katalog. Es faehrt im
+    // Fach mit (ADR-014), und hier kommt es zurueck — sonst waere die Kamera
+    // nach dem Umweg „nicht eindeutig" und damit weg.
+    const ausDemFach = fachVon(c);
+    const camDef = katalogKamera(c) ?? ausDemFach?.eigenesModell ?? null;
     if (!camDef) {
-      ausgelassen.push({ id: c.id, name: c.name, grund: `Modell „${c.model ?? c.name}" ist im Katalog nicht eindeutig` });
+      ausgelassen.push({
+        id: c.id,
+        name: c.name,
+        grund: c.model
+          ? `Modell „${c.model}" ist im Katalog nicht eindeutig`
+          : 'kein Modell angegeben',
+        geraet: c,
+      });
       return;
     }
     const wahl = vorauswahl(camDef);
-    const lensDef = katalogObjektiv(c.kamera?.lens, lenses) ?? wahl.lens ?? lenses[0];
+    const lensDef =
+      katalogObjektiv(c.kamera?.lens, lenses) ??
+      ausDemFach?.eigenesObjektiv ??
+      wahl.lens ??
+      lenses[0];
     if (!lensDef) {
-      ausgelassen.push({ id: c.id, name: c.name, grund: 'kein passendes Objektiv im Katalog' });
+      ausgelassen.push({ id: c.id, name: c.name, grund: 'kein passendes Objektiv im Katalog', geraet: c });
       return;
     }
     // DAS EIGENE FACH SCHLAEGT DIE VORGABE (ADR-013). Es traegt, was dieser
@@ -177,8 +204,7 @@ export function seedToCameras(
     // seither in zwei anderen Planern war und dieser hier gar nicht lief.
     // `alt` (der lokale Stand) steht davor: wer die Kamera GERADE in der Hand
     // hat, hat den neueren Stand als die Datei.
-    const fach = fachVon(c);
-    const alt = { ...fach, ...schonDa.get(c.id) } as Partial<VenueCamera>;
+    const alt = { ...ausDemFach, ...schonDa.get(c.id) } as Partial<VenueCamera>;
     // Die Brennweite aus dem Seed gilt — aber nur, soweit das Objektiv sie
     // hergibt. Eine Zahl ausserhalb des Zoombereichs waere eine Einstellung,
     // die es an diesem Glas nicht gibt. Nennt der Seed keine, behaelt eine
@@ -273,10 +299,22 @@ export function seedToVenue(seed: SuiteSeed, vorher: Venue): Venue {
 export function camerasToSeedPatch(
   cameras: VenueCamera[],
   lenses: Lens[] = LENSES,
+  /**
+   * Die SELBST ANGELEGTEN Kameramodelle dieses Planers (ADR-014).
+   *
+   * Ohne sie fand `CAMERAS.find` ein eigenes Modell nicht, und die Meldung
+   * ging OHNE `model` hinaus — gemessen 2026-09-19. Das Geraet stand danach
+   * modellos im geteilten Projekt, und beim naechsten Seed fiel es hier als
+   * „im Katalog nicht eindeutig" heraus. Wer sich eine Kamera selbst anlegte,
+   * verlor sie beim naechsten Projektwechsel.
+   */
+  eigeneKameras: Camera[] = [],
 ): { geraete: SeedGeraet[] } {
   return {
     geraete: cameras.map((v) => {
-      const camDef = CAMERAS.find((c) => c.id === v.cameraId);
+      const camDef =
+        CAMERAS.find((c) => c.id === v.cameraId) ??
+        eigeneKameras.find((c) => c.id === v.cameraId);
       const lensDef = lenses.find((l) => l.id === v.lensId);
       const sensor =
         camDef?.sensorModes && v.sensorModeIndex !== undefined
@@ -305,7 +343,19 @@ export function camerasToSeedPatch(
         // Fokus, Farbe, Rig — alles, was nur er versteht. Niemand sonst liest
         // es; es wird getragen, damit es einen Umweg ueber zwei andere Planer
         // und die Datei ueberlebt.
-        fachdaten: { [GEWERK]: fachAus(v) },
+        // Ein SELBST angelegtes Modell faehrt im Fach mit (ADR-014, dieselbe
+        // Regel wie beim selbst angelegten Scheinwerfer): der Katalog kennt
+        // es nicht, und ohne diese Zeile waere die Kamera nach einem Umweg
+        // ueber einen anderen Planer ein Geraet ohne Modell — also weg.
+        // Ein Modell AUS dem Katalog faehrt nicht mit; das waere die zweite
+        // Wahrheit fuer 377 Modelle.
+        fachdaten: {
+          [GEWERK]: {
+            ...fachAus(v),
+            ...(camDef && typIdFuer(camDef) === undefined ? { eigenesModell: camDef } : {}),
+            ...(lensDef && !LENSES.some((l) => l.id === lensDef.id) ? { eigenesObjektiv: lensDef } : {}),
+          },
+        },
       };
     }),
   };
