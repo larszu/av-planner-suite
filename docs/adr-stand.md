@@ -1,0 +1,105 @@
+# Was von den ADRs steht — und was sich widerspricht
+
+**Gemessen am 2026-09-19 am Quelltext, nicht aus dem Gedächtnis.** Entstanden aus zwei Fragen des
+Eigentümers: „Wie viel von allen ADRs ist umgesetzt? Und was aus den ADRs widerspricht sich
+selbst?"
+
+Ein ADR ist eine Behauptung über den Code und altert genauso. Diese Seite hält die Antwort an
+einer Stelle fest, statt sie jedes Mal neu zusammenzusuchen.
+
+## Der Stand, ADR für ADR
+
+| ADR | Stand | Gemessen an |
+| --- | --- | --- |
+| **001** Identitäts-Spine | **teilweise** | `lib/portLabel.ts` gibt Herkunft im Rückgabewert zurück (`provenance`), und die vier Umgeher aus dem ADR rufen ihn: `installerLists`, `cableLabel`, `exportDevicePdf`. **Innerhalb** des Cable-Planers erfüllt. **Zwischen** den Planern gebrochen — siehe Widerspruch B |
+| **002** Geräte-Identität Plan ↔ Lager | **umgesetzt, Eigentumsregel gebrochen** | `InventoryItem.deviceTypeId` steht in `@avplan/inventory-core` (portable v2). Die Eigentumstabelle hält nicht — siehe Widerspruch A |
+| **003** Bestätigter Zustand | **umgesetzt** | `types/provenance.ts`, `types/labour.ts`; die drei Herkünfte `planned`/`commanded`/`confirmed` stehen im Typ, nicht in einem Kommentar |
+| **004** Dokument-Stempel | **umgesetzt** | `stamp:check` in drei Repos, `stamp:parity` als CI-Gate der Suite |
+| **005** Verlustfrei oder laut | **umgesetzt** | R1: `CablePlannerProject.avForeign` hält fremde Slots in der DATEI. R3: `unrepresented`/`unresolved` in `sourceMap.ts` und `graphml/semantics.ts`. R4: `tests/avplan.test.ts` und `tests/avplanUnknownSlots.test.ts` halten die Zusage; `light-planner` fährt `avplan:check` |
+| **006** Werkzeug-Schnitt | **teilweise** | Lager (`inventory-planner`) und Gebäude (`larszu-facility-planner`) sind ausgelagert, Ladeplanung nach ADR-010 entschieden und gebaut. **Crew & Geld nicht:** sieben Module liegen weiter in `cable-planner/src/renderer/lib` (`crewBilling`, `crewCalendar`, `crewNetworkSheet`, `labourCost`, `costComparison`, `receiptChain`, `receiptRead`). **Gerätekataloge:** vertagt, Bedingung längst erfüllt, nie wieder angefasst — Widerspruch A |
+| **007** Oberflächen-Regeln | **umgesetzt, Wächter läuft nicht überall** | `packages/ui/src/brand.ts`, `styles.css` und `test/brand.test.ts` sind da. Aber `ci:complete` — der Wächter, der prüft, dass jeder `*:check` auch im CI steht — existiert nur in `light-planner` und der Suite. Widerspruch E |
+| **008** B4-Objektivsteuerung, Ablage | **entschieden, nicht gebaut** | `sony-camera-bridge/packages/` hat `firmware`, nicht `firmware-b4`; kein Lens-Backend unter `packages/bridge/src/cameras/`. Das Quellmaterial liegt wie entschieden in `docs/b4/` |
+| **009** ESP-IDF als Laufzeit | **entschieden, nicht gebaut** | Sagt selbst: „Es gibt noch keine Firmware." Die Mitentscheidung zur CI („zunächst nicht") ist eingehalten |
+| **010** Ladeplanung im Lager | **umgesetzt** | Modul des `inventory-planner`, einschließlich Fahrzeug-Stammdaten und 3D-Laderaum |
+| **011** Ein universelles Gerät | **Stufe 1 von 4** | `packages/ui/src/geraet.ts`; die drei Listen im Seed sind Sichten. Stufen 2–4 stehen im ADR |
+
+**Summe:** fünf ganz umgesetzt (003, 004, 005, 010, und 002 bis auf die Eigentumsregel), vier
+teilweise (001, 006, 007, 011), zwei entschieden und bewusst noch nicht gebaut (008, 009).
+
+## Die Widersprüche
+
+### A · ADR-002 gibt dem Katalog das Datenblatt — es gibt aber drei Kataloge
+
+ADR-002 führt eine Eigentumstabelle, und ihre erste Zeile lautet: **„Gerätetyp (Katalog) besitzt
+das Datenblatt: Ports, Maße, Leistung, Hersteller, Modellname."** Genau ein Eigentümer, das ist
+der Sinn der Tabelle.
+
+ADR-006 vertagt den gemeinsamen Katalog mit einer Bedingung: *„Gerätekataloge — bleibt Kern,
+langfristig Paket; ein eigenes Repo lohnt erst, wenn ein zweiter Planer sie schreibt statt nur
+liest."* Die Bedingung unterstellt, dass die anderen Planer den Katalog des Cable-Planers **lesen**.
+Das tun sie nicht und taten sie nie — sie haben eigene gebaut.
+
+Gemessen: `multicam-planner/src/data/cameras.ts` führt **377 Kameramodelle** mit
+Datenblatt-Links. Davon tragen **9** eine `deviceTypeId`, die auch im Katalog des Cable-Planers
+steht (dort 20 GUIDs auf 23 Einträge). **368 von 377 Kameramodellen der Suite haben im
+Cable-Planer keine Identität.** Das Feld, dem ADR-002 genau einen Eigentümer zuweist, hat drei.
+
+Die Vertagung war also nie eine Vertagung, sondern eine Beschreibung eines Zustands, der schon
+gegen ADR-002 stand.
+
+### B · ADR-001 galt im Planer und nicht dazwischen
+
+ADR-001, erster Absatz: *„Jedes reale Ding bekommt genau einen Datensatz […], nie eine zweite
+Wahrheit."* Gebaut wurde das **innerhalb** des Cable-Planers — Quellen-Identität, Port-Labels,
+Herkunft im Rückgabewert. **Zwischen** den Planern führte der `suite-seed` drei Listen, und die
+Kamera `cam2` und ihr Knoten `n_cam2` waren zwei Datensätze für dasselbe Blech.
+
+Kein Widerspruch zwischen zwei ADRs, sondern zwischen einem ADR und dem eigenen Bau — und er hat
+drei Wochen gehalten, weil nichts ihn gemessen hat. ADR-011 räumt ihn ab (Stufe 1 gebaut).
+
+### C · „Deklariert, nie geraten" gegen „der Nutzer ordnet zu" — aufgelöst, aber stolperfähig
+
+ADR-002 verlangt, dass eine Zuordnung **deklariert** und nie geraten wird. ADR-011 lässt die vom
+Nutzer gesetzte Kategorie ein Gerät den Plänen zuordnen. Das sieht aus wie ein Widerspruch und ist
+keiner: verboten ist das **Raten**. Aus „Kamera 1" auf eine Kamera zu schließen ist geraten; dass
+jemand „Licht" angekreuzt hat, ist gesagt. Der Unterschied steht in ADR-011 ausgeschrieben, weil
+der nächste Leser sonst genau hier das Falsche schließt.
+
+### D · ADR-006 widersprach sich selbst — und ist das Muster, wie man es behebt
+
+Zwei Zeilen derselben Tabelle sagten Gegenteiliges über die Stromplanung: die eine schob sie ins
+ausgelagerte Gebäude-Werkzeug, die andere hielt sie im Kern. Aufgelöst wurde das **in der Datei
+selbst**, mit einem eigenen Abschnitt, der die Grenze benennt (Lebenszyklus und Zugehörigkeit,
+nicht das Wort „Strom") und ausdrücklich sagt, welche Zeile die andere korrigiert.
+
+Das ist die Form, in der ein Widerspruch hier behoben gehört: nicht durch stilles Löschen der
+älteren Zeile, sondern durch einen Absatz, der beide stehen lässt und sagt, warum.
+
+### E · ADR-007 hat einen Wächter, der nicht überall läuft
+
+ADR-007 baut auf „eine Quelle, drei Fassungen, ein Test dazwischen". Der Test ist da. Was fehlt,
+ist die Zusicherung, dass er **gefahren** wird: `ci:complete` — der Wächter, der prüft, dass jeder
+`*:check` auch in einem CI-Schritt steht — existiert nur in `light-planner` und in der Suite.
+In `multicam-planner` ist `slider:check` grün, greift aber in keinem CI-Schritt.
+
+Das ist der Satz aus dem Repo selbst, gegen das Repo gewendet: *„Ein Guard, den niemand fährt, ist
+keine Zusicherung, sondern eine Notiz."*
+
+### F · ADR-005 Regel 2 gehört in ADR-011 zitiert
+
+ADR-005 Regel 2: *„Eine Projektion darf den vollen Stand nicht überschreiben. Wo dieselbe
+Information in zwei Auflösungen in derselben Datei liegt, gewinnt die höhere."*
+
+Genau diese Lage stellt ADR-011 Stufe 1 her: `geraete` (die hohe Auflösung) und die drei Sichten
+(die niedrige) stehen im selben Seed. Im Sinn stimmt es überein — die Sichten werden abgeleitet.
+Aber ADR-011 nennt die Regel nicht, und sie ist die, die entscheiden muss, sobald ein Planer eine
+Sicht zurückschreibt. Kein gelebter Widerspruch, eine fehlende Fußnote mit Folgen.
+
+## Was daraus folgt
+
+1. **A ist der teuerste Befund** und der, den der Eigentümer als Doppelarbeit erlebt: ein
+   gemeinsamer Gerätetyp-Katalog für alle Planer.
+2. **B** ist in Arbeit (ADR-011, Stufen 2–4).
+3. **E** ist billig: `ci:complete` in die übrigen Repos.
+4. **C** und **F** sind Textarbeit an den ADRs, nach dem Muster von **D**.
+5. **Crew & Geld** (ADR-006) steht weiter aus und ist bisher nirgends als offen geführt.
