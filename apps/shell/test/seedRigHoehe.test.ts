@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { seedToFixtures, fixturesToSeedPatch } from '../../light-planner/src/core/shellSeed'
-import { alsLeuchten, emptySeed, type SuiteSeed } from '@avplan/ui/embed'
+import { emptySeed, imLichtplan, type SeedGeraet, type SuiteSeed } from '@avplan/ui/embed'
 import type { PlacedFixture } from '../../light-planner/src/types'
 import { PROJECT, lichtGeraete } from '../src/data/project'
 import { applyPatchToSuite, suiteToSeed } from '../src/data/seed'
@@ -22,12 +22,21 @@ import { applyPatchToSuite, suiteToSeed } from '../src/data/seed'
 
 const VORGABE = 6
 
-const lampe = (id: string, model: string): SuiteSeed['fixtures'][number] => ({ id, name: id, model })
+/**
+ * Eine Lampe in der bequemen Schreibweise des Lichtplans. Seit ADR-011
+ * Stufe 4 gibt es die Liste `fixtures` im Seed nicht mehr — sie ist ein
+ * FILTER auf die eine Geraeteliste. Der Helfer unten baut daraus Geraete.
+ */
+type AlsLeuchte = {
+  id: string; name: string; model?: string
+  x?: number; y?: number
+  purpose?: string; dimmerPct?: number; dmxChannel?: number; rigHeightM?: number
+}
 
-// Seit ADR-011 Stufe 3 liest der Licht-Planer `geraete`; `fixtures` ist die
-// daraus gerechnete Sicht. Der Helfer legt die Lampen deshalb als Geraete an.
-const seed = (fixtures: SuiteSeed['fixtures']): SuiteSeed => {
-  const geraete = fixtures.map((f) => ({
+const lampe = (id: string, model: string): AlsLeuchte => ({ id, name: id, model })
+
+const seed = (fixtures: AlsLeuchte[]): SuiteSeed => {
+  const geraete: SeedGeraet[] = fixtures.map((f) => ({
     id: f.id,
     name: f.name,
     kategorie: 'Licht',
@@ -41,7 +50,7 @@ const seed = (fixtures: SuiteSeed['fixtures']): SuiteSeed => {
       ...(f.rigHeightM !== undefined ? { rigHeightM: f.rigHeightM } : {}),
     },
   }))
-  return { ...emptySeed(1), geraete, fixtures: alsLeuchten(geraete) }
+  return { ...emptySeed(1), geraete }
 }
 
 /** Ein Modell, das der Katalog eindeutig kennt — sonst wird nichts platziert. */
@@ -164,10 +173,10 @@ describe('Die Hoehe geht in die Suite zurueck', () => {
 describe('Die Shell fuehrt die Hoehe mit, ohne sie zu planen', () => {
   const projekt = { ...PROJECT, geraete: PROJECT.geraete.map((g) => ({ ...g })) }
   const ersteLeuchte = lichtGeraete(projekt)[0]
-  const alsSeedLeuchte = (rigHeightM?: number) => ({
+  const alsSeedLeuchte = (rigHeightM?: number): SeedGeraet => ({
     id: ersteLeuchte.id,
     name: ersteLeuchte.name,
-    ...(rigHeightM !== undefined ? { rigHeightM } : {}),
+    licht: { ...(rigHeightM !== undefined ? { rigHeightM } : {}) },
   })
   const hoeheVon = (p: typeof projekt) =>
     p.geraete.find((g) => g.id === ersteLeuchte.id)?.licht?.rigHeightM
@@ -176,17 +185,17 @@ describe('Die Shell fuehrt die Hoehe mit, ohne sie zu planen', () => {
     // Ein `rigHeightM: 0` im Seed hiesse „haengt am Boden" und ueberschriebe
     // drueben die Hoehe, die der Planer selbst fuehrt.
     const s = suiteToSeed(projekt, 1)
-    expect(s.fixtures.every((f) => f.rigHeightM === undefined)).toBe(true)
+    expect(imLichtplan(s.geraete).every((g) => g.licht?.rigHeightM === undefined)).toBe(true)
   })
 
   it('nimmt die gemeldete Hoehe auf und schickt sie wieder mit', () => {
     const { project: nachher } = applyPatchToSuite(projekt, {
       domain: 'fixtures',
       revision: 1,
-      fixtures: [alsSeedLeuchte(7.5)],
+      geraete: [alsSeedLeuchte(7.5)],
     }, 1)
     expect(hoeheVon(nachher)).toBe(7.5)
-    expect(suiteToSeed(nachher, 2).fixtures[0].rigHeightM).toBe(7.5)
+    expect(imLichtplan(suiteToSeed(nachher, 2).geraete)[0].licht?.rigHeightM).toBe(7.5)
   })
 
   it('verliert sie nicht, wenn ein spaeterer Patch sie nicht nennt', () => {
@@ -195,13 +204,13 @@ describe('Die Shell fuehrt die Hoehe mit, ohne sie zu planen', () => {
     const { project: mitHoehe } = applyPatchToSuite(projekt, {
       domain: 'fixtures',
       revision: 1,
-      fixtures: [alsSeedLeuchte(7.5)],
+      geraete: [alsSeedLeuchte(7.5)],
     }, 1)
     // Die zweite Meldung nennt dieselbe Leuchte OHNE Hoehe.
     const { project: danach } = applyPatchToSuite(mitHoehe, {
       domain: 'fixtures',
       revision: 2,
-      fixtures: [alsSeedLeuchte()],
+      geraete: [alsSeedLeuchte()],
     }, 2)
     expect(hoeheVon(danach)).toBe(7.5)
   })

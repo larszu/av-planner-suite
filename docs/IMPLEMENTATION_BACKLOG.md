@@ -2183,8 +2183,7 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
 
 ### B-80 · Drei Listen für dasselbe Blech — ADR-001 galt im Planer und nicht dazwischen
 
-* **Status:** Stufen 1 bis 3 von 4 gebaut am 2026-09-19 (ADR-011); Stufe 4
-  offen und dort benannt.
+* **Status:** erledigt am 2026-09-19 — alle vier Stufen gebaut (ADR-011).
 
 * **Die Entscheidung.** Eigentümer, 2026-09-19: „Es gibt nur ein universelles
   device pro Gerät und nicht pro planner. Dieses device hat alle Felder und
@@ -2244,12 +2243,31 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
   Shell führte `sub`, das Protokoll `subtitle`. Der Untertitel verschwand auf
   dem Weg zum Planer, und zwar still, weil ein `undefined` nirgends auffällt.
 
-* **Offen:** die Sichten `cameras`/`fixtures`/`devices` fallen aus dem Seed
-  (Stufe 4).
+* **Stufe 4, gebaut am selben Tag.** Die Sichten `cameras`/`fixtures`/`devices`
+  sind aus `SuiteSeed` und `SeedPatch` verschwunden, mit ihnen die Typen
+  `SeedCamera`, `SeedFixture`, `SeedDevice`. Ein Plan ist jetzt ein FILTER auf
+  die eine Liste (`imKameraplan`, `imLichtplan`, `imSignalplan`) und gibt
+  dieselben `SeedGeraet` zurück, die der Seed führt.
 
-* **Guards.** `packages/ui/test/geraet.test.ts` (7),
-  `apps/shell/test/kategorieAussage.test.ts` (4), zwei Fälle in
-  `apps/cable-planner/tests/shellSeed.test.ts`.
+  Zwei Befunde, die erst das Löschen sichtbar machte — beide hingen daran,
+  dass die getrennten Listen die Zuständigkeit nebenbei mitcodierten:
+
+  * **Lager und Gebäude durften den Plan schreiben.** `mergeSeedPatch`
+    arbeitete jedes `geraete` im Patch ein, gleich aus welcher Domäne. Mit
+    getrennten Listen fiel das nicht auf — ein Lager schickte eben kein
+    `cameras`. Mit einer gemeinsamen Liste hätte ein Lager den Plan leeren
+    können: ADR-006 in der Gegenrichtung durchbrochen. Jetzt melden nur
+    `signal`, `cameras` und `fixtures` Geräte.
+  * **Die leere Feldgruppe war eine Aussage.** `kamera: {}` heißt „steht im
+    Kameraplan" (`imPlan`). Der Rückweg legte sie unbedingt an — eine Meldung
+    des Kameraplans zog damit jedes darin erwähnte fremde Gerät in den
+    Kameraplan, den Mischer eingeschlossen. Die Gruppe entsteht jetzt nur, wo
+    schon eine ist oder wo der Planer etwas dazu sagt.
+
+* **Guards.** `packages/ui/test/geraet.test.ts` (8),
+  `packages/ui/test/seed.test.ts` (10, darunter der Fall „zieht ein fremdes
+  Gerät nicht in den Kameraplan"), `apps/shell/test/kategorieAussage.test.ts`
+  (4), zwei Fälle in `apps/cable-planner/tests/shellSeed.test.ts`.
 
 ---
 

@@ -8,7 +8,7 @@
 // aufgebaut wird und trotzdem nie auf einen veralteten Stand antwortet.
 // ───────────────────────────────────────────────────────────────────────────
 import { useEffect, useRef } from 'react';
-import { connectShellSeed } from '@avplan/ui/embed';
+import { imLichtplan, connectShellSeed } from '@avplan/ui/embed';
 import { fixturesToSeedPatch, mitSeedBuehne, seedToFixtures, seedToVenue } from './shellSeed';
 import type { Fixture, PlacedFixture, Shape } from '../types';
 
@@ -54,13 +54,13 @@ export function useShellSeed(args: ShellSeedArgs): void {
         a.setShapes(mitSeedBuehne(a.shapes, buehne));
 
         // Ein leerer Seed darf einen gefuellten Plan nicht loeschen.
-        if (seed.fixtures.length === 0 && a.fixtures.length > 0) return false;
+        if (imLichtplan(seed.geraete).length === 0 && a.fixtures.length > 0) return false;
         const { fixtures, ausgelassen } = seedToFixtures(seed, a.haengehoehe, a.eigene, a.fixtures);
         for (const x of ausgelassen) {
           console.warn(`[shellSeed] Scheinwerfer „${x.name}" nicht platziert — ${x.grund}`);
         }
         a.setFixtures(fixtures);
-        console.info(`[shellSeed] ${fixtures.length}/${seed.fixtures.length} Scheinwerfer übernommen`);
+        console.info(`[shellSeed] ${fixtures.length}/${imLichtplan(seed.geraete).length} Scheinwerfer übernommen`);
         return true;
       },
       collect: () => fixturesToSeedPatch(ref.current.fixtures),

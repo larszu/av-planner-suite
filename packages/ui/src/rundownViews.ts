@@ -52,6 +52,7 @@
 // ───────────────────────────────────────────────────────────────────────────
 
 import { rundownSchedule, type Rundown, type RundownItem, type RundownRefKind } from './rundown'
+import { imPlan } from './geraet'
 import type { SuiteSeed } from './seed'
 
 /** Fuer wen das Blatt ist. */
@@ -147,9 +148,15 @@ const uhrzeit = (item: RundownItem): string => {
 const technik = (item: RundownItem, seed: SuiteSeed): string => {
   if (item.refs.length === 0) return NO_GEAR_ON_SHEET
   const namen = new Map<string, string>([
-    ...seed.cameras.map((c) => [`camera:${c.id}`, c.name] as const),
-    ...seed.fixtures.map((f) => [`fixture:${f.id}`, f.name] as const),
-    ...seed.devices.map((d) => [`device:${d.id}`, d.name] as const),
+    // Ein Geraet steht unter JEDER Art, in der es vorkommt: ein Ablauf-Punkt,
+    // der es als `camera:` referenziert, und einer, der `device:` schreibt,
+    // meinen dasselbe Blech. Vorher ergab sich das daraus, dass es in
+    // mehreren Listen stand; jetzt wird es gesagt.
+    ...seed.geraete.flatMap((g) => [
+      ...(imPlan(g, 'kamera') ? [[`camera:${g.id}`, g.name] as const] : []),
+      ...(imPlan(g, 'licht') ? [[`fixture:${g.id}`, g.name] as const] : []),
+      ...(imPlan(g, 'signal') ? [[`device:${g.id}`, g.name] as const] : []),
+    ]),
     ...seed.cables.map((k) => [`cable:${k.id}`, k.label] as const),
   ])
   return item.refs

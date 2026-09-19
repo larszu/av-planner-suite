@@ -15,7 +15,7 @@ import { cableToSeedPatch, seedToCable } from './shellSeed'
 const melde = (seed: SuiteSeed, ausgelassen: { label: string; grund: string }[]): void => {
   const name = seed.projectName ? `„${seed.projectName}"` : 'Shell-Projekt'
   console.info(
-    `[shellSeed] ${name} übernommen: ${seed.devices.length} Geräte, ${seed.cables.length - ausgelassen.length}/${seed.cables.length} Kabel`,
+    `[shellSeed] ${name} übernommen: ${seed.geraete.length} Geräte, ${seed.cables.length - ausgelassen.length}/${seed.cables.length} Kabel`,
   )
   for (const a of ausgelassen) console.warn(`[shellSeed] Kabel „${a.label}" nicht angelegt — ${a.grund}`)
 }
@@ -36,7 +36,7 @@ export function initShellSeed(): () => void {
       // tritt real auf: die Shell steht auf „kein Projekt" und schiebt
       // trotzdem — dann ist Nichtstun die richtige Antwort, nicht ein leerer
       // Canvas ohne Erklaerung.
-      if (seed.devices.length === 0 && seed.cables.length === 0 && hatInhalt) return false
+      if (seed.geraete.length === 0 && seed.cables.length === 0 && hatInhalt) return false
 
       // Die schon eingerichteten Geraete gehen mit hinein: der Seed setzt, was
       // er nennt, und alles andere bleibt stehen. Ohne diese Liste ist jeder

@@ -60,6 +60,7 @@
 // hereingereicht, nicht hier genommen.
 // ───────────────────────────────────────────────────────────────────────────
 
+import { imPlan } from './geraet'
 import type { SuiteSeed } from './seed'
 
 export const RUNDOWN_KIND = 'suite-rundown' as const
@@ -298,9 +299,19 @@ export interface RundownPreview {
 const seedObjects = (
   seed: SuiteSeed,
 ): ReadonlyArray<{ kind: RundownRefKind; id: string; name: string }> => [
-  ...seed.cameras.map((c) => ({ kind: 'camera' as const, id: c.id, name: c.name })),
-  ...seed.fixtures.map((f) => ({ kind: 'fixture' as const, id: f.id, name: f.name })),
-  ...seed.devices.map((d) => ({ kind: 'device' as const, id: d.id, name: d.name })),
+  // EINE Liste, und die Art wird gerechnet (ADR-011, Stufe 4). Genannt wird
+  // die SPEZIELLSTE: wer im Ablauf „CAM 2" schreibt, meint die Kamera und
+  // nicht „irgendein Geraet mit Anschluessen". Vorher standen dieselben
+  // Geraete hier mehrfach — einmal je Liste, in der sie vorkamen.
+  ...seed.geraete.map((g) => ({
+    kind: (imPlan(g, 'kamera')
+      ? 'camera'
+      : imPlan(g, 'licht')
+        ? 'fixture'
+        : 'device') as RundownRefKind,
+    id: g.id,
+    name: g.name,
+  })),
   ...seed.cables.map((k) => ({ kind: 'cable' as const, id: k.id, name: k.label })),
 ]
 

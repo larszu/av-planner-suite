@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alsKameras, emptySeed, type SeedCamera, type SuiteSeed } from '@avplan/ui/embed';
+import { emptySeed, type SeedGeraet, type SuiteSeed } from '@avplan/ui/embed';
 import { camerasToSeedPatch, katalogKamera, seedToCameras, seedToVenue, venueToSeedPatch } from '../utils/shellSeed';
 import { CAMERAS } from '../data/cameras';
 import { LENSES } from '../data/lenses';
@@ -25,9 +25,14 @@ const vorauswahl = () => ({ mount: 'E', lens: LENSES[0] });
  * Geraete an — so pruefen die Tests denselben Weg, den die Shell geht, statt
  * einen Zustand, den es im Betrieb nicht gibt.
  */
-const seed = (over: Partial<SuiteSeed> & { cameras?: SeedCamera[] } = {}): SuiteSeed => {
+type AlsKamera = {
+  id: string; name: string; model?: string; lens?: string
+  focalMm?: number; hfovDeg?: number; x?: number; y?: number
+}
+
+const seed = (over: Partial<SuiteSeed> & { cameras?: AlsKamera[] } = {}): SuiteSeed => {
   const { cameras, ...rest } = over;
-  const geraete = (cameras ?? []).map((c) => ({
+  const geraete: SeedGeraet[] = (cameras ?? []).map((c) => ({
     id: c.id,
     name: c.name,
     kategorie: 'Cameras',
@@ -40,13 +45,7 @@ const seed = (over: Partial<SuiteSeed> & { cameras?: SeedCamera[] } = {}): Suite
       ...(c.hfovDeg !== undefined ? { hfovDeg: c.hfovDeg } : {}),
     },
   }));
-  return {
-    ...emptySeed(1),
-    venue: { name: 'Halle A', widthM: 24, heightM: 14 },
-    geraete,
-    cameras: alsKameras(geraete),
-    ...rest,
-  };
+  return { ...emptySeed(1), venue: { name: 'Halle A', widthM: 24, heightM: 14 }, geraete, ...rest };
 };
 
 describe('shellSeed — Katalog-Aufloesung', () => {
@@ -232,7 +231,7 @@ describe('Der Raum geht auch zurueck (E-21, B-39.1)', () => {
 // ───────────────────────────────────────────────────────────────────────────
 
 describe('shellSeed — ein erneuter Seed nimmt nichts weg', () => {
-  const eine = (over: Partial<Parameters<typeof seedToCameras>[0]['cameras'][number]> = {}) =>
+  const eine = (over: Partial<AlsKamera> = {}) =>
     seed({ cameras: [{ id: 'k1', name: 'CAM 1', model: 'Sony FX9', ...over }] });
 
   const platziert = () =>

@@ -77,7 +77,7 @@ lauffähigen Stand.
 | 1 | `geraete` ist die Wahrheit **im Seed**; `cameras`/`fixtures`/`devices` werden daraus abgeleitet (`alsKameras`, `alsLeuchten`, `alsSignalGeraete`). Die Kategorie fährt mit. Der Signalplan sieht ab hier alle Geräte. | **gebaut, 2026-09-19** |
 | 2 | Das Shell-Projekt führt `geraete` statt drei Listen. Damit verschwindet die Sonderregel auf dem Rückweg (siehe unten) und `altIds`. | **gebaut, 2026-09-19** |
 | 3 | Die drei Planer lesen und melden `geraete` statt ihrer Liste. | **gebaut, 2026-09-19** |
-| 4 | `cameras`, `fixtures`, `devices` und `altIds` fallen aus dem Seed. | offen |
+| 4 | `cameras`, `fixtures`, `devices` fallen aus dem Seed. Ein Plan ist ein **Filter**, keine Liste. | **gebaut, 2026-09-19** |
 
 ### Was Stufe 3 gebracht hat
 
@@ -94,6 +94,28 @@ Zwei Dinge, die dabei auffielen und ohne den Umbau nicht auffallen konnten:
   nirgends auffällt. Das Protokoll heißt jetzt auch `sub`; die Sicht `devices` übersetzt es noch
   nach `subtitle`, weil das alte Protokoll so hieß, und mit Stufe 4 fällt die Übersetzung mit der
   Sicht weg.
+
+### Was Stufe 4 abgeräumt hat
+
+`SuiteSeed` und `SeedPatch` tragen nur noch `geraete` und `cables`. Die drei Sichten sind aus dem
+Protokoll verschwunden, mit ihnen die Typen `SeedCamera`, `SeedFixture`, `SeedDevice` und die
+Übersetzung `sub`/`subtitle`. Was blieb, sind drei **Filter** — `imKameraplan`, `imLichtplan`,
+`imSignalplan` —, die dieselben `SeedGeraet` zurückgeben, die der Seed führt. Ein Plan ist damit
+eine Frage an die eine Liste und keine zweite Liste mehr.
+
+Zwei Befunde, die erst das Löschen sichtbar machte — beide hingen daran, dass die Listen die
+Zuständigkeit vorher nebenbei mitcodierten:
+
+* **Lager und Gebäude durften den Plan schreiben.** `mergeSeedPatch` arbeitete jedes `geraete` im
+  Patch ein, ganz gleich aus welcher Domäne es kam. Solange die Domänen verschiedene Listen
+  benutzten, fiel das nicht auf: ein Lager schickte eben kein `cameras`. Mit einer Liste für alle
+  hätte ein Lager den Plan leeren können — die Grenze aus ADR-006, in der Gegenrichtung
+  durchbrochen. Jetzt melden nur `signal`, `cameras` und `fixtures` Geräte.
+* **Die leere Feldgruppe war eine Aussage.** `kamera: {}` heißt „steht im Kameraplan" (`imPlan`).
+  Der Rückweg legte die Gruppe unbedingt an, also zog eine Meldung des Kameraplans jedes darin
+  erwähnte fremde Gerät in den Kameraplan — den Mischer eingeschlossen, lautlos, in der Liste, die
+  alle Pläne teilen. Die Gruppe entsteht jetzt nur, wo schon eine ist oder wo der Planer etwas
+  dazu sagt.
 
 ### Was Stufe 2 abgeräumt hat
 

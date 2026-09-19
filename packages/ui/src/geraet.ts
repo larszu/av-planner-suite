@@ -146,9 +146,8 @@ export interface SeedGeraet {
    * HEISST `sub` UND NICHT `subtitle`, und das ist kein Geschmack: die Shell
    * fuehrt das Feld seit jeher so, und zwei Namen fuer dasselbe Feld waren am
    * 2026-09-19 genau der Bruch, an dem der Untertitel auf dem Weg zum Planer
-   * verschwand — still, weil `undefined` nirgends auffaellt. Die Sicht
-   * `devices` uebersetzt es nach `subtitle`, weil das ALTE Protokoll so
-   * heisst; mit Stufe 4 faellt die Uebersetzung mit der Sicht weg.
+   * verschwand — still, weil `undefined` nirgends auffaellt. Die Uebersetzung
+   * nach `subtitle` ist mit Stufe 4 weggefallen: es gibt nur noch einen Namen.
    */
   sub?: string
   /**
@@ -178,29 +177,15 @@ export interface SeedGeraet {
   altIds?: { kamera?: string; licht?: string }
 }
 
-// ───────────────────────────────────────────────────────────────────────────
-// DIE PROJEKTIONEN
-//
-// `cameras`, `fixtures` und `devices` bleiben im Seed — aber nicht mehr als
-// Listen, die jemand fuehrt, sondern als Sichten auf die eine. Ein Planer,
-// der noch auf seiner Liste steht, sieht davon nichts; und solange er es
-// nicht tut, kann er auch nicht mehr mit ihr aus dem Tritt geraten.
-//
-// Warum ueberhaupt noch: ein Umbau, der die drei Listen gleichzeitig in drei
-// Planern austauscht, waere ein Tag ohne lauffaehigen Stand. So gibt es ab
-// sofort eine Wahrheit, und die Planer ziehen einzeln nach.
-// ───────────────────────────────────────────────────────────────────────────
-import type { SeedCamera, SeedDevice, SeedFixture } from './seed'
-
 /** Nur die Felder mitnehmen, die gesetzt sind — `undefined` heisst „keine
- *  Aussage" und soll auch in der Sicht keine werden. */
+ *  Aussage" und soll auch in einer Kopie keine werden. */
 const wenn = <T>(wert: T | undefined, feld: string): Record<string, T> =>
   wert === undefined ? {} : ({ [feld]: wert } as Record<string, T>)
 
 /**
  * Steht dieses Geraet im Plan dieses Gewerks?
  *
- * ZWEI GRUENDE, und der zweite ist der, den ein Wächter am 2026-09-19 aus dem
+ * ZWEI GRUENDE, und der zweite ist der, den ein Waechter am 2026-09-19 aus dem
  * Headless-Smoke herausgeholt hat:
  *
  *  1. Die KATEGORIE sagt es (`gewerkeFuer`).
@@ -211,77 +196,50 @@ const wenn = <T>(wert: T | undefined, feld: string): Record<string, T> =>
  * sobald der Signal-Planer den Knoten einmal zurueckgemeldet hatte: seine
  * Meldung traegt die Kategorie, die ER fuehrt (fuer ein nicht aufgeloestes
  * Geraet „Other"), und die ueberschrieb die Zuordnung, die aus der
- * ERKLAERTEN Entsprechung stammte. Eine Kategorie ist eine Auskunft ueber
- * den Typ; `represents` ist eine Entscheidung eines Menschen darueber, dass
- * dieses Blech jene Kamera IST. Die Entscheidung wiegt schwerer, und die
- * Feldgruppe ist ihre Spur im Datensatz.
+ * ERKLAERTEN Entsprechung stammte.
  *
  * Die Vereinigung und nicht der Vorrang: ein Geraet kann aus beiden Gruenden
  * dazugehoeren, und keiner von beiden nimmt dem anderen etwas weg.
  */
-export const imPlan = (g: Pick<SeedGeraet, 'kategorie' | 'kamera' | 'licht'>, gewerk: Gewerk): boolean =>
+export const imPlan = (
+  g: Pick<SeedGeraet, 'kategorie' | 'kamera' | 'licht'>,
+  gewerk: Gewerk,
+): boolean =>
   gehoertZu(g.kategorie, gewerk) ||
   (gewerk === 'kamera' && g.kamera !== undefined) ||
   (gewerk === 'licht' && g.licht !== undefined)
 
-/** Sicht des Kameraplans. */
-export function alsKameras(geraete: readonly SeedGeraet[]): SeedCamera[] {
-  return geraete
-    .filter((g) => imPlan(g, 'kamera'))
-    .map((g) => ({
-      id: g.altIds?.kamera ?? g.id,
-      name: g.name,
-      ...wenn(g.model, 'model'),
-      ...wenn(g.kamera?.lens, 'lens'),
-      ...wenn(g.kamera?.focalMm, 'focalMm'),
-      ...wenn(g.kamera?.hfovDeg, 'hfovDeg'),
-      ...wenn(g.x, 'x'),
-      ...wenn(g.y, 'y'),
-    }))
-}
+// ───────────────────────────────────────────────────────────────────────────
+// DIE SICHTEN — seit Stufe 4 reine FILTER
+//
+// Bis zum 2026-09-19 bauten diese drei Funktionen eigene Objekte: `cameras`,
+// `fixtures` und `devices` standen als Listen IM SEED, jede mit ihren eigenen
+// Feldnamen. Sie waren die Bruecke, ueber die die Planer einzeln umgestellt
+// werden konnten — und sie sind mit dem letzten Planer weggefallen.
+//
+// Was bleibt, ist die Frage, die sie beantwortet haben: WELCHE Geraete zeigt
+// dieser Plan? Sie geben deshalb Geraete zurueck und keine Abschriften. Der
+// Unterschied ist nicht kosmetisch: eine Abschrift kann von ihrem Original
+// abweichen, ein Filter nicht.
+// ───────────────────────────────────────────────────────────────────────────
 
-/** Sicht des Lichtplans. */
-export function alsLeuchten(geraete: readonly SeedGeraet[]): SeedFixture[] {
-  return geraete
-    .filter((g) => imPlan(g, 'licht'))
-    .map((g) => ({
-      id: g.altIds?.licht ?? g.id,
-      name: g.name,
-      ...wenn(g.model, 'model'),
-      ...wenn(g.licht?.purpose, 'purpose'),
-      ...wenn(g.licht?.dimmerPct, 'dimmerPct'),
-      ...wenn(g.licht?.dmxChannel, 'dmxChannel'),
-      ...wenn(g.licht?.universe, 'universe'),
-      ...wenn(g.licht?.rigHeightM, 'rigHeightM'),
-      ...wenn(g.x, 'x'),
-      ...wenn(g.y, 'y'),
-    }))
-}
+/** Die Geraete, die der Kameraplan zeigt. */
+export const imKameraplan = (geraete: readonly SeedGeraet[]): SeedGeraet[] =>
+  geraete.filter((g) => imPlan(g, 'kamera'))
+
+/** Die Geraete, die der Lichtplan zeigt. */
+export const imLichtplan = (geraete: readonly SeedGeraet[]): SeedGeraet[] =>
+  geraete.filter((g) => imPlan(g, 'licht'))
 
 /**
- * Sicht des Signalplans — und die ist NICHT gefiltert.
+ * Die Geraete, die der Signalplan zeigt — praktisch alle.
  *
- * Jedes Geraet hat Anschluesse und haengt an Kabeln; eine Kamera, die im
- * Signalplan fehlte, waere genau die Luecke, aus der die Frage des
- * Eigentuemers entstand. `gehoertZu(…, 'signal')` steht trotzdem in der
- * Filterzeile und nicht nur als Kommentar: waere eines Tages eine Kategorie
- * wirklich planlos, entschiede die Tabelle darueber und nicht diese Datei.
+ * Eine Kamera haengt an einem Kabel, eine Leuchte auch. Gefiltert wird
+ * trotzdem ueber dieselbe Tabelle, damit eine kuenftige Kategorie ohne
+ * Signalbezug von selbst herausfaellt.
  */
-export function alsSignalGeraete(geraete: readonly SeedGeraet[]): SeedDevice[] {
-  return geraete
-    .filter((g) => imPlan(g, 'signal'))
-    .map((g) => ({
-      id: g.id,
-      name: g.name,
-      ...wenn(g.sub, 'subtitle'),
-      ...wenn(g.model, 'model'),
-      ...wenn(g.nx, 'nx'),
-      ...wenn(g.ny, 'ny'),
-      ...wenn(g.x, 'x'),
-      ...wenn(g.y, 'y'),
-      ...wenn(g.kategorie, 'kategorie'),
-    }))
-}
+export const imSignalplan = (geraete: readonly SeedGeraet[]): SeedGeraet[] =>
+  geraete.filter((g) => imPlan(g, 'signal'))
 
 // ───────────────────────────────────────────────────────────────────────────
 // DER WEG HIN: aus drei Listen eine machen

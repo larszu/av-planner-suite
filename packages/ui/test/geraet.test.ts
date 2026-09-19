@@ -11,12 +11,12 @@
 // ───────────────────────────────────────────────────────────────────────────
 import { describe, expect, it } from 'vitest'
 import {
-  alsKameras,
-  alsLeuchten,
-  alsSignalGeraete,
   gehoertZu,
   geraeteAus,
   gewerkeFuer,
+  imKameraplan,
+  imLichtplan,
+  imSignalplan,
 } from '../src/geraet'
 
 const knoten = { id: 'n_cam2', name: 'CAM 2 — Sony FX9', subtitle: '3x SDI Out', nx: 0.1, ny: 0.4 }
@@ -76,17 +76,20 @@ describe('ADR-011 — ein Gerät, viele Pläne', () => {
     )
     expect(g[0].id).toBe('n_cam2')
     expect(g[0].altIds).toEqual({ kamera: 'cam2' })
-    expect(alsKameras(g)[0].id).toBe('cam2')
-    expect(alsSignalGeraete(g)[0].id).toBe('n_cam2')
+    // Seit Stufe 4 ist ein Plan ein FILTER auf die eine Liste: das Gerät
+    // behält seine eine Id, und die alte des Kameraplans fährt daneben mit.
+    expect(imKameraplan(g)[0].id).toBe('n_cam2')
+    expect(imKameraplan(g)[0].altIds?.kamera).toBe('cam2')
+    expect(imSignalplan(g)[0].id).toBe('n_cam2')
   })
 
   it('5. der Signalplan sieht alles — das war der Auftrag', () => {
     const g = geraeteAus([mischer], [kamera], [leuchte])
     // „Alle Kameras aus Multicam planner sind auch in Cable planner."
-    expect(alsSignalGeraete(g).map((d) => d.id)).toEqual(['n_atem', 'cam2', 'lx1'])
+    expect(imSignalplan(g).map((d) => d.id)).toEqual(['n_atem', 'cam2', 'lx1'])
     // Und die Fachsichten bleiben ihre Fachsichten.
-    expect(alsKameras(g).map((c) => c.id)).toEqual(['cam2'])
-    expect(alsLeuchten(g).map((f) => f.id)).toEqual(['lx1'])
+    expect(imKameraplan(g).map((c) => c.id)).toEqual(['cam2'])
+    expect(imLichtplan(g).map((f) => f.id)).toEqual(['lx1'])
   })
 
   it('6. „nicht angegeben" bleibt weg', () => {
@@ -95,9 +98,9 @@ describe('ADR-011 — ein Gerät, viele Pläne', () => {
     // Standort und Optik. Der Schlüssel fehlt, und das ist die Aussage.
     expect('x' in g[0]).toBe(false)
     expect(g[0].kamera).toEqual({})
-    const sicht = alsKameras(g)[0]
+    const sicht = imKameraplan(g)[0]
     expect('x' in sicht).toBe(false)
-    expect('focalMm' in sicht).toBe(false)
+    expect('focalMm' in sicht.kamera!).toBe(false)
   })
 
   it('8. die erklärte Entsprechung überlebt eine fremde Kategorie', () => {
@@ -115,9 +118,9 @@ describe('ADR-011 — ein Gerät, viele Pläne', () => {
       [],
     )
     expect(g[0].kategorie).toBe('Other')
-    expect(alsKameras(g).map((c) => c.id)).toEqual(['cam2'])
+    expect(imKameraplan(g).map((c) => c.id)).toEqual(['n_cam2'])
     // Und die Optik fährt mit — sie ist der Grund, aus dem es eine Kamera ist.
-    expect(alsKameras(g)[0].focalMm).toBe(85)
+    expect(imKameraplan(g)[0].kamera?.focalMm).toBe(85)
   })
 
   it('7. derselbe Baum ergibt dieselbe Liste, in der Ordnung des Plans', () => {

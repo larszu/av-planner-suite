@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alsLeuchten, emptySeed, type SeedFixture, type SuiteSeed } from '@avplan/ui/embed';
+import { emptySeed, type SeedGeraet, type SuiteSeed } from '@avplan/ui/embed';
 import { fixturesToSeedPatch, katalogFixture, seedToFixtures } from '../src/core/shellSeed';
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -19,9 +19,14 @@ import { fixturesToSeedPatch, katalogFixture, seedToFixtures } from '../src/core
  * daraus gerechnet. Der Helfer legt die Leuchten deshalb als Geraete an — so
  * pruefen die Tests den Weg, den die Shell wirklich geht.
  */
-const seed = (over: Partial<SuiteSeed> & { fixtures?: SeedFixture[] } = {}): SuiteSeed => {
+type AlsLeuchte = {
+  id: string; name: string; model?: string; purpose?: string; dimmerPct?: number
+  dmxChannel?: number; universe?: number; rigHeightM?: number; x?: number; y?: number
+}
+
+const seed = (over: Partial<SuiteSeed> & { fixtures?: AlsLeuchte[] } = {}): SuiteSeed => {
   const { fixtures, ...rest } = over;
-  const geraete = (fixtures ?? []).map((f) => ({
+  const geraete: SeedGeraet[] = (fixtures ?? []).map((f) => ({
     id: f.id,
     name: f.name,
     kategorie: 'Licht',
@@ -36,7 +41,7 @@ const seed = (over: Partial<SuiteSeed> & { fixtures?: SeedFixture[] } = {}): Sui
       ...(f.rigHeightM !== undefined ? { rigHeightM: f.rigHeightM } : {}),
     },
   }));
-  return { ...emptySeed(1), geraete, fixtures: alsLeuchten(geraete), ...rest };
+  return { ...emptySeed(1), geraete, ...rest };
 };
 
 describe('shellSeed — Bibliotheks-Aufloesung', () => {

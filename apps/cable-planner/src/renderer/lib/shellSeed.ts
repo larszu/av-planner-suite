@@ -32,7 +32,7 @@
 //      eine Falschaussage ueber echte Hardware. Das Kabel wird dann NICHT
 //      angelegt, sondern als ausgelassen gemeldet — sichtbar, nicht still.
 // ───────────────────────────────────────────────────────────────────────────
-import { alsSignalGeraete, type SeedCable, type SeedDevice, type SeedGeraet, type SuiteSeed } from '@avplan/ui/embed'
+import { imSignalplan, type SeedCable, type SeedGeraet, type SuiteSeed } from '@avplan/ui/embed'
 import type { ConnectorType, EquipmentItem, EquipmentTemplate, Port } from '../types/equipment'
 import type { Cable, CableType } from '../types/cable'
 import type { SignalStandard } from '../types/cableSpec'
@@ -83,7 +83,7 @@ const normalisiere = (s: string): string =>
  * wird. Das Shell-Label traegt oft eine Instanz davor („CAM 1 — Sony FX9"),
  * deshalb zaehlt auch der Teil hinter dem Gedankenstrich als Kandidat.
  */
-export function kandidaten(device: Pick<SeedDevice, 'name' | 'model'>): string[] {
+export function kandidaten(device: Pick<SeedGeraet, 'name' | 'model'>): string[] {
   const roh = [device.model, device.name].filter((s): s is string => !!s && s.trim().length > 0)
   const aus: string[] = []
   for (const r of roh) {
@@ -105,7 +105,7 @@ export function kandidaten(device: Pick<SeedDevice, 'name' | 'model'>): string[]
  * meist nicht. Treffen mehrere, ist das Ergebnis ausdruecklich null: bei
  * Mehrdeutigkeit raten waere schlimmer als nicht aufloesen.
  */
-export function katalogTemplate(device: Pick<SeedDevice, 'name' | 'model'>): EquipmentTemplate | null {
+export function katalogTemplate(device: Pick<SeedGeraet, 'name' | 'model'>): EquipmentTemplate | null {
   const typen = listDeviceTypes()
   for (const kandidat of kandidaten(device)) {
     const treffer = typen.filter((typ) => {
@@ -191,11 +191,11 @@ export function seedToCable(seed: SuiteSeed, vorhandene: EquipmentItem[] = []): 
   // gerechnet statt uebertragen. Sie traegt ALLE Geraete, Kameras und
   // Leuchten eingeschlossen: die haengen an Kabeln und gehoeren in diesen
   // Plan. Wer sie hier vermisste, legte sie ein zweites Mal an.
-  alsSignalGeraete(seed.geraete).forEach((d, i) => {
+  imSignalplan(seed.geraete).forEach((d, i) => {
     const basis = {
       id: d.id,
       name: d.name,
-      ...(d.subtitle ? { subtitle: d.subtitle } : {}),
+      ...(d.sub ? { subtitle: d.sub } : {}),
       x: Math.round((d.nx ?? (i % 4) * 0.25) * CANVAS_W),
       y: Math.round((d.ny ?? Math.floor(i / 4) * 0.25) * CANVAS_H),
     }

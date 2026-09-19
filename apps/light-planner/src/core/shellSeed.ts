@@ -33,7 +33,7 @@
 //     Kabellaenge zum Scheinwerfer, und die Stueckliste zieht sie aus
 //     demselben Projekt.
 // ───────────────────────────────────────────────────────────────────────────
-import { alsLeuchten, type SeedFixture, type SeedGeraet, type SuiteSeed } from '@avplan/ui/embed';
+import { imLichtplan, type SeedGeraet, type SuiteSeed } from '@avplan/ui/embed';
 import { fixtureLibrary } from './fixtureLibrary';
 import type { Fixture, PlacedFixture, Shape } from '../types';
 
@@ -52,7 +52,7 @@ const passt = (katalog: string, kandidat: string): boolean => {
 
 /** Genau ein Treffer oder null; mehrdeutig zaehlt als kein Treffer. */
 export function katalogFixture(
-  seed: Pick<SeedFixture, 'model' | 'name'>,
+  seed: Pick<SeedGeraet, 'model' | 'name'>,
   eigene: Fixture[] = [],
 ): Fixture | null {
   const alle = [...fixtureLibrary, ...eigene];
@@ -99,7 +99,7 @@ export function seedToFixtures(
   // Kategorie „Licht" steht damit hier, ohne dass jemand sie uebergibt. Genau
   // das war der Auftrag: „Lampen die ich im Cable planner anlege muessen auch
   // im light planner erscheinen."
-  for (const f of alsLeuchten(seed.geraete)) {
+  for (const f of imLichtplan(seed.geraete)) {
     const def = katalogFixture(f, eigene);
     if (!def) {
       ausgelassen.push({
@@ -124,7 +124,7 @@ export function seedToFixtures(
       // Der Seed nennt die Hoehe, sonst behaelt ein schon platzierter
       // Scheinwerfer seine. Die Voreinstellung gilt nur fuer einen wirklich
       // neuen — dort ist sie der Anfangswert einer Platzierung.
-      mountingHeight: f.rigHeightM ?? alt?.mountingHeight ?? haengehoehe,
+      mountingHeight: f.licht?.rigHeightM ?? alt?.mountingHeight ?? haengehoehe,
       // Kein Ziel im Seed: eine bereits ausgerichtete Lampe behaelt ihres,
       // eine neue zeigt auf ihre eigene Stelle — dieselbe Voreinstellung wie
       // beim Platzieren von Hand. Ein erfundenes Ziel waere eine
@@ -132,10 +132,10 @@ export function seedToFixtures(
       aimX: alt && !zieltAufSichSelbst ? alt.aimX : x,
       aimY: alt && !zieltAufSichSelbst ? alt.aimY : y,
       bodyRotation: alt?.bodyRotation ?? 0,
-      dimming: f.dimmerPct ?? 100,
-      ...(f.dmxChannel !== undefined ? { channel: f.dmxChannel } : {}),
-      ...(f.universe !== undefined ? { universe: f.universe } : {}),
-      ...(f.purpose ? { purpose: f.purpose } : {}),
+      dimming: f.licht?.dimmerPct ?? 100,
+      ...(f.licht?.dmxChannel !== undefined ? { channel: f.licht.dmxChannel } : {}),
+      ...(f.licht?.universe !== undefined ? { universe: f.licht.universe } : {}),
+      ...(f.licht?.purpose ? { purpose: f.licht.purpose } : {}),
       unitNumber: f.name,
     });
   }

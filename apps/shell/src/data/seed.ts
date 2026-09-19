@@ -34,9 +34,6 @@
 import {
   SUITE_SEED_KIND,
   SUITE_SEED_VERSION,
-  alsKameras,
-  alsLeuchten,
-  alsSignalGeraete,
   deriveBedarf,
   mergeSeedPatch,
   type SeedDomain,
@@ -83,9 +80,6 @@ export function suiteToSeed(
       ...(origin ? { origin } : {}),
       venue: { name: '' },
       geraete: [],
-      cameras: [],
-      fixtures: [],
-      devices: [],
       cables: [],
       bedarf: [],
       deckung: [],
@@ -107,9 +101,6 @@ export function suiteToSeed(
   const geraete = project.geraete.map(
     ({ group, venue, ...rest }) => (void group, void venue, rest),
   )
-  const cameras = alsKameras(geraete)
-  const fixtures = alsLeuchten(geraete)
-  const devices = alsSignalGeraete(geraete)
 
   return {
     kind: SUITE_SEED_KIND,
@@ -124,9 +115,6 @@ export function suiteToSeed(
       stage: project.stage,
     },
     geraete,
-    cameras,
-    fixtures,
-    devices,
     cables: project.cables.map((c) => ({
       id: c.id,
       label: c.label,
@@ -143,7 +131,7 @@ export function suiteToSeed(
     // eine Kamera standen, damit das Lager nicht zwei Geraete anforderte, wo
     // eines steht. Mit einer Liste gibt es diese Doppelung nicht mehr — das
     // Problem ist nicht geloest, sondern verschwunden.
-    bedarf: deriveBedarf({ cameras, fixtures, devices }, new Set()),
+    bedarf: deriveBedarf({ geraete }),
     deckung: project.deckung ?? [],
     anschluesse: project.anschluesse ?? [],
     holds: project.seedHolds,

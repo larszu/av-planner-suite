@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SUITE_SEED_KIND, SUITE_SEED_VERSION, alsSignalGeraete, type SeedDevice, type SuiteSeed } from '@avplan/ui/embed'
+import { SUITE_SEED_KIND, SUITE_SEED_VERSION, type SeedGeraet, type SuiteSeed } from '@avplan/ui/embed'
 import { SEED_BELEG, cableToSeedPatch, katalogTemplate, seedToCable } from '../src/renderer/lib/shellSeed'
 import { listDeviceTypes } from '../src/renderer/lib/deviceTypeRegistry'
 import type { EquipmentItem } from '../src/renderer/types/equipment'
@@ -16,14 +16,19 @@ import type { EquipmentItem } from '../src/renderer/types/equipment'
 /**
  * Ein Seed fuer den Test.
  *
- * `devices` ist die bequeme Schreibweise und nicht mehr der Inhalt: seit
- * ADR-011 Stufe 3 liest der Planer `geraete`, und die Sicht `devices` wird
- * daraus gerechnet. Der Helfer legt sie deshalb als Geraete an — so pruefen
- * die Tests den Weg, den die Shell wirklich geht.
+ * `devices` ist die bequeme Schreibweise und nicht der Inhalt: seit ADR-011
+ * Stufe 4 traegt der Seed nur noch `geraete`, und was der Signalplan davon
+ * sieht, rechnet `imSignalplan` beim Lesen aus. Der Helfer legt sie deshalb
+ * als Geraete an — so pruefen die Tests den Weg, den die Shell wirklich geht.
  */
-const seed = (over: Partial<SuiteSeed> & { devices?: SeedDevice[] } = {}): SuiteSeed => {
+type AlsSignalGeraet = {
+  id: string; name: string; subtitle?: string; model?: string; kategorie?: string
+  nx?: number; ny?: number; x?: number; y?: number
+}
+
+const seed = (over: Partial<SuiteSeed> & { devices?: AlsSignalGeraet[] } = {}): SuiteSeed => {
   const { devices, ...rest } = over
-  const geraete = (devices ?? []).map((d) => ({
+  const geraete: SeedGeraet[] = (devices ?? []).map((d) => ({
     id: d.id,
     name: d.name,
     ...(d.subtitle !== undefined ? { sub: d.subtitle } : {}),
@@ -41,9 +46,6 @@ const seed = (over: Partial<SuiteSeed> & { devices?: SeedDevice[] } = {}): Suite
     projectName: 'Sommershow 2026',
     venue: { name: 'Halle A', widthM: 24, heightM: 14 },
     geraete,
-    cameras: [],
-    fixtures: [],
-    devices: alsSignalGeraete(geraete),
     cables: [],
     bedarf: [],
     deckung: [],

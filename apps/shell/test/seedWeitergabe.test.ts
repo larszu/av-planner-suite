@@ -96,9 +96,9 @@ describe('Seed-Weitergabe zwischen den Planern', () => {
     const patch = {
       domain: 'cameras' as const,
       revision: 0,
-      cameras: [
-        ...suiteToSeed(PROJECT, 0).cameras,
-        { id: 'camNeu', name: 'CAM 9', model: 'Sony FX6', x: 2, y: 2 },
+      geraete: [
+        ...suiteToSeed(PROJECT, 0).geraete,
+        { id: 'camNeu', name: 'CAM 9', kategorie: 'Cameras', model: 'Sony FX6', x: 2, y: 2 },
       ],
     }
     const { handoff } = applyPatchToSuite(PROJECT, patch, 0, () => 1_000, (n) => `h${n}`)
@@ -107,7 +107,7 @@ describe('Seed-Weitergabe zwischen den Planern', () => {
   })
 
   it('bietet KEINE Übergabe an, wenn die Meldung nichts ändert', () => {
-    const patch = { domain: 'cameras' as const, revision: 0, cameras: suiteToSeed(PROJECT, 0).cameras }
+    const patch = { domain: 'cameras' as const, revision: 0, geraete: suiteToSeed(PROJECT, 0).geraete }
     const { handoff } = applyPatchToSuite(PROJECT, patch, 0, () => 1_000, (n) => `h${n}`)
     expect(handoff).toBeUndefined()
   })

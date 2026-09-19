@@ -22,7 +22,7 @@
 //     (`pickInitialMountAndLens`) — eine UI-Voreinstellung, die der Nutzer mit
 //     einem Klick aendert, keine Behauptung ueber sein Material.
 // ───────────────────────────────────────────────────────────────────────────
-import { alsKameras, type SeedCamera, type SeedGeraet, type SeedVenue, type SuiteSeed } from '@avplan/ui/embed';
+import { imKameraplan, type SeedGeraet, type SeedVenue, type SuiteSeed } from '@avplan/ui/embed';
 import { CAMERAS } from '../data/cameras';
 import { LENSES } from '../data/lenses';
 import type { Camera, Lens, VenueCamera, Venue } from '../types';
@@ -73,7 +73,7 @@ const modellKandidaten = (text: string | undefined): string[] => {
 const bezeichnetEinModell = (kandidat: string): boolean => !/^[0-9]+$/.test(kandidat);
 
 /** Genau ein Treffer oder null. Mehrdeutig zaehlt ausdruecklich als kein Treffer. */
-export function katalogKamera(seed: Pick<SeedCamera, 'model' | 'name'>): Camera | null {
+export function katalogKamera(seed: Pick<SeedGeraet, 'model' | 'name'>): Camera | null {
   const kandidaten = [
     ...modellKandidaten(seed.model),
     ...(seed.name && seed.name.trim().length > 0 ? [normalisiere(seed.name)] : []),
@@ -146,14 +146,14 @@ export function seedToCameras(
   // gerechnet statt uebertragen. Der Unterschied ist nicht kosmetisch: ein
   // Geraet, das im Signalplan angelegt wurde und die Kategorie „Cameras"
   // traegt, steht damit hier, ohne dass jemand es uebergeben muss.
-  alsKameras(seed.geraete).forEach((c, i) => {
+  imKameraplan(seed.geraete).forEach((c, i) => {
     const camDef = katalogKamera(c);
     if (!camDef) {
       ausgelassen.push({ id: c.id, name: c.name, grund: `Modell „${c.model ?? c.name}" ist im Katalog nicht eindeutig` });
       return;
     }
     const wahl = vorauswahl(camDef);
-    const lensDef = katalogObjektiv(c.lens, lenses) ?? wahl.lens ?? lenses[0];
+    const lensDef = katalogObjektiv(c.kamera?.lens, lenses) ?? wahl.lens ?? lenses[0];
     if (!lensDef) {
       ausgelassen.push({ id: c.id, name: c.name, grund: 'kein passendes Objektiv im Katalog' });
       return;
@@ -164,7 +164,7 @@ export function seedToCameras(
     // die es an diesem Glas nicht gibt. Nennt der Seed keine, behaelt eine
     // bekannte Kamera ihre eigene.
     const brennweite = Math.min(
-      Math.max(c.focalMm ?? alt?.focalLength ?? lensDef.focalLengthMin, lensDef.focalLengthMin),
+      Math.max(c.kamera?.focalMm ?? alt?.focalLength ?? lensDef.focalLengthMin, lensDef.focalLengthMin),
       lensDef.focalLengthMax,
     );
     cameras.push({

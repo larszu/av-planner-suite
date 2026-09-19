@@ -171,8 +171,9 @@ embedded.
 
 There is **one** device per piece of kit — not one per planner (ADR-011). Both the shell's project
 and the `suite-seed` hold a single `geraete` list with every device exactly once, its category and
-the fields of *all* planners. `cameras`, `fixtures` and `devices` still appear in the seed, but as
-**views** on that one list, and they will disappear once every planner reads it directly.
+the fields of *all* planners. A plan is a **filter** on that list — `imKameraplan`, `imLichtplan`,
+`imSignalplan` — and no longer a list of its own: the seed carries `geraete` and `cables`, nothing
+else.
 
 The **category** does the assigning, and it assigns to several plans at once: a camera belongs to
 the camera plan *and* to the signal plan, because it has a standpoint *and* connectors. A mixer

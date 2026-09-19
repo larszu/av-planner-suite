@@ -38,7 +38,7 @@
 // die echten Befunde unsichtbar.
 // ───────────────────────────────────────────────────────────────────────────
 
-import { alsKameras, alsLeuchten, alsSignalGeraete, imPlan, type SeedGeraet } from './geraet'
+import { imPlan, type SeedGeraet } from './geraet'
 import type {
   SeedDomain,
   SeedHold,
@@ -249,16 +249,9 @@ export function mergeSeedPatch(seed: SuiteSeed, patch: SeedPatch): SeedMerge {
       if (!gehoertDomaene(g, patch.domain)) geraete.push(g)
     }
 
-    naechster = {
-      ...naechster,
-      geraete,
-      // Die drei Sichten werden NEU GERECHNET und nicht mitgeschrieben. Sonst
-      // waeren sie wieder eine zweite Wahrheit — genau die, gegen die die
-      // eine Liste steht.
-      cameras: alsKameras(geraete),
-      fixtures: alsLeuchten(geraete),
-      devices: alsSignalGeraete(geraete),
-    }
+    // Seit Stufe 4 gibt es nichts mehr nachzufuehren: die drei Sichten sind
+    // aus dem Seed verschwunden, und wer sie braucht, filtert die eine Liste.
+    naechster = { ...naechster, geraete }
   }
 
   // Kabel gehoeren dem Signalplan und liegen NEBEN der Geraeteliste: sie
@@ -321,56 +314,28 @@ export const conflictFieldName = (field: SeedVenueField): keyof SeedVenue => VEN
 // WER WAS SCHREIBEN DARF — die Regel als Code, nicht als Kommentar
 // ───────────────────────────────────────────────────────────────────────────
 
-/** Die gemeldete Liste dieser Domaene, in Geraete-Form. */
+/** Die Domaenen, die ueberhaupt einen Plan fuehren. */
+const PLAN_DOMAENEN: readonly SeedDomain[] = ['signal', 'cameras', 'fixtures']
+
+/**
+ * Die gemeldete Liste dieser Domaene.
+ *
+ * Seit Stufe 4 ist das fast eine Zeile: alle Planer melden `geraete`. Hier
+ * stand bis dahin die Uebersetzung der drei alten Sichten — sie ist mit ihnen
+ * weggefallen, und zwar vollstaendig. Eine Uebersetzung, die niemand mehr
+ * braucht, ist ein Weg, den beim naechsten Umbau jemand wiederbelebt.
+ *
+ * Was NICHT weggefallen ist, ist die Grenze aus ADR-006: Lager und Gebaeude
+ * fuehren keinen Plan. Sie melden ihr eigenes Fach (`deckung`, `anschluesse`)
+ * und haben ueber die Geraete der Show keine Meinung. Bis diese Zeile stand,
+ * hatten sie eine — solange sie `geraete` mitschickten, wurde die Liste
+ * eingearbeitet wie die eines Planers, und ein Lager konnte den Plan leeren.
+ * Gefunden 2026-09-19 beim Umbau auf die eine Liste: der Test dafuer stand
+ * bereits, er prueft nur nicht mehr `devices`.
+ */
 function geraeteAusPatch(patch: SeedPatch): SeedGeraet[] | undefined {
-  // Ein Planer, der schon auf der einen Liste steht (Stufe 3), meldet sie
-  // direkt. Die Uebersetzung darunter gilt fuer die, die noch ihre Sicht
-  // melden — und faellt weg, wenn der letzte umgestellt ist.
-  if (patch.geraete) return patch.geraete
-  if (patch.domain === 'signal') {
-    return patch.devices?.map((d) => ({
-      id: d.id,
-      name: d.name,
-      ...(d.subtitle !== undefined ? { sub: d.subtitle } : {}),
-      ...(d.model !== undefined ? { model: d.model } : {}),
-      ...(d.kategorie !== undefined ? { kategorie: d.kategorie } : {}),
-      ...(d.nx !== undefined ? { nx: d.nx } : {}),
-      ...(d.ny !== undefined ? { ny: d.ny } : {}),
-      ...(d.x !== undefined ? { x: d.x } : {}),
-      ...(d.y !== undefined ? { y: d.y } : {}),
-    }))
-  }
-  if (patch.domain === 'cameras') {
-    return patch.cameras?.map((c) => ({
-      id: c.id,
-      name: c.name,
-      ...(c.model !== undefined ? { model: c.model } : {}),
-      ...(c.x !== undefined ? { x: c.x } : {}),
-      ...(c.y !== undefined ? { y: c.y } : {}),
-      kamera: {
-        ...(c.lens !== undefined ? { lens: c.lens } : {}),
-        ...(c.focalMm !== undefined ? { focalMm: c.focalMm } : {}),
-        ...(c.hfovDeg !== undefined ? { hfovDeg: c.hfovDeg } : {}),
-      },
-    }))
-  }
-  if (patch.domain === 'fixtures') {
-    return patch.fixtures?.map((f) => ({
-      id: f.id,
-      name: f.name,
-      ...(f.model !== undefined ? { model: f.model } : {}),
-      ...(f.x !== undefined ? { x: f.x } : {}),
-      ...(f.y !== undefined ? { y: f.y } : {}),
-      licht: {
-        ...(f.purpose !== undefined ? { purpose: f.purpose } : {}),
-        ...(f.dimmerPct !== undefined ? { dimmerPct: f.dimmerPct } : {}),
-        ...(f.dmxChannel !== undefined ? { dmxChannel: f.dmxChannel } : {}),
-        ...(f.universe !== undefined ? { universe: f.universe } : {}),
-        ...(f.rigHeightM !== undefined ? { rigHeightM: f.rigHeightM } : {}),
-      },
-    }))
-  }
-  return undefined
+  if (!PLAN_DOMAENEN.includes(patch.domain)) return undefined
+  return patch.geraete
 }
 
 /**
@@ -415,7 +380,11 @@ function nurEigenes(alt: SeedGeraet, neu: SeedGeraet, domain: SeedDomain): SeedG
       ...(neu.model !== undefined ? { model: neu.model } : {}),
       ...(neu.x !== undefined ? { x: neu.x } : {}),
       ...(neu.y !== undefined ? { y: neu.y } : {}),
-      kamera: { ...alt.kamera, ...neu.kamera },
+      // Die leere Gruppe waere eine AUSSAGE: `kamera: {}` heisst „steht im
+      // Kameraplan" (siehe `imPlan`). Ein Kameraplan, der ein fremdes Geraet
+      // nur miterwaehnt, zoege es damit in seinen Plan — deshalb entsteht die
+      // Gruppe nur, wo schon eine ist oder wo er etwas dazu sagt.
+      ...(alt.kamera || neu.kamera ? { kamera: { ...alt.kamera, ...neu.kamera } } : {}),
     }
   }
   if (domain === 'fixtures') {
@@ -425,7 +394,8 @@ function nurEigenes(alt: SeedGeraet, neu: SeedGeraet, domain: SeedDomain): SeedG
       ...(neu.model !== undefined ? { model: neu.model } : {}),
       ...(neu.x !== undefined ? { x: neu.x } : {}),
       ...(neu.y !== undefined ? { y: neu.y } : {}),
-      licht: { ...alt.licht, ...neu.licht },
+      // Siehe oben: die leere Gruppe ist die Zuordnung zum Lichtplan.
+      ...(alt.licht || neu.licht ? { licht: { ...alt.licht, ...neu.licht } } : {}),
     }
   }
   return alt

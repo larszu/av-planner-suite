@@ -84,7 +84,8 @@ Herkunft im Rückgabewert. **Zwischen** den Planern führte der `suite-seed` dre
 Kamera `cam2` und ihr Knoten `n_cam2` waren zwei Datensätze für dasselbe Blech.
 
 Kein Widerspruch zwischen zwei ADRs, sondern zwischen einem ADR und dem eigenen Bau — und er hat
-drei Wochen gehalten, weil nichts ihn gemessen hat. ADR-011 räumt ihn ab (Stufe 1 gebaut).
+drei Wochen gehalten, weil nichts ihn gemessen hat. ADR-011 hat ihn abgeräumt — alle vier Stufen
+gebaut am 2026-09-19: es gibt eine Liste, und ein Plan ist ein Filter darauf.
 
 ### C · „Deklariert, nie geraten" gegen „der Nutzer ordnet zu" — aufgelöst, aber stolperfähig
 
@@ -119,17 +120,22 @@ keine Zusicherung, sondern eine Notiz."*
 ADR-005 Regel 2: *„Eine Projektion darf den vollen Stand nicht überschreiben. Wo dieselbe
 Information in zwei Auflösungen in derselben Datei liegt, gewinnt die höhere."*
 
-Genau diese Lage stellt ADR-011 Stufe 1 her: `geraete` (die hohe Auflösung) und die drei Sichten
-(die niedrige) stehen im selben Seed. Im Sinn stimmt es überein — die Sichten werden abgeleitet.
-Aber ADR-011 nennt die Regel nicht, und sie ist die, die entscheiden muss, sobald ein Planer eine
-Sicht zurückschreibt. Kein gelebter Widerspruch, eine fehlende Fußnote mit Folgen.
+Genau diese Lage stellte ADR-011 Stufe 1 her: `geraete` (die hohe Auflösung) und die drei Sichten
+(die niedrige) standen im selben Seed. Im Sinn stimmte es überein — die Sichten wurden abgeleitet.
+Aber ADR-011 nannte die Regel nicht, und sie ist die, die entscheiden muss, sobald ein Planer eine
+Sicht zurückschreibt.
+
+**Mit Stufe 4 ist die Lage weg statt geregelt** (2026-09-19): es gibt im Seed nur noch die hohe
+Auflösung, und die Sichten sind Filter, die niemand zurückschreiben kann. Die Fußnote bleibt
+trotzdem fällig — nicht für diesen Fall, sondern für den nächsten, der zwei Auflösungen in eine
+Datei legt.
 
 ## Was daraus folgt
 
 1. **A ist der teuerste Befund** und der, den der Eigentümer als Doppelarbeit erlebt. Das Paket
    steht (`@avplan/device-catalog`), die Kameratypen sind drin; das Anschließen der übrigen
    Kataloge und der Planer läuft.
-2. **B** ist in Arbeit (ADR-011, Stufen 2–4).
+2. **B** ist erledigt (ADR-011, alle vier Stufen gebaut am 2026-09-19).
 3. **E** ist billig: `ci:complete` in die übrigen Repos.
 4. **C** und **F** sind Textarbeit an den ADRs, nach dem Muster von **D**.
 5. **Crew & Geld** (ADR-006) steht weiter aus und ist bisher nirgends als offen geführt.
