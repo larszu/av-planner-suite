@@ -8,6 +8,7 @@ import {
   boardToMarkdown,
   crumbTitles,
   getBoardAtPath,
+  imRahmen,
   layoutBoard,
   updateBoardAtPath,
   type Rect,
@@ -21,6 +22,10 @@ import {
 
 const BOARD_W = 2600
 const BOARD_H = 1600
+/** Rasterweite. Dieselbe Zahl, die das Punktraster zeichnet — sonst faengt es woanders. */
+const GRID = 26
+const ZOOM_MIN = 0.25
+const ZOOM_MAX = 2
 const SWATCHES = ['#f5a623', '#38bdf8', '#a78bfa', '#34d399', '#f87171', '#f2c26b', '#5aa9e6', '#1a2130']
 
 let idSeq = 0
@@ -96,7 +101,52 @@ export function BoardCanvas({
   const TEMPLATES = templates(t)
   const [root, setRoot] = useState<Board>(() => cloneBoard(seed))
   const [path, setPath] = useState<string[]>([])
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  /**
+   * DIE AUSWAHL IST EINE MENGE, nicht eine Karte.
+   *
+   * NUTZER-MELDUNG 2026-09-20: „die boards sind ueberhaupt nicht ausgereift.
+   * Mache sie eher wie milanote."
+   *
+   * Eine Karte auf einmal ist der Kern davon. Wer zwoelf Bilder eines
+   * Moodboards zur Seite schieben will, schob sie zwoelfmal; wer sich bei der
+   * Vorlage vertan hat, loeschte einundzwanzigmal. `selectedId` ist deshalb
+   * eine LISTE geworden, und alles, was eine Auswahl anfasst — Ziehen,
+   * Loeschen, Verdoppeln, Pfeiltasten — arbeitet auf ihr.
+   *
+   * `selectOnly` bleibt daneben stehen, weil der haeufigste Fall genau eine
+   * Karte ist und ein Aufrufer, der das meint, es auch sagen koennen soll.
+   */
+  const [selection, setSelection] = useState<string[]>([])
+  const selectOnly = useCallback((id: string | null) => setSelection(id ? [id] : []), [])
+  const toggleSelected = useCallback(
+    (id: string) => setSelection((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id])),
+    [],
+  )
+  const isSelected = useCallback((id: string) => selection.includes(id), [selection])
+  /** Eine angeklickte Verbindung — sie war bis hierher nicht wieder loszuwerden. */
+  const [selectedLink, setSelectedLink] = useState<string | null>(null)
+
+  /**
+   * Zoom und Verschieben.
+   *
+   * Die Flaeche war 2600x1600 und der einzige Weg darueber die Bildlaufleiste.
+   * Ein Moodboard, das nicht auf einen Blick passt, ist keins — deshalb
+   * Zoom (25 bis 200 %), „Alles zeigen", und Ziehen mit gedrueckter
+   * Leertaste oder der mittleren Maustaste, wie in jedem Zeichenprogramm.
+   *
+   * Der Zoom lebt NICHT im Board: er ist Sicht und nicht Inhalt. Zwei Leute
+   * am selben Projekt haben verschiedene Bildschirme, und ein gespeicherter
+   * Zoom waere die Vergroesserung des anderen.
+   */
+  const [zoom, setZoom] = useState(1)
+  const [spaceDown, setSpaceDown] = useState(false)
+  const [snap, setSnap] = useState(true)
+  const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
+  const marqueeRef = useRef<{ x0: number; y0: number; additive: boolean } | null>(null)
+  const panRef = useRef<{ x: number; y: number; left: number; top: number } | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  /** Karten, die Strg+C in die Hand genommen hat. Nicht die Zwischenablage des Systems. */
+  const clipRef = useRef<BoardCard[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [connectFrom, setConnectFrom] = useState<string | null>(null)
   const [tempPoint, setTempPoint] = useState<Point | null>(null)
@@ -104,7 +154,15 @@ export function BoardCanvas({
   const [query, setQuery] = useState('')
   const boardRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const dragRef = useRef<{ id: string; dx: number; dy: number; moved: boolean } | null>(null)
+  const dragRef = useRef<{
+    id: string
+    dx: number
+    dy: number
+    moved: boolean
+    /** Die ganze mitgezogene Auswahl mit ihren Ausgangslagen. */
+    mit: { id: string; x: number; y: number }[]
+    start: Point
+  } | null>(null)
   const resizeRef = useRef<{ id: string; startX: number; startW: number } | null>(null)
 
   const current = useMemo(() => getBoardAtPath(root, path), [root, path])
@@ -150,25 +208,45 @@ export function BoardCanvas({
     return () => clearTimeout(uhr)
   }, [root, onChange, seed])
 
+  /**
+   * Bildschirm → Board. Durch den Zoom geteilt, nicht bloss verschoben:
+   * bei 50 % sind zwei Bildschirmpixel ein Board-Pixel, und ohne die Teilung
+   * springt die gezogene Karte unter dem Zeiger weg.
+   */
   const toBoard = useCallback((clientX: number, clientY: number): Point => {
     const rect = boardRef.current?.getBoundingClientRect()
-    return { x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) }
-  }, [])
+    return { x: (clientX - (rect?.left ?? 0)) / zoom, y: (clientY - (rect?.top ?? 0)) / zoom }
+  }, [zoom])
+
+  /**
+   * Fangen am Punktraster — dem, das ohnehin gezeichnet ist.
+   *
+   * Es war bis hierher Dekoration: die Punkte lagen 26 px auseinander, die
+   * Karten irgendwo dazwischen, und zwei nebeneinander abgelegte Notizen
+   * standen nie auf einer Linie. Wer frei ablegen will, haelt Alt.
+   */
+  const fang = useCallback(
+    (v: number, frei: boolean) => (snap && !frei ? Math.round(v / GRID) * GRID : Math.round(v)),
+    [snap],
+  )
 
   const patchCard = useCallback((id: string, patch: Partial<BoardCard>) => {
     mutate((b) => ({ ...b, cards: b.cards.map((c) => (c.id === id ? { ...c, ...patch } : c)) }))
   }, [mutate])
 
-  const removeCard = useCallback((id: string) => {
+  const removeCards = useCallback((ids: string[]) => {
+    if (ids.length === 0) return
+    const weg = new Set(ids)
     mutate((b) => ({
-      cards: b.cards.filter((c) => c.id !== id && c.columnId !== id),
-      connections: b.connections.filter((x) => x.from !== id && x.to !== id),
+      cards: b.cards.filter((c) => !weg.has(c.id) && !(c.columnId && weg.has(c.columnId))),
+      connections: b.connections.filter((x) => !weg.has(x.from) && !weg.has(x.to)),
     }))
-    setSelectedId((s) => (s === id ? null : s))
+    setSelection((s) => s.filter((x) => !weg.has(x)))
   }, [mutate])
+  const removeCard = useCallback((id: string) => removeCards([id]), [removeCards])
 
-  const openBoard = useCallback((id: string) => { setPath((p) => [...p, id]); setSelectedId(null); setEditingId(null) }, [])
-  const goToCrumb = useCallback((index: number) => { setPath((p) => p.slice(0, index)); setSelectedId(null); setEditingId(null) }, [])
+  const openBoard = useCallback((id: string) => { setPath((p) => [...p, id]); setSelection([]); setEditingId(null) }, [])
+  const goToCrumb = useCallback((index: number) => { setPath((p) => p.slice(0, index)); setSelection([]); setEditingId(null) }, [])
 
   const addCard = useCallback((type: BoardCardType) => {
     const n = cards.length
@@ -187,7 +265,7 @@ export function BoardCanvas({
     if (type === 'column') base.title = t('board.type.column', 'Spalte')
     if (type === 'board') { base.title = t('board.type.board', 'Unterboard'); base.board = { cards: [], connections: [] } }
     mutate((b) => ({ ...b, cards: [...b.cards, base] }))
-    setSelectedId(base.id)
+    selectOnly(base.id)
     if (type === 'note' || type === 'heading' || type === 'link' || type === 'column') setEditingId(base.id)
   }, [cards.length, mutate, t])
 
@@ -228,7 +306,7 @@ export function BoardCanvas({
           y: (at?.y ?? (scroll?.scrollTop ?? 0) + 120) + index * 24,
         }
         mutate((b) => ({ ...b, cards: [...b.cards, base] }))
-        setSelectedId(base.id)
+        selectOnly(base.id)
       }
       img.src = src
     }
@@ -285,23 +363,64 @@ export function BoardCanvas({
 
   // ── Verschieben (+ Spalten-Detach/Drop) ──
   const onHeaderPointerDown = (e: React.PointerEvent, card: BoardCard) => {
-    if (editingId) return
+    if (editingId || spaceDown) return
     e.currentTarget.setPointerCapture(e.pointerId)
     const r = layout.get(card.id)
     const p = toBoard(e.clientX, e.clientY)
-    dragRef.current = { id: card.id, dx: p.x - (r?.x ?? card.x), dy: p.y - (r?.y ?? card.y), moved: false }
+    // Eine Karte, die schon in der Auswahl liegt, nimmt die ganze Auswahl mit.
+    // Eine, die nicht drin liegt, wird zur Auswahl — sonst zoege ein Griff
+    // daneben stillschweigend etwas anderes mit.
+    const mit = selection.includes(card.id) ? selection : [card.id]
+    if (!selection.includes(card.id) && !e.shiftKey) selectOnly(card.id)
+    dragRef.current = {
+      id: card.id,
+      dx: p.x - (r?.x ?? card.x),
+      dy: p.y - (r?.y ?? card.y),
+      moved: false,
+      mit: mit.map((id) => {
+        const rr = layout.get(id)
+        return { id, x: rr?.x ?? 0, y: rr?.y ?? 0 }
+      }),
+      start: p,
+    }
   }
   const onHeaderPointerMove = (e: React.PointerEvent) => {
     const d = dragRef.current
     if (!d) return
     const p = toBoard(e.clientX, e.clientY)
+    if (!d.moved && Math.abs(p.x - d.start.x) < 3 && Math.abs(p.y - d.start.y) < 3) return
     d.moved = true
-    patchCard(d.id, { columnId: undefined, x: Math.max(0, p.x - d.dx), y: Math.max(0, p.y - d.dy) })
+    const frei = e.altKey
+    if (d.mit.length > 1) {
+      // Die ganze Auswahl um DENSELBEN Versatz — nicht jede Karte einzeln
+      // aufs Raster. Sonst zoege ein Griff die Abstaende zwischen den Karten
+      // zurecht, und ein sorgfaeltig gelegtes Moodboard kaeme anders wieder.
+      const dx = fang(p.x - d.start.x, frei)
+      const dy = fang(p.y - d.start.y, frei)
+      mutate((b) => ({
+        ...b,
+        cards: b.cards.map((c) => {
+          const s0 = d.mit.find((m) => m.id === c.id)
+          return s0 ? { ...c, columnId: undefined, x: Math.max(0, s0.x + dx), y: Math.max(0, s0.y + dy) } : c
+        }),
+      }))
+      return
+    }
+    patchCard(d.id, {
+      columnId: undefined,
+      x: Math.max(0, fang(p.x - d.dx, frei)),
+      y: Math.max(0, fang(p.y - d.dy, frei)),
+    })
   }
   const onHeaderPointerUp = (e: React.PointerEvent, card: BoardCard) => {
     const d = dragRef.current
     e.currentTarget.releasePointerCapture(e.pointerId)
-    if (d && !d.moved) { setSelectedId(card.id); dragRef.current = null; return }
+    if (d && !d.moved) {
+      if (e.shiftKey) toggleSelected(card.id)
+      else selectOnly(card.id)
+      dragRef.current = null
+      return
+    }
     if (d) {
       const p = toBoard(e.clientX, e.clientY)
       const cur = cardById.get(d.id)
@@ -332,18 +451,208 @@ export function BoardCanvas({
     }
   }, [connectFrom, toBoard, mutate])
 
-  // ── Löschen per Tastatur ──
+  /** Karten an eine Stelle setzen, die frei ist — fuer Verdoppeln und Einfuegen. */
+  const einsetzen = useCallback((vorlagen: BoardCard[], versatz: number) => {
+    if (vorlagen.length === 0) return
+    const neue = vorlagen.map((c) => ({
+      ...JSON.parse(JSON.stringify(c)) as BoardCard,
+      id: nextId(),
+      columnId: undefined,
+      x: c.x + versatz,
+      y: c.y + versatz,
+    }))
+    mutate((b) => ({ ...b, cards: [...b.cards, ...neue] }))
+    setSelection(neue.map((c) => c.id))
+  }, [mutate])
+
+  // ── Tastatur ──
+  //
+  // Bis hierher gab es genau zwei Tasten: Entfernen und Escape. Was fehlte,
+  // ist das, was auf einer Arbeitsflaeche in den Fingern sitzt — Auswahl
+  // verschieben, verdoppeln, kopieren, alles auswaehlen, zoomen. Ohne sie
+  // ist jede Bewegung ein Ziehen mit der Maus, und zwei Karten um denselben
+  // Betrag zu versetzen wird zur Zielübung.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === ' ' && !editingId) setSpaceDown(true)
       if (editingId) return
       const el = e.target as HTMLElement | null
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) { e.preventDefault(); removeCard(selectedId) }
-      else if (e.key === 'Escape') setSelectedId(null)
+      const mod = e.metaKey || e.ctrlKey
+
+      if ((e.key === 'Delete' || e.key === 'Backspace')) {
+        if (selectedLink) { e.preventDefault(); mutate((b) => ({ ...b, connections: b.connections.filter((x) => x.id !== selectedLink) })); setSelectedLink(null); return }
+        if (selection.length) { e.preventDefault(); removeCards(selection) }
+        return
+      }
+      if (e.key === 'Escape') { setSelection([]); setSelectedLink(null); return }
+      if (mod && e.key.toLowerCase() === 'a') {
+        e.preventDefault()
+        setSelection(cards.map((c) => c.id))
+        return
+      }
+      if (mod && e.key.toLowerCase() === 'd' && selection.length) {
+        e.preventDefault()
+        einsetzen(cards.filter((c) => selection.includes(c.id)), 24)
+        return
+      }
+      if (mod && e.key.toLowerCase() === 'c' && selection.length) {
+        clipRef.current = cards.filter((c) => selection.includes(c.id))
+        return
+      }
+      if (mod && e.key.toLowerCase() === 'v' && clipRef.current.length) {
+        // Bilder aus der System-Zwischenablage haben ihren eigenen Weg
+        // (`paste`-Ereignis) und kommen hier nicht vorbei: dieser Zweig
+        // greift nur, wenn vorher im Board kopiert wurde.
+        e.preventDefault()
+        einsetzen(clipRef.current, 28)
+        return
+      }
+      if (mod && (e.key === '+' || e.key === '=')) { e.preventDefault(); setZoom((z) => Math.min(ZOOM_MAX, z + 0.1)); return }
+      if (mod && e.key === '-') { e.preventDefault(); setZoom((z) => Math.max(ZOOM_MIN, z - 0.1)); return }
+      if (mod && e.key === '0') { e.preventDefault(); setZoom(1); return }
+
+      if (selection.length && e.key.startsWith('Arrow')) {
+        e.preventDefault()
+        const schritt = e.shiftKey ? GRID : 1
+        const dx = e.key === 'ArrowLeft' ? -schritt : e.key === 'ArrowRight' ? schritt : 0
+        const dy = e.key === 'ArrowUp' ? -schritt : e.key === 'ArrowDown' ? schritt : 0
+        mutate((b) => ({
+          ...b,
+          cards: b.cards.map((c) =>
+            selection.includes(c.id)
+              ? { ...c, columnId: undefined, x: Math.max(0, c.x + dx), y: Math.max(0, c.y + dy) }
+              : c,
+          ),
+        }))
+      }
     }
+    const onKeyUp = (e: KeyboardEvent) => { if (e.key === ' ') setSpaceDown(false) }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [selectedId, editingId, removeCard])
+    window.addEventListener('keyup', onKeyUp)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('keyup', onKeyUp)
+    }
+  }, [selection, selectedLink, editingId, removeCards, cards, einsetzen, mutate])
+
+  // ── Die Fläche selbst: Auswahlrahmen, Schieben, Zoom ────────────────────
+  //
+  // Eine Geste je Eingabe, und jede tut das, was sie anderswo auch tut:
+  // ziehen auf dem Leeren waehlt aus, Leertaste oder mittlere Maustaste
+  // schiebt, Strg/Cmd + Rad zoomt auf den Zeiger.
+
+  /**
+   * Die Flaeche waechst mit dem Inhalt.
+   *
+   * 2600x1600 war eine Wand: wer eine Karte an den Rand zog, konnte daneben
+   * nichts mehr ablegen. Jetzt liegt hinter der aeussersten Karte immer noch
+   * ein halber Bildschirm Platz.
+   */
+  const planeW = useMemo(
+    () => Math.max(BOARD_W, ...[...layout.values()].map((r) => r.x + r.w + 400)),
+    [layout],
+  )
+  const planeH = useMemo(
+    () => Math.max(BOARD_H, ...[...layout.values()].map((r) => r.y + r.h + 400)),
+    [layout],
+  )
+
+  const onSurfacePointerDown = (e: React.PointerEvent) => {
+    const aufKarte = (e.target as HTMLElement).closest('[data-card-id],[data-column-id]')
+    if (spaceDown || e.button === 1) {
+      const sc = scrollRef.current
+      if (!sc) return
+      e.preventDefault()
+      panRef.current = { x: e.clientX, y: e.clientY, left: sc.scrollLeft, top: sc.scrollTop }
+      return
+    }
+    if (aufKarte || e.button !== 0) return
+    const p = toBoard(e.clientX, e.clientY)
+    marqueeRef.current = { x0: p.x, y0: p.y, additive: e.shiftKey }
+    setMarquee({ x: p.x, y: p.y, w: 0, h: 0 })
+    if (!e.shiftKey) { setSelection([]); setSelectedLink(null) }
+  }
+
+  const onSurfacePointerMove = (e: React.PointerEvent) => {
+    const pan = panRef.current
+    if (pan) {
+      const sc = scrollRef.current
+      if (!sc) return
+      sc.scrollLeft = pan.left - (e.clientX - pan.x)
+      sc.scrollTop = pan.top - (e.clientY - pan.y)
+      return
+    }
+    const m = marqueeRef.current
+    if (!m) return
+    const p = toBoard(e.clientX, e.clientY)
+    setMarquee({
+      x: Math.min(m.x0, p.x),
+      y: Math.min(m.y0, p.y),
+      w: Math.abs(p.x - m.x0),
+      h: Math.abs(p.y - m.y0),
+    })
+  }
+
+  const onSurfacePointerUp = () => {
+    panRef.current = null
+    const m = marqueeRef.current
+    marqueeRef.current = null
+    const r = marquee
+    setMarquee(null)
+    if (!m || !r) return
+    // Ein Klick ohne Ziehen hat oben schon abgewaehlt; `imRahmen` gibt fuer
+    // einen Rahmen ohne Flaeche nichts heraus (RAHMEN_MIN), also fuegt ein
+    // Klick auch nichts hinzu.
+    const getroffen = imRahmen(cards, layout, r)
+    setSelection((s) => (m.additive ? [...new Set([...s, ...getroffen])] : getroffen))
+  }
+
+  /**
+   * Strg/Cmd + Rad zoomt AUF DEN ZEIGER.
+   *
+   * Ohne die Korrektur der Bildlaufposition zoomt die Flaeche auf ihre linke
+   * obere Ecke, und was man ansieht, wandert beim Zoomen aus dem Bild. Die
+   * Rechnung ist die uebliche: der Board-Punkt unter dem Zeiger bleibt unter
+   * dem Zeiger.
+   */
+  const onWheel = (e: React.WheelEvent) => {
+    if (!e.ctrlKey && !e.metaKey) return
+    const sc = scrollRef.current
+    if (!sc) return
+    e.preventDefault()
+    const vorher = zoom
+    const nachher = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, vorher * (e.deltaY < 0 ? 1.1 : 1 / 1.1)))
+    if (nachher === vorher) return
+    const box = sc.getBoundingClientRect()
+    const zx = e.clientX - box.left + sc.scrollLeft
+    const zy = e.clientY - box.top + sc.scrollTop
+    setZoom(nachher)
+    requestAnimationFrame(() => {
+      sc.scrollLeft = (zx / vorher) * nachher - (e.clientX - box.left)
+      sc.scrollTop = (zy / vorher) * nachher - (e.clientY - box.top)
+    })
+  }
+
+  /** „Alles zeigen": der Zoom, bei dem der belegte Teil ins Fenster passt. */
+  const zoomAufAlles = useCallback(() => {
+    const sc = scrollRef.current
+    if (!sc || layout.size === 0) { setZoom(1); return }
+    const rects = [...layout.values()]
+    const rechts = Math.max(...rects.map((r) => r.x + r.w))
+    const unten = Math.max(...rects.map((r) => r.y + r.h))
+    const links = Math.min(...rects.map((r) => r.x))
+    const oben = Math.min(...rects.map((r) => r.y))
+    const z = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.min(
+      (sc.clientWidth - 48) / Math.max(1, rechts - links),
+      (sc.clientHeight - 48) / Math.max(1, unten - oben),
+    )))
+    setZoom(z)
+    requestAnimationFrame(() => {
+      sc.scrollLeft = Math.max(0, links * z - 24)
+      sc.scrollTop = Math.max(0, oben * z - 24)
+    })
+  }, [layout])
 
   const anchorOut = (id: string): Point | null => { const r = layout.get(id); return r ? { x: r.x + r.w, y: r.y + r.h / 2 } : null }
   const anchorIn = (id: string): Point | null => { const r = layout.get(id); return r ? { x: r.x, y: r.y + r.h / 2 } : null }
@@ -367,12 +676,53 @@ export function BoardCanvas({
         </button>
         <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { handleFiles(e.target.files); if (fileInputRef.current) fileInputRef.current.value = '' }} />
 
+        {selection.length > 1 && (
+          /* Was mit einer Mehrfach-Auswahl geht, steht hier und nicht nur auf
+             der Tastatur: Strg+D findet niemand, der es nicht schon weiss. */
+          <span className="ml-2 flex items-center gap-1 rounded-av-control border border-av-border bg-av-surface-3 px-2 py-0.5">
+            <span className="text-[12px] text-av-text-muted">
+              {format(t('board.selection.count', '{n} ausgewählt'), { n: selection.length })}
+            </span>
+            <button type="button" className="av-toolbar-btn av-focus" onClick={() => einsetzen(cards.filter((c) => selection.includes(c.id)), 24)} aria-label={t('board.selection.duplicate', 'Auswahl verdoppeln')} title={t('board.selection.duplicate', 'Auswahl verdoppeln')}>
+              <Icon name="layers" size={14} /> <span className="text-[12px]">{t('board.selection.duplicateShort', 'Verdoppeln')}</span>
+            </button>
+            <button type="button" className="av-toolbar-btn av-focus" onClick={() => removeCards(selection)} aria-label={t('board.selection.delete', 'Auswahl löschen')} title={t('board.selection.delete', 'Auswahl löschen')}>
+              <Icon name="close" size={14} /> <span className="text-[12px]">{t('board.selection.deleteShort', 'Löschen')}</span>
+            </button>
+          </span>
+        )}
+
         <div className="ml-2 flex min-w-0 items-center gap-1.5 rounded-av-control border border-av-border bg-av-surface-3 px-2">
           <Icon name="search" size={13} style={{ color: 'var(--av-text-faint)' }} />
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('board.search.placeholder', 'Board durchsuchen…')} aria-label={t('board.search.aria', 'Board durchsuchen')} className="av-focus w-32 bg-transparent py-1 text-[12px] text-av-text outline-none placeholder:text-av-text-faint" />
         </div>
 
         <div className="ml-auto flex items-center gap-1">
+          {/* Zoom. Die Zahl ist ein Knopf: sie setzt auf 100 % zurueck —
+              dieselbe Stelle, an der sie steht, macht sie rueckgaengig. */}
+          <button type="button" className="av-toolbar-btn av-focus" onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - 0.1))} aria-label={t('board.zoom.out', 'Verkleinern')} title={t('board.zoom.out', 'Verkleinern')}>
+            <Icon name="minus" size={15} />
+          </button>
+          <button type="button" className="av-toolbar-btn av-focus min-w-[3.2rem] justify-center" onClick={() => setZoom(1)} aria-label={t('board.zoom.reset', 'Zoom auf 100 %')} title={t('board.zoom.reset', 'Zoom auf 100 %')}>
+            <span className="text-[12px] tabular-nums">{Math.round(zoom * 100)} %</span>
+          </button>
+          <button type="button" className="av-toolbar-btn av-focus" onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + 0.1))} aria-label={t('board.zoom.in', 'Vergrößern')} title={t('board.zoom.in', 'Vergrößern')}>
+            <Icon name="plus" size={15} />
+          </button>
+          <button type="button" className="av-toolbar-btn av-focus" onClick={zoomAufAlles} aria-label={t('board.zoom.fit', 'Alles zeigen')} title={t('board.zoom.fit', 'Alles zeigen')}>
+            <Icon name="fit" size={15} /> <span className="text-[12px]">{t('board.zoom.fitShort', 'Alles')}</span>
+          </button>
+          <button
+            type="button"
+            className="av-toolbar-btn av-focus"
+            aria-pressed={snap}
+            onClick={() => setSnap((v) => !v)}
+            style={snap ? { color: 'var(--av-accent)' } : undefined}
+            aria-label={t('board.snap', 'Am Raster fangen')}
+            title={t('board.snapHint', 'Am Raster fangen (Alt beim Ziehen: frei)')}
+          >
+            <Icon name="grid" size={15} /> <span className="text-[12px]">{t('board.snapShort', 'Raster')}</span>
+          </button>
           <Menu button={menuButton(t('board.menu.template', 'Vorlage'), 'wand')} align="right">
             {(close) => TEMPLATES.map((tpl) => (
               <MenuItem key={tpl.id} icon={<Icon name="board" size={14} style={{ color: 'var(--av-accent)' }} />} onClick={() => { applyTpl(tpl.id); close() }}>
@@ -414,24 +764,41 @@ export function BoardCanvas({
 
       {/* Scroll-Fläche */}
       <div
+        ref={scrollRef}
         className="av-scroll relative min-h-0 flex-1 overflow-auto"
-        onPointerDown={(e) => { if (e.target === e.currentTarget) setSelectedId(null) }}
+        style={{ cursor: spaceDown ? (panRef.current ? 'grabbing' : 'grab') : undefined }}
+        onPointerDown={onSurfacePointerDown}
+        onPointerMove={onSurfacePointerMove}
+        onPointerUp={onSurfacePointerUp}
+        onWheel={onWheel}
+        onContextMenu={(e) => { if (panRef.current) e.preventDefault() }}
         onDragOver={(e) => { e.preventDefault() }}
         onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files, toBoard(e.clientX, e.clientY)) }}
       >
         <div
           ref={boardRef}
-          className="relative"
+          className="relative origin-top-left"
           /* Das Punktraster ist eine ZEICHNUNG, kein Farbverlauf im Sinne von
              ADR-007: der Verlauf zeichnet den Punkt, er faerbt keine Flaeche.
              Dieselbe benannte Ausnahme wie der Chevron des Auswahlfelds. */
-          style={{ width: BOARD_W, height: BOARD_H, backgroundImage: 'radial-gradient(circle, var(--av-border-muted) 1px, transparent 1px)', backgroundSize: '26px 26px' }}
-          onPointerDown={(e) => { if (e.target === e.currentTarget) setSelectedId(null) }}
+          style={{
+            width: planeW,
+            height: planeH,
+            transform: `scale(${zoom})`,
+            backgroundImage: 'radial-gradient(circle, var(--av-border-muted) 1px, transparent 1px)',
+            backgroundSize: `${GRID}px ${GRID}px`,
+          }}
         >
+          {marquee && (
+            <div
+              className="pointer-events-none absolute z-30 border border-dashed border-av-accent"
+              style={{ left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h, background: 'color-mix(in srgb, var(--av-accent) 12%, transparent)' }}
+            />
+          )}
           {/* Spalten-Panels */}
           {columns.map((col) => {
             const r = layout.get(col.id)!
-            const selected = selectedId === col.id
+            const selected = isSelected(col.id)
             const hasChildren = cards.some((c) => c.columnId === col.id)
             return (
               <div key={col.id} data-column-id={col.id} className="absolute rounded-av-card border border-dashed border-av-border bg-av-surface-1/40" style={{ left: r.x, top: r.y, width: r.w, height: r.h, boxShadow: selected ? '0 0 0 2px var(--av-accent)' : undefined }}>
@@ -473,15 +840,57 @@ export function BoardCanvas({
           })}
 
           {/* Verbindungen */}
-          <svg className="pointer-events-none absolute inset-0" width={BOARD_W} height={BOARD_H}>
+          <svg className="pointer-events-none absolute inset-0" width={planeW} height={planeH}>
             {connections.map((x) => {
               const a = anchorOut(x.from); const b = anchorIn(x.to)
-              return a && b ? <path key={x.id} d={linkPath(a, b)} fill="none" stroke="var(--av-accent)" strokeWidth={1.6} opacity={0.7} /> : null
+              if (!a || !b) return null
+              const d = linkPath(a, b)
+              const gewaehlt = selectedLink === x.id
+              return (
+                <g key={x.id}>
+                  {/* Eine unsichtbare, breite Linie darunter: eine 1,6 px
+                      duenne Kurve trifft niemand mit der Maus. Erst damit
+                      laesst sich eine falsch gezogene Verbindung ueberhaupt
+                      anfassen — bis hierher war sie nur durch Loeschen einer
+                      der beiden Karten wieder wegzubekommen. */}
+                  <path
+                    d={d}
+                    fill="none"
+                    stroke="transparent"
+                    strokeWidth={14}
+                    style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+                    onPointerDown={(e) => { e.stopPropagation(); setSelectedLink(x.id); setSelection([]) }}
+                  />
+                  <path d={d} fill="none" stroke="var(--av-accent)" strokeWidth={gewaehlt ? 2.6 : 1.6} opacity={gewaehlt ? 1 : 0.7} />
+                </g>
+              )
             })}
             {connectFrom && tempPoint && anchorOut(connectFrom) && (
               <path d={linkPath(anchorOut(connectFrom)!, tempPoint)} fill="none" stroke="var(--av-accent)" strokeWidth={1.6} strokeDasharray="5 4" />
             )}
           </svg>
+
+          {/* Der Loeschknopf einer gewaehlten Verbindung.
+              Er steht in der Mitte der Kurve und nicht in einem Menue: eine
+              Verbindung hat keine Kopfzeile, an der ein Menue haengen
+              koennte, und die Entfernen-Taste allein findet niemand. */}
+          {(() => {
+            const x = connections.find((c) => c.id === selectedLink)
+            if (!x) return null
+            const a = anchorOut(x.from); const b = anchorIn(x.to)
+            if (!a || !b) return null
+            return (
+              <button
+                type="button"
+                className="av-focus absolute z-30 grid h-6 w-6 place-items-center rounded-none border border-av-border bg-av-surface-2 text-av-text"
+                style={{ left: (a.x + b.x) / 2 - 12, top: (a.y + b.y) / 2 - 12 }}
+                onClick={() => { mutate((bd) => ({ ...bd, connections: bd.connections.filter((c) => c.id !== x.id) })); setSelectedLink(null) }}
+                aria-label={t('board.link.delete', 'Verbindung löschen')}
+              >
+                <Icon name="close" size={13} />
+              </button>
+            )
+          })()}
 
           {/* Karten */}
           {drawCards.map((card) => {
@@ -490,7 +899,7 @@ export function BoardCanvas({
             return (
               <BoardCardView
                 key={card.id} card={card} rect={r} dim={!matchesQuery(card)}
-                selected={selectedId === card.id} editing={editingId === card.id}
+                selected={isSelected(card.id)} editing={editingId === card.id}
                 onHeaderPointerDown={(e) => onHeaderPointerDown(e, card)}
                 onHeaderPointerMove={onHeaderPointerMove}
                 onHeaderPointerUp={(e) => onHeaderPointerUp(e, card)}
@@ -509,6 +918,7 @@ export function BoardCanvas({
             <div className="pointer-events-none absolute left-1/2 top-40 -translate-x-1/2 text-center">
               <div className="text-[15px] font-semibold text-av-text-secondary">{path.length ? t('board.empty.subboard', 'Leeres Unterboard') : t('board.empty.board', 'Leeres Board')}</div>
               <div className="mt-1 text-[13px] text-av-text-muted">{t('board.empty.hint', 'Füge oben Karten hinzu oder wende eine Vorlage an.')}</div>
+              <div className="mt-2 text-[12px] text-av-text-faint">{t('board.empty.gestures', 'Ziehen wählt mehrere aus · Leertaste oder mittlere Maustaste schiebt die Fläche · Strg/Cmd + Mausrad zoomt')}</div>
             </div>
           )}
         </div>

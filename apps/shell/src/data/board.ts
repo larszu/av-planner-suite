@@ -175,3 +175,54 @@ function boardSection(board: Board, title: string, level: number): string[] {
 export function boardToMarkdown(board: Board, title = 'Kreativ-Board'): string {
   return `${boardSection(board, title, 1).join('\n').trim()}\n`
 }
+
+/**
+ * Welche Karten ein aufgezogener Rahmen einsammelt.
+ *
+ * ─── BERUEHRT, NICHT UMSCHLOSSEN ────────────────────────────────────────
+ *
+ * Eine Karte gehoert dazu, sobald der Rahmen sie SCHNEIDET — nicht erst,
+ * wenn er sie ganz enthaelt. Das ist keine Bequemlichkeit: auf einem
+ * Moodboard sind die Bilder gross, und ein Rahmen, der sie ganz umfassen
+ * muss, zwingt dazu, ueber den halben Bildschirm zu ziehen, um drei Karten
+ * zu erwischen, die nebeneinanderliegen. Milanote, Figma und jedes
+ * Zeichenprogramm machen es so.
+ *
+ * Der Vergleich ist bewusst STRIKT (`<`, nicht `<=`): ein Rahmen, der eine
+ * Kante genau beruehrt, hat die Karte nicht gemeint. Ohne das sammelte ein
+ * Klick mit dem kleinsten Zittern alles ein, was zufaellig an derselben
+ * Linie liegt.
+ *
+ * ─── EIN KLICK IST KEIN RAHMEN ──────────────────────────────────────────
+ *
+ * Unter `RAHMEN_MIN` Pixeln Kantenlaenge sammelt der Rahmen NICHTS ein. Ein
+ * Klick auf die freie Flaeche erzeugt technisch einen Rahmen der Groesse
+ * null, und der liegt mitten auf der Karte, ueber die man geklickt hat —
+ * ohne diese Schwelle waehlte „danebenklicken" die Karte aus, statt
+ * abzuwaehlen. Die Schwelle steht HIER und nicht im Ereignis-Handler, damit
+ * sie mit der Trefferregel zusammen gemessen wird.
+ *
+ * Reine Rechnung, damit sie gemessen werden kann — im Ereignis-Handler der
+ * Flaeche waere sie es nicht.
+ */
+export const RAHMEN_MIN = 4
+
+export function imRahmen(
+  cards: readonly BoardCard[],
+  layout: ReadonlyMap<string, Rect>,
+  rahmen: Rect,
+): string[] {
+  if (rahmen.w < RAHMEN_MIN && rahmen.h < RAHMEN_MIN) return []
+  return cards
+    .filter((c) => {
+      const r = layout.get(c.id)
+      return (
+        !!r &&
+        r.x < rahmen.x + rahmen.w &&
+        r.x + r.w > rahmen.x &&
+        r.y < rahmen.y + rahmen.h &&
+        r.y + r.h > rahmen.y
+      )
+    })
+    .map((c) => c.id)
+}

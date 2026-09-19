@@ -15,6 +15,8 @@ export type IconName =
   | 'undo'
   | 'redo'
   | 'plus'
+  | 'minus'
+  | 'fit'
   | 'close'
   | 'check'
   | 'warning'
@@ -45,6 +47,10 @@ const PATHS: Record<IconName, string> = {
   moon: 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z',
   monitor: 'M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM9 20h6M12 16v4',
   undo: 'M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2',
+  // Verkleinern und „alles zeigen" — die beiden Zeichen der Zoom-Leiste des
+  // Boards. `minus` ist der Gegenpart zu `plus` und fehlte schlicht.
+  minus: 'M5 12h14',
+  fit: 'M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4',
   redo: 'm15 7 5 5-5 5M20 12H9a5 5 0 0 0 0 10h2',
   plus: 'M12 5v14M5 12h14',
   close: 'M6 6l12 12M18 6 6 18',
