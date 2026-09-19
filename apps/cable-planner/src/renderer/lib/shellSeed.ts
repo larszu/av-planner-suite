@@ -318,14 +318,29 @@ export function seedToCable(seed: SuiteSeed, vorhandene: EquipmentItem[] = []): 
  * nicht, wohin es gehört. Zwei Stellen mit dieser Zuordnung wären eine zu
  * viel.
  *
+ * ZWEI QUELLEN, in dieser Reihenfolge, und die zweite ist kein Notbehelf:
+ *
+ *   1. Das Datenblatt-Template hinter der `deviceTypeId`. Die belegte
+ *      Angabe — sie gewinnt.
+ *   2. Sonst die Kategorie, die der NUTZER am Geraet gesetzt hat
+ *      (`categorySchemas.ts`: Kameras, Licht, Audio, …). Ein von Hand
+ *      angelegtes Geraet hat keine `deviceTypeId`, und genau davon spricht
+ *      der Auftrag: „Geräte im Cable planner haben eine Kategorie. Diese
+ *      heißt dann zum Beispiel Kamera. […] durch die Kategorie lässt es
+ *      sich zuordnen."
+ *
+ * Das widerspricht ADR-002 nicht, sondern liest es genau: verboten ist das
+ * RATEN. Aus „Kamera 1" auf eine Kamera zu schliessen wäre geraten; dass
+ * jemand „Licht" angekreuzt hat, ist gesagt. Was die Kategorie NICHT tut,
+ * ist ein Datenblatt ersetzen — Ports und Leistungsaufnahme kommen weiter
+ * nur aus dem Katalog.
+ *
  * `undefined` heisst „keine Aussage" und ausdruecklich nicht „gehoert
- * nirgends hin": ein von Hand angelegtes oder importiertes Geraet traegt
- * keine `deviceTypeId`. Das freie `category`-Feld am `EquipmentItem` wird
- * NICHT ersatzweise gelesen — es tippt der Nutzer, und damit ist es keine
- * Typaussage (ADR-002).
+ * nirgends hin": ein Geraet ohne beides faellt auf die Vorgabe `['signal']`
+ * und steht damit im Plan, der seine Anschluesse fuehrt.
  */
 const kategorieAus = (e: EquipmentItem): string | undefined =>
-  resolveDeviceType(e.deviceTypeId)?.template.category
+  resolveDeviceType(e.deviceTypeId)?.template.category ?? (e.category?.trim() || undefined)
 
 /** Rueckweg: das native Modell als Seed-Domaene „signal". */
 export function cableToSeedPatch(project: {

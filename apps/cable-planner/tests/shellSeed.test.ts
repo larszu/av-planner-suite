@@ -222,14 +222,32 @@ describe('shellSeed — Rueckweg', () => {
     expect(gemeldet.model).toBe(kamera!.name)
   })
 
-  it('schweigt, wo der Katalog nichts sagt', () => {
-    // Ein von Hand angelegtes Geraet: kein `deviceTypeId`, also keine
-    // Typaussage. Der Name waere hier verfuehrerisch genug — und genau
-    // deshalb steht er nicht in der Rechnung.
+  it('nimmt die Kategorie, die der Nutzer gesetzt hat, wenn der Katalog schweigt', () => {
+    // Der Auftrag des Eigentuemers, 2026-09-19: „Geraete im Cable planner
+    // haben eine Kategorie. Diese heisst dann zum Beispiel Kamera. [...]
+    // durch die Kategorie laesst es sich zuordnen." Eine von Hand angelegte
+    // Lampe hat keine `deviceTypeId` — aber der Nutzer hat „Licht"
+    // angekreuzt, und das ist eine Aussage und kein Ratespiel.
+    const lampe = {
+      id: 'l1',
+      name: 'Stufenlinse 1',
+      category: 'Licht',
+      inputs: [],
+      outputs: [],
+      x: 100,
+      y: 100,
+    } as unknown as EquipmentItem
+    expect(cableToSeedPatch({ equipment: [lampe] }).devices[0].kategorie).toBe('Licht')
+  })
+
+  it('schweigt, wo weder Katalog noch Nutzer etwas sagen', () => {
+    // Kein `deviceTypeId` UND keine gesetzte Kategorie. Der Name waere hier
+    // verfuehrerisch genug — und genau deshalb steht er nicht in der
+    // Rechnung (ADR-002).
     const vonHand = {
       id: 'h1',
       name: 'Kamera 1',
-      category: 'Other',
+      category: '',
       inputs: [],
       outputs: [],
       x: 100,

@@ -30,6 +30,11 @@ describe('ADR-011 — ein Gerät, viele Pläne', () => {
     // genau die Trennung, die das ADR aufhebt.
     expect(gewerkeFuer('Cameras')).toEqual(['kamera', 'signal'])
     expect(gewerkeFuer('Video Mixer')).toEqual(['signal'])
+    // Die Kategorien, die ein Mensch im Cable-Planer ankreuzt, zählen genauso.
+    // Eine Lampe, die dort angelegt wird, gehört in den Lichtplan — das ist
+    // der Auftrag, und die Wahl des Nutzers ist die Aussage dazu.
+    expect(gewerkeFuer('Licht')).toEqual(['licht', 'signal'])
+    expect(gewerkeFuer('Kameras')).toEqual(['kamera', 'signal'])
     expect(gehoertZu('Cameras', 'signal')).toBe(true)
     expect(gehoertZu('Video Mixer', 'kamera')).toBe(false)
   })

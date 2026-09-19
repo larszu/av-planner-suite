@@ -52,11 +52,20 @@ Ebene feiner — und deshalb sind die Felder in Gruppen gefasst: „der Kamerapl
 schreiben" ist eine Regel, die man prüfen kann; „der Kameraplan darf `lens`, `focalMm` und
 `hfovDeg` schreiben" ist eine Liste, die beim nächsten Feld veraltet, ohne dass es jemand merkt.
 
-**Die Kategorie wird deklariert, nie geraten.** Sie kommt aus dem **Katalog** des führenden
-Planers (`deviceTypeId` → Kategorie des Datenblatt-Templates), nicht aus dem Namen und auch
-nicht aus dem freien `category`-Feld am `EquipmentItem` — das tippt der Nutzer. Fehlt sie, gilt
-die Vorgabe `['signal']`: ein Gerät ohne Katalog-Zuordnung ist trotzdem ein Gerät im Plan.
-„Nicht angegeben" ist nicht „nirgends" (ADR-002).
+**Die Kategorie wird deklariert, nie geraten — und der Nutzer darf sie erklären.** Zwei Quellen,
+in dieser Reihenfolge: das **Datenblatt-Template** hinter der `deviceTypeId` (die belegte Angabe,
+sie gewinnt), sonst die **Kategorie, die der Nutzer am Gerät gesetzt hat** (`categorySchemas.ts`:
+Kameras, Licht, Audio, …). Der Eigentümer hat genau das verlangt: „Geräte im Cable planner haben
+eine Kategorie. Diese heißt dann zum Beispiel Kamera. […] durch die Kategorie lässt es sich
+zuordnen."
+
+Das widerspricht ADR-002 nicht, sondern liest es genau: verboten ist das **Raten**. Aus „Kamera 1"
+auf eine Kamera zu schließen wäre geraten; dass jemand „Licht" angekreuzt hat, ist **gesagt**. Was
+die Kategorie nicht tut, ist ein Datenblatt ersetzen — Ports und Leistungsaufnahme kommen weiter
+nur aus dem Katalog.
+
+Fehlt beides, gilt die Vorgabe `['signal']`: ein Gerät ohne Zuordnung ist trotzdem ein Gerät im
+Plan. „Nicht angegeben" ist nicht „nirgends".
 
 ## Der Weg dorthin — in Stufen, jede mit lauffähigem Stand
 

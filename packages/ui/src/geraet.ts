@@ -62,9 +62,16 @@ export type Gewerk = 'kamera' | 'licht' | 'signal'
  * der Normalfall.
  */
 export const KATEGORIE_GEWERKE: Readonly<Record<string, readonly Gewerk[]>> = {
+  // Wie die KATALOGE sie fuehren (Datenblatt-Templates, englisch).
   Cameras: ['kamera', 'signal'],
   Lights: ['licht', 'signal'],
-  Moving: ['licht', 'signal'],
+  // Wie sie im Eigenschaften-Feld des Cable-Planers heissen — das ist die
+  // Liste, aus der ein Mensch waehlt (`categorySchemas.ts`), und seine Wahl
+  // ist eine AUSSAGE. ADR-002 verbietet das Raten, nicht das Fragen: „Kamera
+  // 1" aus dem Namen zu schliessen waere geraten, „der Nutzer hat Licht
+  // angekreuzt" ist gesagt.
+  Kameras: ['kamera', 'signal'],
+  Licht: ['licht', 'signal'],
 }
 
 /** Die Vorgabe fuer jede Kategorie, die oben nicht steht. */
