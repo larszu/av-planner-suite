@@ -28,6 +28,7 @@ import { LENSES } from '../data/lenses';
 import type { Camera, Lens, VenueCamera, Venue } from '../types';
 import { horizontalFov } from './fov';
 import { kameraFuerTyp, typIdFuer } from './typRegister';
+import { fachAus, fachVon, GEWERK } from './fachdaten';
 
 const CAMERA_COLORS = ['#38bdf8', '#f472b6', '#a3e635', '#fbbf24', '#c084fc', '#fb7185'];
 
@@ -171,7 +172,13 @@ export function seedToCameras(
       ausgelassen.push({ id: c.id, name: c.name, grund: 'kein passendes Objektiv im Katalog' });
       return;
     }
-    const alt = schonDa.get(c.id);
+    // DAS EIGENE FACH SCHLAEGT DIE VORGABE (ADR-013). Es traegt, was dieser
+    // Planer beim letzten Mal geschrieben hat — auch dann, wenn das Projekt
+    // seither in zwei anderen Planern war und dieser hier gar nicht lief.
+    // `alt` (der lokale Stand) steht davor: wer die Kamera GERADE in der Hand
+    // hat, hat den neueren Stand als die Datei.
+    const fach = fachVon(c);
+    const alt = { ...fach, ...schonDa.get(c.id) } as Partial<VenueCamera>;
     // Die Brennweite aus dem Seed gilt — aber nur, soweit das Objektiv sie
     // hergibt. Eine Zahl ausserhalb des Zoombereichs waere eine Einstellung,
     // die es an diesem Glas nicht gibt. Nennt der Seed keine, behaelt eine
@@ -294,6 +301,11 @@ export function camerasToSeedPatch(
           // weiterzeigen, waehrend die Brennweite laengst eine andere ist.
           ...(sensor ? { hfovDeg: Number(horizontalFov(sensor.widthMm, v.focalLength).toFixed(1)) } : {}),
         },
+        // DAS FACH DIESES PLANERS (ADR-013): Schwenk, Neigung, Hoehe, Blende,
+        // Fokus, Farbe, Rig — alles, was nur er versteht. Niemand sonst liest
+        // es; es wird getragen, damit es einen Umweg ueber zwei andere Planer
+        // und die Datei ueberlebt.
+        fachdaten: { [GEWERK]: fachAus(v) },
       };
     }),
   };

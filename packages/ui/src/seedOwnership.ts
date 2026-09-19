@@ -360,16 +360,41 @@ function gehoertDomaene(g: SeedGeraet, domain: SeedDomain): boolean {
  * Meldung des Kameraplans die DMX-Adresse einer Leuchte loeschen, sobald
  * jemand drueben etwas anfasst — und niemand saehe, wann es passierte.
  */
+/**
+ * Das Fach DIESER Domaene einarbeiten — und jedes andere unangetastet lassen
+ * (ADR-013).
+ *
+ * Die Regel in einem Satz: ein Melder ERSETZT sein eigenes Fach und TRAEGT
+ * alle uebrigen. Ersetzen und nicht mischen, weil nur er weiss, was ein
+ * geloeschtes Feld in seinem Fach bedeutet; tragen und nicht mischen, weil er
+ * ueber die fremden nichts weiss — auch nicht, ob sie noch gelten.
+ *
+ * Meldet er kein Fach, bleibt seines stehen. „Nichts gesagt" ist keine
+ * Loeschung; genau daran ist die Ausrichtung der Kameras bis 2026-09-19
+ * verlorengegangen, eine Ebene hoeher.
+ */
+function fachdatenZusammen(
+  alt: SeedGeraet,
+  neu: SeedGeraet,
+  domain: SeedDomain,
+): Pick<SeedGeraet, 'fachdaten'> {
+  const eigenes = neu.fachdaten?.[domain]
+  if (!alt.fachdaten && !eigenes) return {}
+  const zusammen = { ...alt.fachdaten, ...(eigenes ? { [domain]: eigenes } : {}) }
+  return { fachdaten: zusammen }
+}
+
 function nurEigenes(alt: SeedGeraet, neu: SeedGeraet, domain: SeedDomain): SeedGeraet {
   if (domain === 'signal') {
     // Der Signalplan fuehrt das Geraet als solches: Name, Beschriftung,
     // Modell, Kategorie, Lage im Diagramm. Die Fachgruppen fasst er nicht an.
-    const { kamera, licht, x, y, ...rest } = neu
+    const { kamera, licht, x, y, fachdaten, ...rest } = neu
     void kamera
     void licht
     void x
     void y
-    return { ...alt, ...rest }
+    void fachdaten
+    return { ...alt, ...rest, ...fachdatenZusammen(alt, neu, domain) }
   }
   if (domain === 'cameras') {
     return {
@@ -389,6 +414,7 @@ function nurEigenes(alt: SeedGeraet, neu: SeedGeraet, domain: SeedDomain): SeedG
       // nur miterwaehnt, zoege es damit in seinen Plan — deshalb entsteht die
       // Gruppe nur, wo schon eine ist oder wo er etwas dazu sagt.
       ...(alt.kamera || neu.kamera ? { kamera: { ...alt.kamera, ...neu.kamera } } : {}),
+      ...fachdatenZusammen(alt, neu, domain),
     }
   }
   if (domain === 'fixtures') {
@@ -404,6 +430,7 @@ function nurEigenes(alt: SeedGeraet, neu: SeedGeraet, domain: SeedDomain): SeedG
       ...(neu.y !== undefined ? { y: neu.y } : {}),
       // Siehe oben: die leere Gruppe ist die Zuordnung zum Lichtplan.
       ...(alt.licht || neu.licht ? { licht: { ...alt.licht, ...neu.licht } } : {}),
+      ...fachdatenZusammen(alt, neu, domain),
     }
   }
   return alt

@@ -36,6 +36,7 @@
 import { imLichtplan, type SeedGeraet, type SuiteSeed } from '@avplan/ui/embed';
 import { fixtureLibrary } from './fixtureLibrary';
 import { fixtureFuerTyp, typIdFuer } from './typRegister';
+import { fachAus, fachVon, uebrigesFach, GEWERK } from './fachdaten';
 import type { Fixture, PlacedFixture, Shape } from '../types';
 
 const normalisiere = (s: string): string =>
@@ -111,7 +112,14 @@ export function seedToFixtures(
   // das war der Auftrag: „Lampen die ich im Cable planner anlege muessen auch
   // im light planner erscheinen."
   for (const f of imLichtplan(seed.geraete)) {
-    const def = katalogFixture(f, eigene);
+    // DAS EIGENE FACH (ADR-013): was dieser Planer beim letzten Mal
+    // geschrieben hat — auch wenn das Projekt seither in zwei anderen
+    // Planern war und er selbst gar nicht lief.
+    const fach = fachVon(f);
+    // Ein selbst angelegter Scheinwerfer steht in keinem Katalog. Sein Modell
+    // faehrt im Fach mit, und hier kommt es zurueck — sonst waere er nach dem
+    // Umweg ein Geraet ohne Modell und fiele als „nicht eindeutig" heraus.
+    const def = katalogFixture(f, eigene) ?? fach?.eigenesModell ?? null;
     if (!def) {
       ausgelassen.push({
         id: f.id,
@@ -120,13 +128,16 @@ export function seedToFixtures(
       });
       continue;
     }
-    const alt = schonDa.get(f.id);
+    // Der lokale Stand steht VOR dem Fach: wer die Lampe gerade in der Hand
+    // hat, ist neuer als die Datei.
+    const alt = { ...fach, ...schonDa.get(f.id) } as Partial<PlacedFixture>;
     const x = f.x ?? alt?.x ?? 0;
     const y = f.y ?? alt?.y ?? 0;
     // Verschiebt der Seed die Lampe, wandert ein Ziel, das AUF IHR LAG, mit.
     // Sonst zeigte eine Lampe, die nie ausgerichtet wurde, nach dem
     // Verschieben auf ihre alte Stelle — und das saehe aus wie eine Absicht.
-    const zieltAufSichSelbst = alt !== undefined && alt.aimX === alt.x && alt.aimY === alt.y;
+    const zieltAufSichSelbst =
+      alt.aimX !== undefined && alt.aimX === alt.x && alt.aimY === alt.y;
     fixtures.push({
       id: f.id,
       fixture: def,
@@ -140,14 +151,18 @@ export function seedToFixtures(
       // eine neue zeigt auf ihre eigene Stelle — dieselbe Voreinstellung wie
       // beim Platzieren von Hand. Ein erfundenes Ziel waere eine
       // Ausrichtungs-Aussage, die niemand getroffen hat.
-      aimX: alt && !zieltAufSichSelbst ? alt.aimX : x,
-      aimY: alt && !zieltAufSichSelbst ? alt.aimY : y,
+      aimX: alt.aimX !== undefined && !zieltAufSichSelbst ? alt.aimX : x,
+      aimY: alt.aimY !== undefined && !zieltAufSichSelbst ? alt.aimY : y,
       bodyRotation: alt?.bodyRotation ?? 0,
       dimming: f.licht?.dimmerPct ?? 100,
       ...(f.licht?.dmxChannel !== undefined ? { channel: f.licht.dmxChannel } : {}),
       ...(f.licht?.universe !== undefined ? { universe: f.licht.universe } : {}),
       ...(f.licht?.purpose ? { purpose: f.licht.purpose } : {}),
       unitNumber: f.name,
+      // Der Rest des Fachs: Zoomwinkel, Farbfolien, Torblenden,
+      // Farbtemperatur, Fokus-Notiz. Undurchsichtig fuer alle anderen,
+      // wortwoertlich fuer diesen Planer.
+      ...uebrigesFach(fach),
     });
   }
 
@@ -176,6 +191,13 @@ export function fixturesToSeedPatch(fixtures: PlacedFixture[]): { geraete: SeedG
       // Cable-Planer das Geraet und das Lager seine Position, ohne den
       // Modellnamen zu vergleichen.
       ...(() => { const t = typIdFuer(p.fixture); return t ? { typId: t } : {}; })(),
+      // DAS FACH DIESES PLANERS (ADR-013): Ausrichtung, Koerperdrehung,
+      // Zoomwinkel, Farbfolien, Torblenden, Farbtemperatur. Niemand sonst
+      // liest es; es wird getragen, damit es einen Umweg ueber zwei andere
+      // Planer und die Datei ueberlebt. Kennt der Katalog das Modell nicht,
+      // faehrt es mit — sonst waere ein selbst angelegter Scheinwerfer nach
+      // dem Umweg ein Geraet ohne Modell.
+      fachdaten: { [GEWERK]: fachAus(p, typIdFuer(p.fixture) !== undefined) },
       x: p.x,
       y: p.y,
       licht: {

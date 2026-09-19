@@ -198,9 +198,18 @@ Before that, four lists answered the same question in four ways, and “Sony FX9
 “Sony PXW-FX9” decided whether a camera arrived in the camera plan — and whether the house ordered
 one body or two.
 
-What is *not* shared: the trade facts. Sensor and mount belong to the camera plan, photometrics to
-the lighting plan, ports to the signal plan. Pick a type another planner owns and you get it along
-with the statement that those facts are missing, instead of the model being hidden from you.
+What is *not* **interpreted** elsewhere: the trade facts. Sensor and mount belong to the camera
+plan, photometrics to the lighting plan, ports to the signal plan. Pick a type another planner
+owns and you get it along with the statement that those facts are missing, instead of the model
+being hidden from you.
+
+Owning them is not the same as being the only one who keeps them. Every device carries one
+**compartment per trade** (`fachdaten`, ADR-013): each planner writes its own in full, nobody
+reads another's, and nobody may lose one. That is what makes a→b→c→a work — take a project from
+the cabling planner into the camera planner, on into the lighting planner and back, and the pan,
+tilt, aperture and renamed ports are all still there. Before that they were not: each planner kept
+its own state alongside, so within one session it looked right, and across a *file* the work was
+gone.
 
 A camera created in the cabling planner therefore *is* a camera in the camera plan — nothing to
 confirm, nothing to link, and the bill of materials counts one device because there is one. Project
