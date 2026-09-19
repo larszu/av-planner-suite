@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { seedToFixtures, fixturesToSeedPatch } from '../../light-planner/src/core/shellSeed'
-import { emptySeed, type SuiteSeed } from '@avplan/ui/embed'
+import { emptySeed, imLichtplan, type SeedGeraet, type SuiteSeed } from '@avplan/ui/embed'
 import type { PlacedFixture } from '../../light-planner/src/types'
-import { PROJECT } from '../src/data/project'
+import { PROJECT, lichtGeraete } from '../src/data/project'
 import { applyPatchToSuite, suiteToSeed } from '../src/data/seed'
 
 /**
@@ -22,9 +22,36 @@ import { applyPatchToSuite, suiteToSeed } from '../src/data/seed'
 
 const VORGABE = 6
 
-const lampe = (id: string, model: string): SuiteSeed['fixtures'][number] => ({ id, name: id, model })
+/**
+ * Eine Lampe in der bequemen Schreibweise des Lichtplans. Seit ADR-011
+ * Stufe 4 gibt es die Liste `fixtures` im Seed nicht mehr — sie ist ein
+ * FILTER auf die eine Geraeteliste. Der Helfer unten baut daraus Geraete.
+ */
+type AlsLeuchte = {
+  id: string; name: string; model?: string
+  x?: number; y?: number
+  purpose?: string; dimmerPct?: number; dmxChannel?: number; rigHeightM?: number
+}
 
-const seed = (fixtures: SuiteSeed['fixtures']): SuiteSeed => ({ ...emptySeed(1), fixtures })
+const lampe = (id: string, model: string): AlsLeuchte => ({ id, name: id, model })
+
+const seed = (fixtures: AlsLeuchte[]): SuiteSeed => {
+  const geraete: SeedGeraet[] = fixtures.map((f) => ({
+    id: f.id,
+    name: f.name,
+    kategorie: 'Licht',
+    ...(f.model !== undefined ? { model: f.model } : {}),
+    ...(f.x !== undefined ? { x: f.x } : {}),
+    ...(f.y !== undefined ? { y: f.y } : {}),
+    licht: {
+      ...(f.purpose !== undefined ? { purpose: f.purpose } : {}),
+      ...(f.dimmerPct !== undefined ? { dimmerPct: f.dimmerPct } : {}),
+      ...(f.dmxChannel !== undefined ? { dmxChannel: f.dmxChannel } : {}),
+      ...(f.rigHeightM !== undefined ? { rigHeightM: f.rigHeightM } : {}),
+    },
+  }))
+  return { ...emptySeed(1), geraete }
+}
 
 /** Ein Modell, das der Katalog eindeutig kennt — sonst wird nichts platziert. */
 const MODELL = 'ETC Source Four 26°'
@@ -135,29 +162,40 @@ describe('Ein nie ausgerichtetes Ziel wandert mit', () => {
 describe('Die Hoehe geht in die Suite zurueck', () => {
   it('steht im Rueckweg-Patch', () => {
     // Ohne sie faende die Stueckliste die Kabel zum Scheinwerfer zu kurz.
+    // Seit Stufe 3 meldet der Licht-Planer `geraete`, und die Hoehe steht in
+    // der Fachgruppe `licht` — dort, wo die Shell sie als Eigentum des
+    // Lichtplans erkennt und nichts anderes damit ueberschreibt.
     const patch = fixturesToSeedPatch([platziert({ mountingHeight: 8 })])
-    expect(patch.fixtures[0].rigHeightM).toBe(8)
+    expect(patch.geraete[0].licht?.rigHeightM).toBe(8)
   })
 })
 
 describe('Die Shell fuehrt die Hoehe mit, ohne sie zu planen', () => {
-  const projekt = { ...PROJECT, fixtures: PROJECT.fixtures.map((f) => ({ ...f })) }
+  const projekt = { ...PROJECT, geraete: PROJECT.geraete.map((g) => ({ ...g })) }
+  const ersteLeuchte = lichtGeraete(projekt)[0]
+  const alsSeedLeuchte = (rigHeightM?: number): SeedGeraet => ({
+    id: ersteLeuchte.id,
+    name: ersteLeuchte.name,
+    licht: { ...(rigHeightM !== undefined ? { rigHeightM } : {}) },
+  })
+  const hoeheVon = (p: typeof projekt) =>
+    p.geraete.find((g) => g.id === ersteLeuchte.id)?.licht?.rigHeightM
 
   it('erfindet keine, wo keine gemeldet ist', () => {
     // Ein `rigHeightM: 0` im Seed hiesse „haengt am Boden" und ueberschriebe
     // drueben die Hoehe, die der Planer selbst fuehrt.
     const s = suiteToSeed(projekt, 1)
-    expect(s.fixtures.every((f) => f.rigHeightM === undefined)).toBe(true)
+    expect(imLichtplan(s.geraete).every((g) => g.licht?.rigHeightM === undefined)).toBe(true)
   })
 
   it('nimmt die gemeldete Hoehe auf und schickt sie wieder mit', () => {
     const { project: nachher } = applyPatchToSuite(projekt, {
       domain: 'fixtures',
       revision: 1,
-      fixtures: [{ ...projekt.fixtures[0], rigHeightM: 7.5 }],
+      geraete: [alsSeedLeuchte(7.5)],
     }, 1)
-    expect(nachher.fixtures[0].rigHeightM).toBe(7.5)
-    expect(suiteToSeed(nachher, 2).fixtures[0].rigHeightM).toBe(7.5)
+    expect(hoeheVon(nachher)).toBe(7.5)
+    expect(imLichtplan(suiteToSeed(nachher, 2).geraete)[0].licht?.rigHeightM).toBe(7.5)
   })
 
   it('verliert sie nicht, wenn ein spaeterer Patch sie nicht nennt', () => {
@@ -166,18 +204,14 @@ describe('Die Shell fuehrt die Hoehe mit, ohne sie zu planen', () => {
     const { project: mitHoehe } = applyPatchToSuite(projekt, {
       domain: 'fixtures',
       revision: 1,
-      fixtures: [{ ...projekt.fixtures[0], rigHeightM: 7.5 }],
+      geraete: [alsSeedLeuchte(7.5)],
     }, 1)
-    const ohneAngabe = mitHoehe.fixtures.map((f) => {
-      const kopie = { ...f }
-      delete kopie.rigHeightM
-      return kopie
-    })
+    // Die zweite Meldung nennt dieselbe Leuchte OHNE Hoehe.
     const { project: danach } = applyPatchToSuite(mitHoehe, {
       domain: 'fixtures',
       revision: 2,
-      fixtures: ohneAngabe,
+      geraete: [alsSeedLeuchte()],
     }, 2)
-    expect(danach.fixtures[0].rigHeightM).toBe(7.5)
+    expect(hoeheVon(danach)).toBe(7.5)
   })
 })

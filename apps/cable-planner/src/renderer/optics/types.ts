@@ -884,22 +884,22 @@ export interface ProjectFile {
    * Speicher, waere jedes Speichern-und-neu-Oeffnen zwischen Import und Export
    * genau der Verlust, den das Feld verhindern soll.
    */
-  stageForeign?: Record<string, import('../utils/venueExchange').ForeignStageFields>;
+  stageForeign?: Record<string, import('./fremdfelder').ForeignStageFields>;
   /**
    * ADR-005 — Gebaeudeplan-Felder aus einem eingelesenen Raum, die MultiCam
    * nicht modelliert (Name, Sperre, PDF-Herkunft, Seitenzahl). Ohne sie kam
    * ein uebernommener PDF-Grundriss als namenloses Bild ohne Seitenbezug
    * zurueck. Gehoert aus demselben Grund in die Datei wie `stageForeign`.
    */
-  floorPlanForeign?: import('../utils/venueExchange').ForeignFloorPlanFields;
+  floorPlanForeign?: import('./fremdfelder').ForeignFloorPlanFields;
   /**
    * ADR-005 — Wand-Felder aus einem eingelesenen Raum, die MultiCam nicht
    * modelliert (Kruemmung, Reflexionsgrad), je Wand-Id.
    */
-  wallForeign?: Record<string, import('../utils/venueExchange').ForeignWallFields>;
+  wallForeign?: Record<string, import('./fremdfelder').ForeignWallFields>;
   /**
    * ADR-005 — Personen-Felder aus einem eingelesenen Raum, die MultiCam nicht
    * modelliert (Pose, Blickrichtung), je Personen-Id.
    */
-  personForeign?: Record<string, import('../utils/venueExchange').ForeignPersonFields>;
+  personForeign?: Record<string, import('./fremdfelder').ForeignPersonFields>;
 }

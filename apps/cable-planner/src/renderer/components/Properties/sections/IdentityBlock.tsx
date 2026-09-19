@@ -177,7 +177,20 @@ const DeviceTypePicker = ({ equipment }: { equipment: EquipmentItem }) => {
         <option value="">{t('eq.field.deviceTypeUnset', '— none —')}</option>
         {matches.map((c) => (
           <option key={c.id} value={c.id}>
-            {c.category ? `${c.name} · ${c.category}` : c.name}
+            {/* Ein Typ aus dem gemeinsamen Katalog der Suite, den DIESER
+                Planer nicht als Datenblatt fuehrt, wird als solcher benannt.
+                Ohne den Zusatz saehe er aus wie jeder andere — und der Nutzer
+                erfuehre erst am leeren Port-Bereich, dass die Anschluesse
+                fehlen. Ein ganzer Satz je Schluessel, Platzhalter ueber
+                `format()`: die Wortstellung gehoert zur Sprache. */}
+            {c.ohneDatenblatt
+              ? format(
+                  t('eq.field.deviceTypeNoSheetHere', '{name} · {category} — model known, ports not'),
+                  { name: c.name, category: c.category ?? '' },
+                )
+              : c.category
+                ? `${c.name} · ${c.category}`
+                : c.name}
           </option>
         ))}
       </select>

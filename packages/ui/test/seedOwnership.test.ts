@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { imKameraplan } from '../src/geraet'
 import { emptySeed, type SeedVenue, type SuiteSeed } from '../src/seed'
 import {
   SEED_VENUE_OWNER,
@@ -160,10 +161,10 @@ describe('Eigentum je Feld — der Raum geht zurueck', () => {
       revision: 3,
       at: 1000,
       venue: { widthM: 30 },
-      cameras: [{ id: 'k9', name: 'CAM 9' }],
+      geraete: [{ id: 'k9', name: 'CAM 9', kategorie: 'Cameras' }],
     })
     expect(nach.venue.widthM).toBe(30)
-    expect(nach.cameras.map((c) => c.id)).toEqual(['k9'])
+    expect(imKameraplan(nach.geraete).map((c) => c.id)).toEqual(['k9'])
   })
 })
 

@@ -22,7 +22,7 @@
 //     (`pickInitialMountAndLens`) — eine UI-Voreinstellung, die der Nutzer mit
 //     einem Klick aendert, keine Behauptung ueber sein Material.
 // ───────────────────────────────────────────────────────────────────────────
-import type { SeedCamera, SeedVenue, SuiteSeed } from '@avplan/ui/embed';
+import { imKameraplan, type SeedGeraet, type SeedVenue, type SuiteSeed } from '@avplan/ui/embed';
 import { CAMERAS } from '../data/cameras';
 import { LENSES } from '../data/lenses';
 import type { Camera, Lens, VenueCamera, Venue } from '../types';
@@ -73,7 +73,7 @@ const modellKandidaten = (text: string | undefined): string[] => {
 const bezeichnetEinModell = (kandidat: string): boolean => !/^[0-9]+$/.test(kandidat);
 
 /** Genau ein Treffer oder null. Mehrdeutig zaehlt ausdruecklich als kein Treffer. */
-export function katalogKamera(seed: Pick<SeedCamera, 'model' | 'name'>): Camera | null {
+export function katalogKamera(seed: Pick<SeedGeraet, 'model' | 'name'>): Camera | null {
   const kandidaten = [
     ...modellKandidaten(seed.model),
     ...(seed.name && seed.name.trim().length > 0 ? [normalisiere(seed.name)] : []),
@@ -140,14 +140,20 @@ export function seedToCameras(
   const ausgelassen: KameraUebernahme['ausgelassen'] = [];
   const schonDa = new Map(vorhandene.map((v) => [v.id, v]));
 
-  seed.cameras.forEach((c, i) => {
+  // ── Gelesen wird die EINE Liste (ADR-011, Stufe 3) ────────────────────
+  //
+  // `alsKameras` ist dieselbe Sicht, die die Shell bisher mitschickte —
+  // gerechnet statt uebertragen. Der Unterschied ist nicht kosmetisch: ein
+  // Geraet, das im Signalplan angelegt wurde und die Kategorie „Cameras"
+  // traegt, steht damit hier, ohne dass jemand es uebergeben muss.
+  imKameraplan(seed.geraete).forEach((c, i) => {
     const camDef = katalogKamera(c);
     if (!camDef) {
       ausgelassen.push({ id: c.id, name: c.name, grund: `Modell „${c.model ?? c.name}" ist im Katalog nicht eindeutig` });
       return;
     }
     const wahl = vorauswahl(camDef);
-    const lensDef = katalogObjektiv(c.lens, lenses) ?? wahl.lens ?? lenses[0];
+    const lensDef = katalogObjektiv(c.kamera?.lens, lenses) ?? wahl.lens ?? lenses[0];
     if (!lensDef) {
       ausgelassen.push({ id: c.id, name: c.name, grund: 'kein passendes Objektiv im Katalog' });
       return;
@@ -158,7 +164,7 @@ export function seedToCameras(
     // die es an diesem Glas nicht gibt. Nennt der Seed keine, behaelt eine
     // bekannte Kamera ihre eigene.
     const brennweite = Math.min(
-      Math.max(c.focalMm ?? alt?.focalLength ?? lensDef.focalLengthMin, lensDef.focalLengthMin),
+      Math.max(c.kamera?.focalMm ?? alt?.focalLength ?? lensDef.focalLengthMin, lensDef.focalLengthMin),
       lensDef.focalLengthMax,
     );
     cameras.push({
@@ -231,9 +237,25 @@ export function seedToVenue(seed: SuiteSeed, vorher: Venue): Venue {
 }
 
 /** Rueckweg: die platzierten Kameras als Seed-Domaene „cameras". */
-export function camerasToSeedPatch(cameras: VenueCamera[], lenses: Lens[] = LENSES): { cameras: SeedCamera[] } {
+/**
+ * Rueckweg: die platzierten Kameras als Meldung auf der EINEN Geraeteliste
+ * (ADR-011, Stufe 3).
+ *
+ * Bis 2026-09-19 meldete dieser Planer `cameras` — seine eigene Sicht. Jetzt
+ * meldet er `geraete`, und zwar mit der Fachgruppe `kamera`: die Shell
+ * schreibt daraus nur, was dem Kameraplan gehoert, und laesst alles andere am
+ * Geraet stehen. Vorher trug die Meldung die Kamera als GANZEN Datensatz, und
+ * die Shell musste raten, welche Felder ernst gemeint waren.
+ *
+ * `kategorie: 'Cameras'` faehrt mit: eine hier neu angelegte Kamera soll auch
+ * im Signalplan auftauchen, und die Zuordnung macht die Kategorie.
+ */
+export function camerasToSeedPatch(
+  cameras: VenueCamera[],
+  lenses: Lens[] = LENSES,
+): { geraete: SeedGeraet[] } {
   return {
-    cameras: cameras.map((v) => {
+    geraete: cameras.map((v) => {
       const camDef = CAMERAS.find((c) => c.id === v.cameraId);
       const lensDef = lenses.find((l) => l.id === v.lensId);
       const sensor =
@@ -243,15 +265,18 @@ export function camerasToSeedPatch(cameras: VenueCamera[], lenses: Lens[] = LENS
       return {
         id: v.id,
         name: v.label,
+        kategorie: 'Cameras',
         ...(camDef ? { model: `${camDef.manufacturer} ${camDef.model}` } : {}),
-        ...(lensDef ? { lens: `${lensDef.manufacturer} ${lensDef.model}` } : {}),
-        focalMm: v.focalLength,
-        // Der Bildwinkel wird hier gerechnet, nicht drueben: die Shell kennt
-        // die Sensorbreite nicht und wuerde sonst den alten Wert weiterzeigen,
-        // waehrend die Brennweite laengst eine andere ist.
-        ...(sensor ? { hfovDeg: Number(horizontalFov(sensor.widthMm, v.focalLength).toFixed(1)) } : {}),
         x: v.x,
         y: v.y,
+        kamera: {
+          ...(lensDef ? { lens: `${lensDef.manufacturer} ${lensDef.model}` } : {}),
+          focalMm: v.focalLength,
+          // Der Bildwinkel wird hier gerechnet, nicht drueben: die Shell kennt
+          // die Sensorbreite nicht und wuerde sonst den alten Wert
+          // weiterzeigen, waehrend die Brennweite laengst eine andere ist.
+          ...(sensor ? { hfovDeg: Number(horizontalFov(sensor.widthMm, v.focalLength).toFixed(1)) } : {}),
+        },
       };
     }),
   };

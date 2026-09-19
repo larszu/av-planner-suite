@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { SUITE_SEED_KIND, SUITE_SEED_VERSION, type SuiteSeed } from '@avplan/ui/embed'
+import { SUITE_SEED_KIND, SUITE_SEED_VERSION, type SeedGeraet, type SuiteSeed } from '@avplan/ui/embed'
 import { SEED_BELEG, cableToSeedPatch, katalogTemplate, seedToCable } from '../src/renderer/lib/shellSeed'
+import { listDeviceTypes } from '../src/renderer/lib/deviceTypeRegistry'
+import type { EquipmentItem } from '../src/renderer/types/equipment'
 
 // ───────────────────────────────────────────────────────────────────────────
 // SUITE-OVERLAY-TEST: der Projekt-Seed der Shell im Cable-Planer.
@@ -11,18 +13,46 @@ import { SEED_BELEG, cableToSeedPatch, katalogTemplate, seedToCable } from '../s
 // sondern dass sie Ports und Stecker erfinden koennte, die es nicht gibt.
 // ───────────────────────────────────────────────────────────────────────────
 
-const seed = (over: Partial<SuiteSeed> = {}): SuiteSeed => ({
-  kind: SUITE_SEED_KIND,
-  formatVersion: SUITE_SEED_VERSION,
-  revision: 1,
-  projectName: 'Sommershow 2026',
-  venue: { name: 'Halle A', widthM: 24, heightM: 14 },
-  cameras: [],
-  fixtures: [],
-  devices: [],
-  cables: [],
-  ...over,
-})
+/**
+ * Ein Seed fuer den Test.
+ *
+ * `devices` ist die bequeme Schreibweise und nicht der Inhalt: seit ADR-011
+ * Stufe 4 traegt der Seed nur noch `geraete`, und was der Signalplan davon
+ * sieht, rechnet `imSignalplan` beim Lesen aus. Der Helfer legt sie deshalb
+ * als Geraete an — so pruefen die Tests den Weg, den die Shell wirklich geht.
+ */
+type AlsSignalGeraet = {
+  id: string; name: string; subtitle?: string; model?: string; kategorie?: string
+  nx?: number; ny?: number; x?: number; y?: number
+}
+
+const seed = (over: Partial<SuiteSeed> & { devices?: AlsSignalGeraet[] } = {}): SuiteSeed => {
+  const { devices, ...rest } = over
+  const geraete: SeedGeraet[] = (devices ?? []).map((d) => ({
+    id: d.id,
+    name: d.name,
+    ...(d.subtitle !== undefined ? { sub: d.subtitle } : {}),
+    ...(d.model !== undefined ? { model: d.model } : {}),
+    ...(d.kategorie !== undefined ? { kategorie: d.kategorie } : {}),
+    ...(d.nx !== undefined ? { nx: d.nx } : {}),
+    ...(d.ny !== undefined ? { ny: d.ny } : {}),
+    ...(d.x !== undefined ? { x: d.x } : {}),
+    ...(d.y !== undefined ? { y: d.y } : {}),
+  }))
+  return {
+    kind: SUITE_SEED_KIND,
+    formatVersion: SUITE_SEED_VERSION,
+    revision: 1,
+    projectName: 'Sommershow 2026',
+    venue: { name: 'Halle A', widthM: 24, heightM: 14 },
+    geraete,
+    cables: [],
+    bedarf: [],
+    deckung: [],
+    anschluesse: [],
+    ...rest,
+  }
+}
 
 describe('shellSeed — Katalog-Aufloesung', () => {
   it('loest einen Namen auf, den der Katalog mit Hersteller-Praefix fuehrt', () => {
@@ -182,17 +212,84 @@ describe('shellSeed — Rueckweg', () => {
     const { equipment, cables } = seedToCable(start)
     const zurueck = cableToSeedPatch({ equipment, cables })
 
-    expect(zurueck.devices.map((d) => d.id)).toEqual(['cam', 'atem'])
-    expect(zurueck.devices[0].subtitle).toBe('3x SDI Out')
+    expect(zurueck.geraete.map((d) => d.id)).toEqual(['cam', 'atem'])
+    expect(zurueck.geraete[0].sub).toBe('3x SDI Out')
     // Die normalisierte Lage ueberlebt den Umweg ueber Canvas-Pixel.
-    expect(zurueck.devices[0].nx).toBeCloseTo(0.1, 2)
-    expect(zurueck.devices[0].ny).toBeCloseTo(0.2, 2)
+    expect(zurueck.geraete[0].nx).toBeCloseTo(0.1, 2)
+    expect(zurueck.geraete[0].ny).toBeCloseTo(0.2, 2)
     expect(zurueck.cables).toHaveLength(1)
     expect(zurueck.cables[0].from).toBe('cam')
     expect(zurueck.cables[0].to).toBe('atem')
     expect(zurueck.cables[0].lengthM).toBe(45)
     // Zurueck geht die aussagekraeftigere Angabe: der Standard, nicht der Stecker.
     expect(zurueck.cables[0].type).toBe('SDI-12G')
+  })
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DIE KATEGORIE KOMMT AUS DEM KATALOG, NIE AUS DEM NAMEN.
+  //
+  // Sie ist der Weg, auf dem die Shell ein Geraet den Plaenen zuordnet
+  // (ADR-011): eine Kamera steht im Kameraplan UND im Signalplan. Aus dem
+  // Namen abgeleitet waere es dieselbe Falle wie `seedFromEquipment` damals
+  // (ADR-002): „Kamera 1" ist ein Instanzname und keine Typaussage. Und das
+  // freie `category`-Feld am `EquipmentItem` taugt auch nicht: das tippt der
+  // Nutzer.
+  // ─────────────────────────────────────────────────────────────────────────
+  it('meldet die Kategorie und das Modell aus dem Katalog', () => {
+    // Eine Kamera MIT Datenblatt-Template: seit dem gemeinsamen Katalog
+    // stehen auch Modelle in der Liste, die nur ein anderer Planer fuehrt —
+    // die haben hier keine Ports und koennen deshalb nicht aufgeloest werden.
+    const kamera = listDeviceTypes().find((d) => d.category === 'Cameras' && !d.ohneDatenblatt)
+    expect(kamera, 'Katalog ohne Kamera-Eintrag').toBeDefined()
+
+    const { equipment } = seedToCable(
+      seed({ devices: [{ id: 'g1', name: kamera!.name, nx: 0.1, ny: 0.2 }] }),
+    )
+    expect(equipment[0].deviceTypeId, 'Katalog-Treffer erwartet').toBe(kamera!.id)
+
+    const [gemeldet] = cableToSeedPatch({ equipment }).geraete
+    expect(gemeldet.kategorie).toBe('Cameras')
+    // Das MODELL aus dem Datenblatt, nicht der Instanzname auf dem Canvas.
+    expect(gemeldet.model).toBe(kamera!.name)
+  })
+
+  it('nimmt die Kategorie, die der Nutzer gesetzt hat, wenn der Katalog schweigt', () => {
+    // Der Auftrag des Eigentuemers, 2026-09-19: „Geraete im Cable planner
+    // haben eine Kategorie. Diese heisst dann zum Beispiel Kamera. [...]
+    // durch die Kategorie laesst es sich zuordnen." Eine von Hand angelegte
+    // Lampe hat keine `deviceTypeId` — aber der Nutzer hat „Licht"
+    // angekreuzt, und das ist eine Aussage und kein Ratespiel.
+    const lampe = {
+      id: 'l1',
+      name: 'Stufenlinse 1',
+      category: 'Licht',
+      inputs: [],
+      outputs: [],
+      x: 100,
+      y: 100,
+    } as unknown as EquipmentItem
+    expect(cableToSeedPatch({ equipment: [lampe] }).geraete[0].kategorie).toBe('Licht')
+  })
+
+  it('schweigt, wo weder Katalog noch Nutzer etwas sagen', () => {
+    // Kein `deviceTypeId` UND keine gesetzte Kategorie. Der Name waere hier
+    // verfuehrerisch genug — und genau deshalb steht er nicht in der
+    // Rechnung (ADR-002).
+    const vonHand = {
+      id: 'h1',
+      name: 'Kamera 1',
+      category: '',
+      inputs: [],
+      outputs: [],
+      x: 100,
+      y: 100,
+    } as unknown as EquipmentItem
+    const [gemeldet] = cableToSeedPatch({ equipment: [vonHand] }).geraete
+    expect(gemeldet.kategorie).toBeUndefined()
+    expect(gemeldet.model).toBeUndefined()
+    // Der Name faehrt weiter mit — er ist die Beschriftung, nur eben keine
+    // Typaussage.
+    expect(gemeldet.name).toBe('Kamera 1')
   })
 })
 

@@ -1,6 +1,6 @@
 import type { Command } from '@avplan/ui'
 import { MODULES, type ModuleDef, type ModuleId } from '../modules/registry'
-import { PROJECT } from '../data/project'
+import { PROJECT, kameraGeraete, lichtGeraete } from '../data/project'
 import { format, type TFunc } from '../i18n'
 
 export interface CommandActions {
@@ -55,26 +55,26 @@ export function buildCommands(active: ModuleDef, actions: CommandActions, t: TFu
     }
   }
   if (active.id === 'cameras') {
-    for (const cam of PROJECT.cameras) {
+    for (const cam of kameraGeraete(PROJECT)) {
       cmds.push({
         id: `sel:${cam.id}`,
-        title: `${cam.name} — ${cam.model}`,
+        title: `${cam.name} — ${cam.model ?? ''}`,
         group: t('config.cmd.group.jump', 'Springen zu'),
-        keywords: [cam.lens],
-        hint: `${cam.focalMm} mm`,
+        keywords: [cam.kamera?.lens ?? ''],
+        hint: `${cam.kamera?.focalMm ?? 0} mm`,
         when: (ctx) => ctx.moduleId === 'cameras',
         run: () => actions.selectItem(cam.id),
       })
     }
   }
   if (active.id === 'licht') {
-    for (const fx of PROJECT.fixtures) {
+    for (const fx of lichtGeraete(PROJECT)) {
       cmds.push({
         id: `sel:${fx.id}`,
-        title: `${fx.name} — ${fx.model}`,
+        title: `${fx.name} — ${fx.model ?? ''}`,
         group: t('config.cmd.group.jump', 'Springen zu'),
-        keywords: [fx.purpose],
-        hint: `Ch ${fx.dmxChannel}`,
+        keywords: [fx.licht?.purpose ?? ''],
+        hint: `Ch ${fx.licht?.dmxChannel ?? 0}`,
         when: (ctx) => ctx.moduleId === 'licht',
         run: () => actions.selectItem(fx.id),
       })

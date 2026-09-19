@@ -162,9 +162,8 @@ describe('was eine Vorlage mitnimmt', () => {
     const { project } = templateFromProject(quelle)
     expect(project.hall).toEqual(quelle.hall)
     expect(project.stage).toEqual(quelle.stage)
-    expect(project.cameras).toEqual(quelle.cameras)
-    expect(project.fixtures).toEqual(quelle.fixtures)
-    expect(project.nodes).toEqual(quelle.nodes)
+    // EINE Liste seit ADR-011 Stufe 2 — der Rahmen bringt sie ganz mit.
+    expect(project.geraete).toEqual(quelle.geraete)
     expect(project.cables).toEqual(quelle.cables)
     expect(project.inventory).toEqual(quelle.inventory)
     // Das Haus faehrt mit — Bedarf 91 meint ausdruecklich die Haus-Vorlage.
@@ -266,7 +265,7 @@ describe('aus der Vorlage wird ein Projekt', () => {
 
   it('bringt den Rahmen mit', () => {
     const p = projectFromTemplate(vorlage(), 'Jahresgala 2027')
-    expect(p.cameras.length).toBeGreaterThan(0)
+    expect(p.geraete.length).toBeGreaterThan(0)
     expect(p.show.contacts).toEqual([])
   })
 })

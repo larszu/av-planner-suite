@@ -36,12 +36,14 @@ import quelle from '../src/rundown.ts?raw'
 const seed = (): SuiteSeed => ({
   ...emptySeed(1),
   venue: { name: 'Halle A' },
-  cameras: [
-    { id: 'c1', name: 'Kamera 1' },
-    { id: 'c2', name: 'Kamera 2' },
+  // EINE Liste seit ADR-011 Stufe 4; die Art rechnet `seedObjects` aus der
+  // Kategorie. Der Mischer bleibt ohne — „keine Kategorie" heisst Signalplan.
+  geraete: [
+    { id: 'c1', name: 'Kamera 1', kategorie: 'Cameras' },
+    { id: 'c2', name: 'Kamera 2', kategorie: 'Cameras' },
+    { id: 'f1', name: 'Key Host', kategorie: 'Lights' },
+    { id: 'd1', name: 'Mischer' },
   ],
-  fixtures: [{ id: 'f1', name: 'Key Host' }],
-  devices: [{ id: 'd1', name: 'Mischer' }],
   cables: [{ id: 'k1', label: 'SDI 1', type: '12G-SDI', from: 'c1', to: 'd1' }],
 })
 
@@ -208,7 +210,13 @@ describe('previewRundown', () => {
 
   it('verknuepft nichts, was es nicht eindeutig findet', () => {
     // Eine geratene Verknuepfung waere eine erfundene Tatsache ueber die Show.
-    const zwei = { ...seed(), cameras: [{ id: 'a', name: 'Kamera' }, { id: 'b', name: 'Kamera' }] }
+    const zwei = {
+      ...seed(),
+      geraete: [
+        { id: 'a', name: 'Kamera', kategorie: 'Cameras' },
+        { id: 'b', name: 'Kamera', kategorie: 'Cameras' },
+      ],
+    }
     const p = previewRundown(
       KOPF,
       [['1', 'Panel', '14:20', '', 'Kamera, Handheld 5']],
@@ -276,7 +284,7 @@ describe('rundownFindings', () => {
     // Seite gelesen: wer Kamera 1 aus dem Plan nimmt, entwertet jeden Punkt,
     // der sie benutzt — und bis heute sieht das niemand.
     const p = previewRundown(KOPF, [['1', 'Panel', '14:20', '', 'Kamera 1']], ZUORDNUNG, seed())
-    const ohneKamera = { ...seed(), cameras: [] }
+    const ohneKamera = { ...seed(), geraete: seed().geraete.filter((g) => g.id !== 'c1') }
     const f = rundownFindings(rundown(p.items), ohneKamera)
     expect(f.map((x) => x.kind)).toEqual<RundownFindingKind[]>(['ref-missing'])
     expect(f[0].message).toContain('Kamera 1')

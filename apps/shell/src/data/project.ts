@@ -6,6 +6,7 @@
  * eigentlichen Projektdaten leben in den eingebetteten Planern.
  */
 
+import { imPlan } from '@avplan/ui/embed'
 import { CONTAINER_KINDS, type InventoryItem, type StorageNode } from '@avplan/inventory-core'
 
 export interface ProjectMeta {
@@ -181,68 +182,98 @@ export interface InvoiceRecord {
   webUrl?: string
 }
 
-export interface Camera {
+/**
+ * EIN Geraet im Suite-Projekt — nicht eines je Planer (ADR-011, Stufe 2).
+ *
+ * ─── WAS HIER VERSCHWUNDEN IST, UND WARUM DAS DER PUNKT IST ────────────────
+ *
+ * Bis 2026-09-19 standen an dieser Stelle DREI Typen: `Camera`, `Fixture`,
+ * `SignalNode`. Die Kamera `cam2` und ihr Knoten `n_cam2` waren zwei
+ * Datensaetze fuer dasselbe Blech, verbunden nur durch eine erklaerte
+ * Zuordnung (`SignalNode.represents`) — und die hatte im ganzen Baum ausser
+ * in den Demo-Daten nie jemand gesetzt.
+ *
+ * Mit einer Liste gibt es nichts mehr zu verbinden. `represents` ist deshalb
+ * WEG, nicht deaktiviert: ein Feld, das auf ein Objekt zeigt, das es nicht
+ * mehr gibt, waere schlimmer als keins. Dasselbe gilt fuer `altIds` im Seed
+ * und fuer die Sonderregel auf dem Rueckweg, die verhinderte, dass eine
+ * Kamera als Knoten zurueckkam. Alle drei waren Geruest, und Geruest faellt,
+ * wenn der Bau steht.
+ *
+ * ─── DIE FELDGRUPPEN SIND DIE EINHEIT DES EIGENTUMS ────────────────────────
+ *
+ * Gemeinsam oben, fachlich in `kamera` und `licht`. „Der Kameraplan darf
+ * `kamera` schreiben" ist eine Regel, die man pruefen kann; eine Feldliste
+ * veraltet beim naechsten Feld, ohne dass es jemand merkt.
+ */
+export interface SuiteGeraet {
   id: string
   name: string
-  model: string
-  lens: string
-  focalMm: number
-  hfovDeg: number
-  /** Position im Plan (Meter). */
-  x: number
-  y: number
-  linked: boolean
-}
-
-export interface Fixture {
-  id: string
-  name: string
-  model: string
-  purpose: string
-  dimmerPct: number
-  dmxChannel: number
-  x: number
-  y: number
   /**
-   * Haenge-Hoehe ueber dem Boden in Metern — vom Licht-Planer gemeldet.
+   * Die Kategorie, wie der Katalog sie fuehrt („Cameras", „Licht", „Video
+   * Mixer"). Sie ordnet das Geraet den Plaenen zu — MEHREREN zugleich: eine
+   * Kamera steht im Kameraplan UND im Signalplan.
    *
-   * OPTIONAL, und das ist die ganze Aussage: die Shell plant keine Rigging-
-   * Hoehen, sie fuehrt die gemeldete mit. Fehlt sie, hat sie niemand gesetzt.
-   * Eine Vorgabe hier waere eine Hoehe, die niemand geplant hat, und sie
-   * liefe ueber den Seed zurueck in den Planer.
+   * Fehlt sie, gilt die Vorgabe `['signal']`: ein Geraet ohne Zuordnung ist
+   * trotzdem ein Geraet im Plan. „Nicht angegeben" ist nicht „nirgends".
    */
-  rigHeightM?: number
+  kategorie?: string
+  /** Das Katalog-MODELL („Sony FX9"), nicht der Instanzname („Kamera 1"). */
+  model?: string
+  /** Zweite Zeile am Knoten im Signalfluss („3x SDI Out"). Beschreibung. */
+  sub?: string
+  /** Shell-Begriff: steht es bodennah oder in der Regie? */
+  group: 'floor' | 'regie'
+  /** Shell-Begriff: steht es im Raum? */
+  venue: boolean
+  /** Lage im Signalfluss-Diagramm (0..1 relativ zur Flaeche). */
+  nx?: number
+  ny?: number
+  /**
+   * Lage im RAUM (Meter). Geteilt: Kameraplan, Lichtplan und Stueckliste
+   * meinen dieselbe Stelle.
+   *
+   * Fehlt sie, ist das Geraet noch nicht platziert — nicht „am Nullpunkt".
+   * Bis 2026-09-19 setzte der Rueckweg hier `0` ein, also die Ecke der Halle,
+   * und die Vorschau zeichnete sie als Tatsache.
+   */
+  x?: number
+  y?: number
+  /** Was der KAMERAPLAN fuehrt. */
+  kamera?: {
+    lens?: string
+    focalMm?: number
+    hfovDeg?: number
+    /** Im Kameraplan verkabelt. */
+    linked?: boolean
+  }
+  /** Was der LICHTPLAN fuehrt. */
+  licht?: {
+    purpose?: string
+    dimmerPct?: number
+    dmxChannel?: number
+    universe?: number
+    /**
+     * Haenge-Hoehe ueber dem Boden in Metern — vom Licht-Planer gemeldet.
+     * Fehlt sie, hat sie niemand gesetzt. Eine Vorgabe waere eine Hoehe, die
+     * niemand geplant hat, und sie liefe ueber den Seed in den Planer
+     * zurueck; die Stueckliste rechnete daraufhin die Kabel zu kurz.
+     */
+    rigHeightM?: number
+  }
 }
 
 export type CableLayer = 'video' | 'dmx' | 'net'
 
-export interface SignalNode {
-  id: string
-  name: string
-  sub: string
-  group: 'floor' | 'regie'
-  venue: boolean
-  /** Position im Signal-Flow (0..1 relativ zur Fläche). */
-  nx: number
-  ny: number
-  /**
-   * B-18 — WOFUER dieser Knoten im Signalweg steht, wenn er fuer etwas steht,
-   * das ein anderes Gewerk ebenfalls fuehrt.
-   *
-   * Der Knoten `n_cam2` („CAM 2 — Sony FX9") und die Kamera `cam2` sind
-   * dasselbe Blech, aber zwei Datensaetze in zwei Gewerken: der Signalweg
-   * kennt Anschluesse, der Kameraplan kennt Brennweiten. Ohne dieses Feld
-   * verbindet die beiden nur eine Namensaehnlichkeit — und die darf niemand
-   * auswerten. Ein Sprung, der `n_cam2` per Zeichenkette zu `cam2` macht,
-   * trifft beim ersten anders benannten Projekt daneben und sagt es nicht
-   * (ADR-002: die Entsprechung wird DEKLARIERT, nie geraten).
-   *
-   * Fehlt das Feld, heisst das „hier ist keine Entsprechung erklaert" — nicht
-   * „es gibt keine". Der Cross-Link wechselt dann nur das Modul, statt eine
-   * Auswahl zu erfinden.
-   */
-  represents?: { kind: 'camera' | 'fixture'; id: string }
-}
+/**
+ * ─── `SignalNode`, `Camera` und `Fixture` GIBT ES NICHT MEHR ───────────────
+ *
+ * Sie sind am 2026-09-19 in `SuiteGeraet` aufgegangen (ADR-011, Stufe 2).
+ * Wer hier nach ihnen sucht: die Migration alter Projektdateien steht in
+ * `projectFile.ts` und legt die drei Listen ueber die damals erklaerte
+ * Zuordnung (`represents`) zusammen — das Feld ueberlebt also genau so
+ * lange, wie es gebraucht wird, und keinen Tag laenger.
+ */
 
 export interface Cable {
   id: string
@@ -256,9 +287,16 @@ export interface Cable {
 
 export interface SuiteProject {
   meta: ProjectMeta
-  cameras: Camera[]
-  fixtures: Fixture[]
-  nodes: SignalNode[]
+  /**
+   * DIE Geraeteliste — eine, nicht drei (ADR-011, Stufe 2).
+   *
+   * Welcher Plan ein Geraet zeigt, sagt seine Kategorie (`gewerkeFuer` in
+   * `@avplan/ui`), und mehrere zugleich duerfen es sein. Die Helfer
+   * `kameraGeraete`, `lichtGeraete` und `signalGeraete` weiter unten sind
+   * die einzigen Stellen, die filtern — damit die Regel an EINER Stelle
+   * steht und nicht in jeder Sicht neu.
+   */
+  geraete: SuiteGeraet[]
   cables: Cable[]
   /** Bühnenmaße (Meter) für die Plan-Vorschau. */
   stage: { x: number; y: number; w: number; h: number }
@@ -283,6 +321,18 @@ export interface SuiteProject {
   seedConflicts?: SeedConflictRecord[]
   /** Angebotene Uebergaben an die anderen Planer (Nutzer-Auftrag 2026-09-12). */
   seedHandoffs?: SeedHandoffRecord[]
+  /**
+   * Knoten-Ids, deren Kamera-Uebergabe der Nutzer ABGELEHNT hat.
+   *
+   * Ohne diese Liste kaeme derselbe Vorschlag nach jeder Meldung des
+   * Signal-Planers wieder — und ein Streifen, der nach dem dritten „nein"
+   * unveraendert dasteht, wird weggeklickt statt gelesen. Die Ablehnung ist
+   * eine Aussage und wird deshalb gefuehrt, nicht vergessen.
+   *
+   * Sie haelt am KNOTEN und nicht am Namen: wer das Geraet umbenennt, hat es
+   * nicht neu entschieden.
+   */
+  kameraUebergabeAbgelehnt?: string[]
   /**
    * Was der Bestand vom Bedarf des Plans deckt — gemeldet vom Lager-Modul.
    *
@@ -347,33 +397,48 @@ export const PROJECT: SuiteProject = {
   meta: { name: 'Sommershow 2026', venue: 'Halle A', version: 12, saved: true },
   hall: { w: 24, h: 14 },
   stage: { x: 8, y: 3, w: 8, h: 3.2 },
-  cameras: [
-    { id: 'cam1', name: 'CAM 1', model: 'Sony FX9', lens: 'FE 24–105 f/4', focalMm: 24, hfovDeg: 73.7, x: 4.2, y: 10.8, linked: true },
-    { id: 'cam2', name: 'CAM 2', model: 'Sony FX9', lens: 'FE 24–105 f/4', focalMm: 85, hfovDeg: 12.4, x: 12.0, y: 11.6, linked: true },
-    { id: 'cam3', name: 'CAM 3', model: 'Sony VENICE 2', lens: 'FE 70–200 f/2.8', focalMm: 135, hfovDeg: 7.9, x: 20.4, y: 10.6, linked: true },
-    { id: 'cam4', name: 'CAM 4', model: 'Sony FR7 PTZ', lens: 'FE 24–105 f/4', focalMm: 35, hfovDeg: 54.4, x: 3.4, y: 4.6, linked: false },
-  ],
-  fixtures: [
-    { id: 'lx1', name: 'LX 1', model: 'ETC Source Four 19°', purpose: 'Key Host', dimmerPct: 82, dmxChannel: 1, x: 8.6, y: 5.6 },
-    { id: 'lx2', name: 'LX 2', model: 'ETC Source Four 36°', purpose: 'Fill', dimmerPct: 64, dmxChannel: 4, x: 10.0, y: 5.6 },
-    { id: 'lx3', name: 'LX 3', model: 'ETC Source Four 26°', purpose: 'Key Host', dimmerPct: 78, dmxChannel: 7, x: 11.2, y: 5.6 },
-    { id: 'lx4', name: 'LX 4', model: 'KL Fresnel 8 FC', purpose: 'Wash', dimmerPct: 55, dmxChannel: 10, x: 12.6, y: 5.6 },
-    { id: 'lx5', name: 'LX 5', model: 'KL Panel XL', purpose: 'Backlight', dimmerPct: 70, dmxChannel: 13, x: 14.0, y: 5.6 },
-    { id: 'lx6', name: 'LX 6', model: 'PAR 64 CP62', purpose: 'Effekt', dimmerPct: 40, dmxChannel: 16, x: 15.4, y: 5.6 },
-  ],
-  nodes: [
-    { id: 'n_cam1', name: 'CAM 1 — Sony FX9', sub: '3× SDI Out', group: 'floor', venue: true, nx: 0.08, ny: 0.12, represents: { kind: 'camera', id: 'cam1' } },
-    { id: 'n_cam2', name: 'CAM 2 — Sony FX9', sub: '3× SDI Out', group: 'floor', venue: true, nx: 0.08, ny: 0.42, represents: { kind: 'camera', id: 'cam2' } },
+  // EINE Liste (ADR-011, Stufe 2). Was frueher `cam1` UND `n_cam1` war, ist
+  // jetzt ein Geraet: die Kamera-Felder in `kamera`, die Signal-Felder oben.
+  // Die drei Kameras ohne eigenen Knoten im Signalweg behalten ihre Lage im
+  // Raum und haben schlicht kein `nx`/`ny` — sie stehen im Kameraplan und im
+  // Signalplan, nur hat sie dort noch niemand platziert.
+  geraete: [
+    { id: 'cam1', name: 'CAM 1 — Sony FX9', sub: '3× SDI Out', kategorie: 'Cameras', model: 'Sony FX9',
+      group: 'floor', venue: true, nx: 0.08, ny: 0.12, x: 4.2, y: 10.8,
+      kamera: { lens: 'FE 24–105 f/4', focalMm: 24, hfovDeg: 73.7, linked: true } },
+    { id: 'cam2', name: 'CAM 2 — Sony FX9', sub: '3× SDI Out', kategorie: 'Cameras', model: 'Sony FX9',
+      group: 'floor', venue: true, nx: 0.08, ny: 0.42, x: 12.0, y: 11.6,
+      kamera: { lens: 'FE 24–105 f/4', focalMm: 85, hfovDeg: 12.4, linked: true } },
+    { id: 'cam3', name: 'CAM 3', kategorie: 'Cameras', model: 'Sony VENICE 2',
+      group: 'floor', venue: true, x: 20.4, y: 10.6,
+      kamera: { lens: 'FE 70–200 f/2.8', focalMm: 135, hfovDeg: 7.9, linked: true } },
+    { id: 'cam4', name: 'CAM 4', kategorie: 'Cameras', model: 'Sony FR7 PTZ',
+      group: 'floor', venue: true, x: 3.4, y: 4.6,
+      kamera: { lens: 'FE 24–105 f/4', focalMm: 35, hfovDeg: 54.4, linked: false } },
+
+    { id: 'lx1', name: 'LX 1', kategorie: 'Licht', model: 'ETC Source Four 19°', group: 'floor', venue: true,
+      x: 8.6, y: 5.6, licht: { purpose: 'Key Host', dimmerPct: 82, dmxChannel: 1 } },
+    { id: 'lx2', name: 'LX 2', kategorie: 'Licht', model: 'ETC Source Four 36°', group: 'floor', venue: true,
+      x: 10.0, y: 5.6, licht: { purpose: 'Fill', dimmerPct: 64, dmxChannel: 4 } },
+    { id: 'lx3', name: 'LX 3', kategorie: 'Licht', model: 'ETC Source Four 26°', group: 'floor', venue: true,
+      x: 11.2, y: 5.6, licht: { purpose: 'Key Host', dimmerPct: 78, dmxChannel: 7 } },
+    { id: 'lx4', name: 'LX 4', kategorie: 'Licht', model: 'KL Fresnel 8 FC', group: 'floor', venue: true,
+      x: 12.6, y: 5.6, licht: { purpose: 'Wash', dimmerPct: 55, dmxChannel: 10 } },
+    { id: 'lx5', name: 'LX 5', kategorie: 'Licht', model: 'KL Panel XL', group: 'floor', venue: true,
+      x: 14.0, y: 5.6, licht: { purpose: 'Backlight', dimmerPct: 70, dmxChannel: 13 } },
+    { id: 'lx6', name: 'LX 6', kategorie: 'Licht', model: 'PAR 64 CP62', group: 'floor', venue: true,
+      x: 15.4, y: 5.6, licht: { purpose: 'Effekt', dimmerPct: 40, dmxChannel: 16 } },
+
     { id: 'n_dimmer', name: 'Dimmer Rack 2', sub: '12 Kanäle · 16 A', group: 'floor', venue: true, nx: 0.08, ny: 0.72 },
-    { id: 'n_atem', name: 'ATEM Constellation 8K', sub: '40× 12G-SDI In', group: 'regie', venue: false, nx: 0.62, ny: 0.14 },
-    { id: 'n_hub', name: 'Videohub 40×40', sub: '12G-SDI Router', group: 'regie', venue: false, nx: 0.62, ny: 0.46 },
+    { id: 'n_atem', name: 'ATEM Constellation 8K', sub: '40× 12G-SDI In', kategorie: 'Video Mixer', group: 'regie', venue: false, nx: 0.62, ny: 0.14 },
+    { id: 'n_hub', name: 'Videohub 40×40', sub: '12G-SDI Router', kategorie: 'Video Router', group: 'regie', venue: false, nx: 0.62, ny: 0.46 },
     { id: 'n_foh', name: 'FOH — GrandMA', sub: 'Licht-Pult', group: 'regie', venue: false, nx: 0.5, ny: 0.82 },
   ],
   cables: [
-    { id: 'v012', label: 'V-012 · CAM2 PGM', type: '12G-SDI', layer: 'video', lengthM: 45, from: 'n_cam2', to: 'n_atem' },
-    { id: 'v008', label: 'V-008 · CAM1 PGM', type: '12G-SDI', layer: 'video', lengthM: 45, from: 'n_cam1', to: 'n_atem' },
+    { id: 'v012', label: 'V-012 · CAM2 PGM', type: '12G-SDI', layer: 'video', lengthM: 45, from: 'cam2', to: 'n_atem' },
+    { id: 'v008', label: 'V-008 · CAM1 PGM', type: '12G-SDI', layer: 'video', lengthM: 45, from: 'cam1', to: 'n_atem' },
     { id: 'v021', label: 'V-021 · MV Out', type: '6G-SDI', layer: 'video', lengthM: 60, from: 'n_atem', to: 'n_hub' },
-    { id: 'net04', label: 'N-004 · Cam-Ctrl', type: 'Cat6A', layer: 'net', lengthM: 45, from: 'n_cam1', to: 'n_hub' },
+    { id: 'net04', label: 'N-004 · Cam-Ctrl', type: 'Cat6A', layer: 'net', lengthM: 45, from: 'cam1', to: 'n_hub' },
     { id: 'dmx03', label: 'D-003 · Dimmer A', type: 'DMX512', layer: 'dmx', lengthM: 25, from: 'n_dimmer', to: 'n_foh' },
   ],
   show: {
@@ -506,11 +571,16 @@ export interface ProjectCounts {
 }
 
 export function computeCounts(p: SuiteProject): ProjectCounts {
+  // Die Zahlen sind SICHTEN auf eine Liste und addieren sich deshalb nicht
+  // zur Gesamtzahl: eine Kamera zaehlt bei `cameras` UND bei `devices`, weil
+  // sie in beiden Plaenen steht. Das ist die Aussage und kein Rechenfehler —
+  // vorher waren es drei Listen, und die Summe war eine Zufallszahl aus der
+  // Frage, wer wen doppelt fuehrte.
   return {
-    cameras: p.cameras.length,
-    fixtures: p.fixtures.length,
+    cameras: kameraGeraete(p).length,
+    fixtures: lichtGeraete(p).length,
     cables: p.cables.length,
-    devices: p.nodes.length,
+    devices: signalGeraete(p).length,
   }
 }
 
@@ -613,3 +683,35 @@ export const PROJECTS: SuiteProject[] = [PROJECT]
 
 /** Leeres Board für den Standalone-Betrieb (ohne zugewiesenes Projekt). */
 export const emptyBoard = (): Board => ({ cards: [], connections: [] })
+
+
+// ───────────────────────────────────────────────────────────────────────────
+// DIE SICHTEN AUF DIE EINE LISTE
+//
+// Kein Filter steht woanders. Waere er in jeder Sicht wiederholt, hiesse das:
+// die Regel „welches Geraet gehoert in welchen Plan" stuende fuenfmal da, und
+// beim naechsten Sonderfall vier davon falsch.
+// ───────────────────────────────────────────────────────────────────────────
+
+/** Die Geraete, die der Kameraplan zeigt. */
+export const kameraGeraete = (p: SuiteProject): SuiteGeraet[] =>
+  p.geraete.filter((g) => imPlan(g, 'kamera'))
+
+/** Die Geraete, die der Lichtplan zeigt. */
+export const lichtGeraete = (p: SuiteProject): SuiteGeraet[] =>
+  p.geraete.filter((g) => imPlan(g, 'licht'))
+
+/**
+ * Die Geraete, die der Signalplan zeigt — also alle, die Anschluesse haben.
+ *
+ * Das ist praktisch die ganze Liste, und das ist richtig: eine Kamera haengt
+ * an einem Kabel, eine Leuchte auch. Gefiltert wird trotzdem ueber dieselbe
+ * Tabelle wie oben, damit eine kuenftige Kategorie ohne Signalbezug hier von
+ * selbst herausfaellt.
+ */
+export const signalGeraete = (p: SuiteProject): SuiteGeraet[] =>
+  p.geraete.filter((g) => imPlan(g, 'signal'))
+
+/** Ein Geraet zu seiner Id — oder `undefined`. */
+export const geraetMit = (p: SuiteProject, id: string | undefined): SuiteGeraet | undefined =>
+  id ? p.geraete.find((g) => g.id === id) : undefined

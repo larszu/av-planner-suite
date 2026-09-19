@@ -1,5 +1,5 @@
 // ───────────────────────────────────────────────────────────────────────────
-// `suite-seed` v2 — das neutrale Projektmodell, das die Shell in die
+// `suite-seed` v3 — das neutrale Projektmodell, das die Shell in die
 // eingebetteten Planer schiebt und aus ihnen zurueckbekommt.
 //
 // WARUM ES DAS BRAUCHT. Bis hierher war die Einbettung eine reine
@@ -33,6 +33,8 @@
 // (`portsUnknown` im Cable-Planer), statt Ports zu erfinden.
 // ───────────────────────────────────────────────────────────────────────────
 
+import { imPlan, type SeedGeraet } from './geraet'
+
 export const SUITE_SEED_KIND = 'suite-seed' as const
 /**
  * 2 seit 2026-09-18: `bedarf`, `deckung` und `anschluesse` sind hinzugekommen,
@@ -46,7 +48,7 @@ export const SUITE_SEED_KIND = 'suite-seed' as const
  * faehrt: Sender und Empfaenger liegen beide in diesem Repo (`apps/`), die
  * eigenstaendigen Planer-Repos kennen ihn nicht.
  */
-export const SUITE_SEED_VERSION = 2 as const
+export const SUITE_SEED_VERSION = 3 as const
 
 /** Der geteilte Raum. Masse in Metern. */
 export interface SeedVenue {
@@ -57,72 +59,13 @@ export interface SeedVenue {
   stage?: { x: number; y: number; w: number; h: number }
 }
 
-export interface SeedCamera {
-  id: string
-  name: string
-  model?: string
-  lens?: string
-  focalMm?: number
-  hfovDeg?: number
-  /** Position im Raum (Meter). */
-  x?: number
-  y?: number
-}
-
-export interface SeedFixture {
-  id: string
-  name: string
-  /**
-   * Haenge-Hoehe ueber dem Boden in Metern, WENN sie jemand gesetzt hat.
-   *
-   * Optional und nie erfunden: eine fehlende Hoehe heisst „nicht angegeben"
-   * und nicht „haengt am Boden". Wer hier eine Vorgabe eintraegt, macht aus
-   * einer UI-Voreinstellung des Planers eine Aussage ueber diese Show — und
-   * die naechste App liest sie als gesetzt.
-   *
-   * Sie gehoert in den Seed und nicht nur in den Licht-Planer: sie entscheidet
-   * ueber die Kabellaenge zum Scheinwerfer, und die Stueckliste zieht sie aus
-   * demselben Projekt.
-   */
-  rigHeightM?: number
-  model?: string
-  /** Freitext-Zweck („Key Host", „Fill", „Backlight"). */
-  purpose?: string
-  /** Dimmer-Stellung in Prozent (0..100). */
-  dimmerPct?: number
-  dmxChannel?: number
-  universe?: number
-  x?: number
-  y?: number
-}
-
-/**
- * Ein Knoten im Signalfluss. Absichtlich ohne Ports: die Shell kennt keine
- * Port-Belegung, und eine erfundene waere eine plausible-aber-falsche Tatsache,
- * die still in Stueckliste und Patchliste eingeht. Der Cable-Planer loest den
- * Namen gegen seinen Katalog auf und markiert, was er nicht aufloesen konnte.
- */
-export interface SeedDevice {
-  id: string
-  name: string
-  /** Zweite Zeile am Knoten („3x SDI Out"). Beschreibung, keine Port-Angabe. */
-  subtitle?: string
-  model?: string
-  /** Normalisierte Lage im Signalfluss-Diagramm (0..1), wie die Shell sie fuehrt. */
-  nx?: number
-  ny?: number
-  /** Lage im Raum (Meter), falls das Geraet im Venue steht. */
-  x?: number
-  y?: number
-}
-
 export interface SeedCable {
   id: string
   label: string
   /** Kabeltyp als Klartext, wie ihn die Shell fuehrt („12G-SDI", „DMX512"). */
   type: string
   lengthM?: number
-  /** Verweise auf `SeedDevice.id`. */
+  /** Verweise auf `SeedGeraet.id`. */
   from: string
   to: string
 }
@@ -264,9 +207,16 @@ export interface SuiteSeed {
   /** Name des Projekts in der Shell — nur zur Anzeige im Planer. */
   projectName?: string
   venue: SeedVenue
-  cameras: SeedCamera[]
-  fixtures: SeedFixture[]
-  devices: SeedDevice[]
+  /**
+   * DIE Geraeteliste — eine, nicht drei (Eigentuemer-Entscheidung 2026-09-19,
+   * ADR-011).
+   *
+   * Hier steht jedes Geraet genau einmal, mit allen Feldern aller Planer und
+   * seiner Kategorie. Die drei Listen darunter sind seit Formatversion 3
+   * SICHTEN darauf (`alsKameras`, `alsLeuchten`, `alsSignalGeraete`) und
+   * keine eigenen Wahrheiten mehr.
+   */
+  geraete: SeedGeraet[]
   cables: SeedCable[]
   /**
    * Der Bedarf des Plans — was an Geraeten gebraucht wird, als Modell mit
@@ -367,9 +317,21 @@ export interface SeedPatch {
    * Empfaenger und nicht die Reihenfolge des Eintreffens.
    */
   venue?: SeedVenue
-  cameras?: SeedCamera[]
-  fixtures?: SeedFixture[]
-  devices?: SeedDevice[]
+  /**
+   * Die Geraete, die dieser Planer fuehrt — die Meldung auf der EINEN Liste
+   * (ADR-011, Stufe 3).
+   *
+   * Sie loest `cameras`/`fixtures`/`devices` ab. Solange ein Planer noch auf
+   * seiner Sicht steht, meldet er wie bisher; `mergeSeedPatch` nimmt beides
+   * entgegen und rechnet es auf dieselbe Liste. Wer `geraete` schickt, sagt
+   * damit mehr als vorher moeglich war: eine Meldung kann die Kamera-Gruppe
+   * UND die Lage im Diagramm tragen, ohne dass zwei Listen dasselbe Geraet
+   * beschreiben.
+   *
+   * Was ein Planer schreiben DARF, entscheidet weiter seine Domaene — je
+   * Feldgruppe, nicht je Liste.
+   */
+  geraete?: SeedGeraet[]
   cables?: SeedCable[]
   /**
    * Die Meldung des Lagers: was der Bestand vom Bedarf deckt.
@@ -397,9 +359,7 @@ export function emptySeed(revision = 0): SuiteSeed {
     formatVersion: SUITE_SEED_VERSION,
     revision,
     venue: { name: '' },
-    cameras: [],
-    fixtures: [],
-    devices: [],
+    geraete: [],
     cables: [],
     bedarf: [],
     deckung: [],
@@ -422,19 +382,7 @@ export function emptySeed(revision = 0): SuiteSeed {
  * Richtung.
  */
 export function deriveBedarf(
-  seed: Pick<SuiteSeed, 'cameras' | 'fixtures' | 'devices'>,
-  /**
-   * Ids aus `devices`, die fuer ein Objekt stehen, das schon in `cameras` oder
-   * `fixtures` steht (`SignalNode.represents`, B-18).
-   *
-   * Ohne sie waere der Bedarf doppelt: der Knoten „CAM 2 — Sony FX9" im
-   * Signalweg und die Kamera „CAM 2" im Kameraplan sind DASSELBE BLECH in
-   * zwei Gewerken, und das Lager bekaeme zwei Geraete angefordert, wo eines
-   * steht. Der Seed traegt `represents` bewusst nicht mit — die Aufloesung
-   * ueber die Gewerks-Grenze gehoert in die Shell (B-18), und deshalb reicht
-   * sie das Ergebnis herein statt der Regel.
-   */
-  vertretene: ReadonlySet<string> = new Set(),
+  seed: Pick<SuiteSeed, 'geraete'>,
 ): SeedBedarf[] {
   const zeilen = new Map<string, SeedBedarf>()
   const offen: SeedBedarf[] = []
@@ -464,11 +412,25 @@ export function deriveBedarf(
     else zeilen.set(key, { key, label: modell, category, quantity: 1, fromDomain })
   }
 
-  for (const c of seed.cameras) aufnehmen('cameras', c.id, c.name, c.model, 'camera')
-  for (const f of seed.fixtures) aufnehmen('fixtures', f.id, f.name, f.model, 'fixture')
-  for (const d of seed.devices) {
-    if (vertretene.has(d.id)) continue
-    aufnehmen('signal', d.id, d.name, d.model)
+  // ── UEBER DIE EINE LISTE (ADR-011, Stufe 4) ──────────────────────────────
+  //
+  // Hier standen drei Schleifen und eine Ausnahmeliste: die Knoten, die fuer
+  // eine Kamera standen, mussten herausgezaehlt werden, sonst forderte das
+  // Lager zwei Geraete an, wo eines steht. Mit einer Liste gibt es diese
+  // Doppelung nicht — das Problem ist nicht geloest, sondern verschwunden,
+  // und die Ausnahmeliste mit ihm.
+  //
+  // `fromDomain` sagt, in welchem Plan das Geraet gefuehrt wird. Ein Geraet
+  // steht in mehreren; genannt wird der speziellste, weil das Lager wissen
+  // will, was es ist, und nicht, wo es ueberall vorkommt.
+  for (const g of seed.geraete) {
+    const domain: SeedDomain = imPlan(g, 'kamera')
+      ? 'cameras'
+      : imPlan(g, 'licht')
+        ? 'fixtures'
+        : 'signal'
+    const category = domain === 'cameras' ? 'camera' : domain === 'fixtures' ? 'fixture' : undefined
+    aufnehmen(domain, g.id, g.name, g.model, category)
   }
 
   return [...zeilen.values(), ...offen]
@@ -483,9 +445,7 @@ export function isSuiteSeed(value: unknown): value is SuiteSeed {
     s.formatVersion === SUITE_SEED_VERSION &&
     typeof s.revision === 'number' &&
     !!s.venue &&
-    Array.isArray(s.cameras) &&
-    Array.isArray(s.fixtures) &&
-    Array.isArray(s.devices) &&
+    Array.isArray(s.geraete) &&
     Array.isArray(s.cables) &&
     Array.isArray(s.bedarf) &&
     Array.isArray(s.deckung) &&
@@ -499,10 +459,16 @@ export function isSuiteSeed(value: unknown): value is SuiteSeed {
  * Smoke-Test misst, damit ein leer bleibender Planer wieder auffaellt.
  */
 export function seedContentCount(seed: SuiteSeed): number {
-  // `bedarf` zaehlt hier bewusst NICHT mit: er ist aus denselben drei Listen
-  // abgeleitet, und ihn mitzuzaehlen hiesse, denselben Inhalt zweimal zu
-  // zaehlen — ein Seed saehe voller aus, als er ist.
-  return seed.cameras.length + seed.fixtures.length + seed.devices.length + seed.cables.length
+  // ÜBER `geraete` UND NICHT ÜBER DIE DREI SICHTEN (ADR-011, Stufe 2).
+  //
+  // Eine Kamera steht in `cameras` UND in `devices` — sie zu addieren hiesse,
+  // sie zweimal zu zaehlen. Gemessen am 2026-09-19: ein Seed mit drei
+  // Geraeten und einem Kabel meldete `6` statt `4`. Die Zahl entscheidet
+  // ausserdem, ob ein Planer einen Seed als „leer" behandelt, und ein zu
+  // voller Seed ist dort die gefaehrlichere Richtung.
+  //
+  // `bedarf` zaehlt aus demselben Grund nicht mit: er ist abgeleitet.
+  return seed.geraete.length + seed.cables.length
 }
 
 // Das Einarbeiten einer Rueckmeldung steht NICHT hier, sondern in

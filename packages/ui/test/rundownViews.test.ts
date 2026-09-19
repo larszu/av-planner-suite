@@ -27,9 +27,12 @@ import quelle from '../src/rundownViews.ts?raw'
 
 const seed = (): SuiteSeed => ({
   ...emptySeed(1),
-  cameras: [{ id: 'c1', name: 'Kamera 1' }],
-  fixtures: [{ id: 'f1', name: 'Key Host' }],
-  devices: [{ id: 'd1', name: 'Mischer' }],
+  // EINE Liste seit ADR-011 Stufe 4; die Art kommt aus der Kategorie.
+  geraete: [
+    { id: 'c1', name: 'Kamera 1', kategorie: 'Cameras' },
+    { id: 'f1', name: 'Key Host', kategorie: 'Lights' },
+    { id: 'd1', name: 'Mischer' },
+  ],
   cables: [],
 })
 
@@ -140,7 +143,12 @@ describe('Bedarf 7 trifft Bedarf 8 — der Name kommt aus dem Plan von heute', (
   it('druckt den NEUEN Namen nach einer Umbenennung', () => {
     // Ein Blatt mit dem beim Import gelesenen Namen zeigt einen, den im Haus
     // niemand mehr benutzt.
-    const umbenannt = { ...seed(), cameras: [{ id: 'c1', name: 'Kamera Bühne links' }] }
+    const umbenannt = {
+      ...seed(),
+      geraete: seed().geraete.map((g) =>
+        g.id === 'c1' ? { ...g, name: 'Kamera Bühne links' } : g,
+      ),
+    }
     const v = rundownView(rd([PUNKT]), umbenannt, 'crew')
     expect(v.rows[0][3]).toBe('Kamera Bühne links, Mischer')
   })
@@ -148,7 +156,7 @@ describe('Bedarf 7 trifft Bedarf 8 — der Name kommt aus dem Plan von heute', (
   it('benennt Verschwundenes, statt es wegzulassen', () => {
     // Eine kuerzere Zeile saehe aus wie ein Punkt, der weniger Material
     // braucht.
-    const ohneKamera = { ...seed(), cameras: [] }
+    const ohneKamera = { ...seed(), geraete: seed().geraete.filter((g) => g.id !== 'c1') }
     expect(rundownView(rd([PUNKT]), ohneKamera, 'crew').rows[0][3]).toBe(
       `Kamera 1 ${GEAR_GONE}, Mischer`,
     )

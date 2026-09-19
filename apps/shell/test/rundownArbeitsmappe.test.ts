@@ -41,7 +41,7 @@ const mappeMitZeitzelle = (): ArrayBuffer => {
   return XLSX.write(mappe, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer
 }
 
-const SEED: SuiteSeed = { cameras: [], fixtures: [], devices: [], cables: [] }
+const SEED = { geraete: [], cables: [] } as unknown as SuiteSeed
 
 describe('die Mappe wird gelesen wie die Tabelle, aus der sie kommt', () => {
   it('erkennt eine Mappe an der Endung — und nur die', () => {

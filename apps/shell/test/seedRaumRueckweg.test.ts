@@ -136,8 +136,18 @@ describe('Der Raum kommt aus dem Planer zurueck', () => {
       0,
       uhr,
     )
-    expect(project.nodes.map((n) => n.group)).toEqual(p.nodes.map((n) => n.group))
-    expect(project.cameras.map((c) => c.linked)).toEqual(p.cameras.map((c) => c.linked))
+    expect(project.geraete.map((g) => g.group)).toEqual(p.geraete.map((g) => g.group))
+    expect(project.geraete.map((g) => g.venue)).toEqual(p.geraete.map((g) => g.venue))
+    // Und die Fachgruppen, die der Signalplan gar nicht fuehrt: eine Meldung
+    // von dort darf die Brennweite einer Kamera nicht loeschen. Seit ADR-011
+    // Stufe 2 haengt das an der Eigentumsregel je Feldgruppe und nicht mehr
+    // daran, dass drei Listen getrennt waren.
+    expect(project.geraete.map((g) => g.kamera?.linked)).toEqual(
+      p.geraete.map((g) => g.kamera?.linked),
+    )
+    expect(project.geraete.map((g) => g.licht?.dmxChannel)).toEqual(
+      p.geraete.map((g) => g.licht?.dmxChannel),
+    )
     expect(project.cables.map((c) => c.layer)).toEqual(p.cables.map((c) => c.layer))
   })
 })

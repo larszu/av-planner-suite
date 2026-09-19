@@ -143,7 +143,7 @@ describe('Die Verdrahtung', () => {
   it('der Raum wird VOR der Leer-Sperre uebernommen', () => {
     const hook = lies('apps/light-planner/src/core/useShellSeed.ts')
     const raum = hook.indexOf('seedToVenue(seed)')
-    const sperre = hook.indexOf('seed.fixtures.length === 0')
+    const sperre = hook.indexOf('imLichtplan(seed.geraete).length === 0')
     // Die Sperre ist eine Aussage ueber SCHEINWERFER. Den Raum mit ihr
     // wegzuwerfen hiesse, ihn aus einem Grund zu verlieren, der nichts mit ihm
     // zu tun hat.

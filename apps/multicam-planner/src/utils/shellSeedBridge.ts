@@ -2,7 +2,7 @@
 // SUITE-OVERLAY (nicht upstream): Anschluss des Projekt-Seeds an den Store.
 // Die Abbildung selbst steht in `shellSeed.ts` (rein, headless testbar).
 // ───────────────────────────────────────────────────────────────────────────
-import { connectShellSeed } from '@avplan/ui/embed';
+import { connectShellSeed, imKameraplan } from '@avplan/ui/embed';
 import { useStore } from '../store/useStore';
 import { LENSES, pickInitialMountAndLens } from '../data/lenses';
 import { camerasToSeedPatch, seedToCameras, seedToVenue, venueToSeedPatch } from './shellSeed';
@@ -15,7 +15,7 @@ export function initShellSeed(): () => void {
     apply: (seed) => {
       const s = useStore.getState();
       // Ein leerer Seed darf einen gefuellten Plan nicht loeschen.
-      if (seed.cameras.length === 0 && s.cameras.length > 0) return false;
+      if (imKameraplan(seed.geraete).length === 0 && s.cameras.length > 0) return false;
 
       const venue = seedToVenue(seed, s.venue);
       const { cameras, ausgelassen } = seedToCameras(
@@ -36,7 +36,7 @@ export function initShellSeed(): () => void {
       }
       s.setVenue(venue);
       useStore.setState({ cameras });
-      console.info(`[shellSeed] ${cameras.length}/${seed.cameras.length} Kameras übernommen`);
+      console.info(`[shellSeed] ${cameras.length}/${imKameraplan(seed.geraete).length} Kameras übernommen`);
       return true;
     },
     collect: () => {

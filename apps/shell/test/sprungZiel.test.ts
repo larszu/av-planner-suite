@@ -11,8 +11,17 @@ import { PROJECT } from '../src/data/project'
  * Der Backlog-Eintrag: „„Im Signal-Flow zeigen" wechselt das Modul, die
  * Auswahl bleibt zurueck." Geprueft ist hier beides, was daran haengt:
  *
- *  1. WELCHE Id mitfaehrt — die des Ziel-Gewerks, aufgeloest ueber eine
- *     DEKLARIERTE Entsprechung. Nie ueber Namensaehnlichkeit (ADR-002).
+ *  1. WELCHE Id mitfaehrt. Seit ADR-011 Stufe 2 ist das DIESELBE Id: es gibt
+ *     eine Geraeteliste, und das Geraet IST der Knoten. Die Frage lautet nur
+ *     noch, ob es im ZIEL-Plan ueberhaupt steht — ein Mischer hat im
+ *     Kameraplan nichts zu suchen, und ein Sprung dorthin waere eine Auswahl,
+ *     die es nicht gibt.
+ *
+ *     Was hier bis 2026-09-19 stand, war die Aufloesung ueber
+ *     `SignalNode.represents`: `cam2` und `n_cam2` waren zwei Datensaetze, und
+ *     ohne erklaerte Zuordnung zeigte der Sprung ins Leere. Mit einer Liste
+ *     gibt es nichts mehr aufzuloesen — das Problem ist nicht geloest,
+ *     sondern verschwunden.
  *  2. WANN sie ankommt — erst im Ziel-Modul, dessen Rahmen beim Klick noch gar
  *     nicht steht. Wer sofort sendet, zeigt im Modul, das der Nutzer verlaesst.
  */
@@ -20,43 +29,48 @@ import { PROJECT } from '../src/data/project'
 const projekt = (teil: Partial<SuiteProject> = {}): SuiteProject =>
   ({ ...PROJECT, ...teil }) as SuiteProject
 
-describe('Die Entsprechung ist deklariert, nicht geraten', () => {
-  it('findet den Knoten, der erklaertermassen fuer die Kamera steht', () => {
-    expect(knotenFuer(PROJECT, 'camera', 'cam2')).toBe('n_cam2')
+describe('Das Geraet IST der Knoten — es gibt nichts aufzuloesen', () => {
+  it('findet die Kamera unter ihrer eigenen Id', () => {
+    expect(knotenFuer(PROJECT, 'camera', 'cam2')).toBe('cam2')
   })
 
-  it('raet NICHT aus dem Namen', () => {
-    // `n_cam9` heisst „CAM 9" und sieht fuer jedes Auge nach `cam9` aus. Genau
-    // deshalb steht der Fall hier: ohne `represents` ist die Antwort
-    // `undefined` und nicht der naheliegende Treffer. Ein geratener Sprung
-    // saehe aus wie ein gelungener.
-    const p = projekt({
-      cameras: [{ ...PROJECT.cameras[0], id: 'cam9', name: 'CAM 9' }],
-      nodes: [{ ...PROJECT.nodes[0], id: 'n_cam9', name: 'CAM 9 — Sony FX9', represents: undefined }],
-    })
-    expect(knotenFuer(p, 'camera', 'cam9')).toBeUndefined()
-    expect(querziel(p, { modul: 'cameras', id: 'cam9' }, 'signal')).toBeUndefined()
+  it('sagt NEIN, wo das Geraet im Ziel-Plan nicht steht', () => {
+    // Der Fall, der die alte „raet nicht aus dem Namen"-Zusicherung abloest:
+    // dort ging es darum, dass zwei Datensaetze ohne erklaerte Zuordnung
+    // nicht zusammengelegt werden. Jetzt ist es EIN Datensatz, und die
+    // verbleibende Frage ist die Zugehoerigkeit.
+    //
+    // Der Videohub steht im Signalplan und in keinem anderen. Ihn im
+    // Kameraplan auszuwaehlen hiesse, dort ein Objekt zu zeigen, das es dort
+    // nicht gibt.
+    expect(knotenFuer(PROJECT, 'camera', 'n_hub')).toBeUndefined()
+    expect(knotenFuer(PROJECT, 'fixture', 'n_hub')).toBeUndefined()
+    expect(querziel(PROJECT, { modul: 'signal', id: 'n_hub' }, 'cameras')).toBeUndefined()
   })
 
-  it('unterscheidet die Art: ein Fixture ist keine Kamera unter derselben Id', () => {
-    // Beide Gewerke duerfen dieselbe Id vergeben — sie sind getrennte
-    // Id-Raeume. Wer nur die Id vergleicht, springt vom Fixture auf den Knoten
-    // der gleichnamigen Kamera.
-    const p = projekt({
-      nodes: [{ ...PROJECT.nodes[0], id: 'n_x', represents: { kind: 'camera', id: 'gleich' } }],
-    })
-    expect(knotenFuer(p, 'camera', 'gleich')).toBe('n_x')
-    expect(knotenFuer(p, 'fixture', 'gleich')).toBeUndefined()
+  it('und NEIN zu einer Id, die es gar nicht gibt', () => {
+    expect(knotenFuer(PROJECT, 'camera', 'gibt-es-nicht')).toBeUndefined()
+  })
+
+  it('unterscheidet die Plaene, nicht die Id-Raeume', () => {
+    // Bis 2026-09-19 stand hier: „beide Gewerke duerfen dieselbe Id vergeben
+    // — sie sind getrennte Id-Raeume." Das ist vorbei: es gibt EINEN Id-Raum,
+    // und genau deshalb kann dieselbe Id nicht mehr zwei Dinge meinen.
+    //
+    // Was bleibt, ist die Plan-Zugehoerigkeit: `lx3` ist eine Leuchte, also
+    // im Lichtplan und im Signalplan — aber nicht im Kameraplan.
+    expect(knotenFuer(PROJECT, 'fixture', 'lx3')).toBe('lx3')
+    expect(knotenFuer(PROJECT, 'camera', 'lx3')).toBeUndefined()
   })
 })
 
 describe('Was mitfaehrt, ist die Id des ZIEL-Gewerks', () => {
-  it('Kamera -> Signalweg: der Knoten, nicht die Kamera', () => {
-    expect(querziel(PROJECT, { modul: 'cameras', id: 'cam2' }, 'signal')).toBe('n_cam2')
+  it('Kamera -> Signalweg: dieselbe Id, weil es dasselbe Geraet ist', () => {
+    expect(querziel(PROJECT, { modul: 'cameras', id: 'cam2' }, 'signal')).toBe('cam2')
   })
 
   it('Signalweg -> Kameraplan: die Kamera am Kabel, nicht das Kabel', () => {
-    // v012 haengt an n_cam2, und n_cam2 steht erklaertermassen fuer cam2.
+    // v012 haengt an cam2 — und das ist die Kamera.
     expect(objektAmKabel(PROJECT, 'v012', 'camera')).toBe('cam2')
     expect(querziel(PROJECT, { modul: 'signal', id: 'v012' }, 'cameras')).toBe('cam2')
   })
@@ -65,16 +79,27 @@ describe('Was mitfaehrt, ist die Id des ZIEL-Gewerks', () => {
     // Willkuerlich, aber festgehalten: in einem Signalweg ist „welche Kamera
     // ist das" die Seite, die das Signal erzeugt.
     const p = projekt({
-      cables: [{ ...PROJECT.cables[0], id: 'k', from: 'n_cam2', to: 'n_cam1' }],
+      cables: [{ ...PROJECT.cables[0], id: 'k', from: 'cam2', to: 'cam1' }],
     })
     expect(objektAmKabel(p, 'k', 'camera')).toBe('cam2')
   })
 
-  it('faehrt ohne Ziel, wo nichts erklaert ist', () => {
-    // dmx03 haengt an n_dimmer und n_foh — fuer beide steht kein Fixture und
-    // keine Kamera. Der Knopf wechselt dann nur das Modul, wie bisher.
+  it('faehrt ohne Ziel, wo das Geraet im Ziel-Plan nicht steht', () => {
+    // dmx03 haengt an n_dimmer und n_foh — beide stehen nur im Signalplan,
+    // im Kameraplan gibt es dazu nichts auszuwaehlen.
     expect(querziel(PROJECT, { modul: 'signal', id: 'dmx03' }, 'cameras')).toBeUndefined()
-    expect(querziel(PROJECT, { modul: 'licht', id: 'lx3' }, 'signal')).toBeUndefined()
+  })
+
+  it('Licht -> Signalweg fuehrt jetzt ZU ETWAS — und das ist der Unterschied', () => {
+    // Bis 2026-09-19 war das `undefined`: die Leuchte `lx3` und der Signalplan
+    // hatten keine erklaerte Verbindung, also wechselte der Knopf nur das
+    // Modul und liess den Nutzer suchen.
+    //
+    // Eine Leuchte haengt an einem Kabel. Sie steht deshalb im Lichtplan UND
+    // im Signalplan, und der Sprung zeigt dort dasselbe Geraet. Das ist keine
+    // gelockerte Zusicherung, sondern die Folge davon, dass es nur noch ein
+    // Geraet gibt.
+    expect(querziel(PROJECT, { modul: 'licht', id: 'lx3' }, 'signal')).toBe('lx3')
   })
 
   it('Kamera -> Licht bleibt ohne Ziel', () => {
@@ -96,7 +121,7 @@ describe('Was mitfaehrt, ist die Id des ZIEL-Gewerks', () => {
 })
 
 describe('Die offene Bitte kommt im richtigen Moment im richtigen Modul an', () => {
-  const bitte = { modul: 'signal' as const, id: 'n_cam2' }
+  const bitte = { modul: 'signal' as const, id: 'cam2' }
 
   it('sendet, wenn ihr Modul vorne steht und der Rahmen hoert', () => {
     expect(

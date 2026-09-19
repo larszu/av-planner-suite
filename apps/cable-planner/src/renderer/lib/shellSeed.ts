@@ -32,7 +32,7 @@
 //      eine Falschaussage ueber echte Hardware. Das Kabel wird dann NICHT
 //      angelegt, sondern als ausgelassen gemeldet — sichtbar, nicht still.
 // ───────────────────────────────────────────────────────────────────────────
-import type { SeedCable, SeedDevice, SuiteSeed } from '@avplan/ui/embed'
+import { imSignalplan, type SeedCable, type SeedGeraet, type SuiteSeed } from '@avplan/ui/embed'
 import type { ConnectorType, EquipmentItem, EquipmentTemplate, Port } from '../types/equipment'
 import type { Cable, CableType } from '../types/cable'
 import type { SignalStandard } from '../types/cableSpec'
@@ -83,7 +83,7 @@ const normalisiere = (s: string): string =>
  * wird. Das Shell-Label traegt oft eine Instanz davor („CAM 1 — Sony FX9"),
  * deshalb zaehlt auch der Teil hinter dem Gedankenstrich als Kandidat.
  */
-export function kandidaten(device: Pick<SeedDevice, 'name' | 'model'>): string[] {
+export function kandidaten(device: Pick<SeedGeraet, 'name' | 'model'>): string[] {
   const roh = [device.model, device.name].filter((s): s is string => !!s && s.trim().length > 0)
   const aus: string[] = []
   for (const r of roh) {
@@ -105,15 +105,24 @@ export function kandidaten(device: Pick<SeedDevice, 'name' | 'model'>): string[]
  * meist nicht. Treffen mehrere, ist das Ergebnis ausdruecklich null: bei
  * Mehrdeutigkeit raten waere schlimmer als nicht aufloesen.
  */
-export function katalogTemplate(device: Pick<SeedDevice, 'name' | 'model'>): EquipmentTemplate | null {
+export function katalogTemplate(device: Pick<SeedGeraet, 'name' | 'model'>): EquipmentTemplate | null {
   const typen = listDeviceTypes()
   for (const kandidat of kandidaten(device)) {
     const treffer = typen.filter((typ) => {
       const name = normalisiere(typ.name)
       return name === kandidat || name.endsWith(` ${kandidat}`)
     })
-    if (treffer.length === 1) {
-      const info = resolveDeviceType(treffer[0].id)
+    // Seit der Katalog der ganzen Suite in dieser Liste steht, kann derselbe
+    // Name zweimal auftauchen: einmal als hiesiges Datenblatt-Template und
+    // einmal als Typ, den nur ein anderer Planer fuehrt. Das ist KEINE
+    // Mehrdeutigkeit — es ist dasselbe Modell, und eines der beiden kennt
+    // seine Anschluesse. Ohne diese Zeile fiele der Treffer unter die
+    // Rate-Sperre darunter, und ein Geraet verloere beim naechsten Seed
+    // seine Ports. Still.
+    const mitDatenblatt = treffer.filter((t) => !t.ohneDatenblatt)
+    const eindeutig = mitDatenblatt.length === 1 ? mitDatenblatt : treffer
+    if (eindeutig.length === 1) {
+      const info = resolveDeviceType(eindeutig[0].id)
       if (info) return info.template
     }
   }
@@ -125,7 +134,15 @@ const klonPort = (p: Port, praefix: string, i: number): Port => ({
   id: `${praefix}-${i}-${p.id}`,
 })
 
-interface SeedGeraet {
+/**
+ * Ein Geraet IM AUFBAU, waehrend der Seed gelesen wird.
+ *
+ * Hiess bis 2026-09-19 `SeedGeraet` — derselbe Name, den seit ADR-011 der
+ * Geraete-Typ des Protokolls traegt. Zwei verschiedene Dinge unter einem
+ * Namen in derselben Datei: genau die Sorte Verwechslung, die dieser Umbau
+ * gerade abschafft.
+ */
+interface ImAufbau {
   item: EquipmentItem
   /** true = kein eindeutiger Katalog-Treffer, Ports duerfen ergaenzt werden. */
   offen: boolean
@@ -165,14 +182,20 @@ export interface SeedUebernahme {
  */
 export function seedToCable(seed: SuiteSeed, vorhandene: EquipmentItem[] = []): SeedUebernahme {
   const ausgelassen: SeedUebernahme['ausgelassen'] = []
-  const geraete = new Map<string, SeedGeraet>()
+  const geraete = new Map<string, ImAufbau>()
   const schonDa = new Map(vorhandene.map((e) => [e.id, e]))
 
-  seed.devices.forEach((d, i) => {
+  // ── Gelesen wird die EINE Liste (ADR-011, Stufe 3) ──────────────────────
+  //
+  // `alsSignalGeraete` ist dieselbe Sicht, die die Shell bisher mitschickte —
+  // gerechnet statt uebertragen. Sie traegt ALLE Geraete, Kameras und
+  // Leuchten eingeschlossen: die haengen an Kabeln und gehoeren in diesen
+  // Plan. Wer sie hier vermisste, legte sie ein zweites Mal an.
+  imSignalplan(seed.geraete).forEach((d, i) => {
     const basis = {
       id: d.id,
       name: d.name,
-      ...(d.subtitle ? { subtitle: d.subtitle } : {}),
+      ...(d.sub ? { subtitle: d.sub } : {}),
       x: Math.round((d.nx ?? (i % 4) * 0.25) * CANVAS_W),
       y: Math.round((d.ny ?? Math.floor(i / 4) * 0.25) * CANVAS_H),
     }
@@ -308,20 +331,68 @@ export function seedToCable(seed: SuiteSeed, vorhandene: EquipmentItem[] = []): 
   return { equipment, cables, ausgelassen }
 }
 
+/**
+ * Die Kategorie aus dem KATALOG, nicht aus dem Namen.
+ *
+ * Sie ordnet das Geraet in der Suite den Plaenen zu (ADR-011): eine Kamera
+ * steht im Kameraplan UND im Signalplan, ein Mischer nur im Signalplan.
+ * Welche Kategorie in welchen Plan gehoert, entscheidet die Tabelle in
+ * `@avplan/ui/embed` — dieser Planer sagt nur, was sein Katalog sagt, und
+ * nicht, wohin es gehört. Zwei Stellen mit dieser Zuordnung wären eine zu
+ * viel.
+ *
+ * ZWEI QUELLEN, in dieser Reihenfolge, und die zweite ist kein Notbehelf:
+ *
+ *   1. Das Datenblatt-Template hinter der `deviceTypeId`. Die belegte
+ *      Angabe — sie gewinnt.
+ *   2. Sonst die Kategorie, die der NUTZER am Geraet gesetzt hat
+ *      (`categorySchemas.ts`: Kameras, Licht, Audio, …). Ein von Hand
+ *      angelegtes Geraet hat keine `deviceTypeId`, und genau davon spricht
+ *      der Auftrag: „Geräte im Cable planner haben eine Kategorie. Diese
+ *      heißt dann zum Beispiel Kamera. […] durch die Kategorie lässt es
+ *      sich zuordnen."
+ *
+ * Das widerspricht ADR-002 nicht, sondern liest es genau: verboten ist das
+ * RATEN. Aus „Kamera 1" auf eine Kamera zu schliessen wäre geraten; dass
+ * jemand „Licht" angekreuzt hat, ist gesagt. Was die Kategorie NICHT tut,
+ * ist ein Datenblatt ersetzen — Ports und Leistungsaufnahme kommen weiter
+ * nur aus dem Katalog.
+ *
+ * `undefined` heisst „keine Aussage" und ausdruecklich nicht „gehoert
+ * nirgends hin": ein Geraet ohne beides faellt auf die Vorgabe `['signal']`
+ * und steht damit im Plan, der seine Anschluesse fuehrt.
+ */
+const kategorieAus = (e: EquipmentItem): string | undefined =>
+  resolveDeviceType(e.deviceTypeId)?.template.category ?? (e.category?.trim() || undefined)
+
 /** Rueckweg: das native Modell als Seed-Domaene „signal". */
 export function cableToSeedPatch(project: {
   equipment?: EquipmentItem[]
   cables?: Cable[]
-}): { devices: SeedDevice[]; cables: SeedCable[] } {
+}): { geraete: SeedGeraet[]; cables: SeedCable[] } {
   const equipment = project.equipment ?? []
   return {
-    devices: equipment.map((e) => ({
-      id: e.id,
-      name: e.name,
-      ...(e.subtitle ? { subtitle: e.subtitle } : {}),
-      nx: Math.min(1, Math.max(0, e.x / CANVAS_W)),
-      ny: Math.min(1, Math.max(0, e.y / CANVAS_H)),
-    })),
+    // Gemeldet wird auf der EINEN Liste (Stufe 3). Die Fachgruppen `kamera`
+    // und `licht` fasst dieser Planer NICHT an — sie gehoeren dem Kamera-
+    // bzw. Lichtplan, und die Shell laesst sie deshalb stehen, auch wenn
+    // dieser Planer ein Geraet meldet, das drueben eine Brennweite hat.
+    geraete: equipment.map((e) => {
+      // Das MODELL, nicht der Instanzname. `e.name` ist „Kamera 1"; was fuer
+      // ein Geraet dahintersteht, sagt allein das Template hinter der
+      // `deviceTypeId` (ADR-002). Der Kameraplan loest sein Katalog-Modell
+      // daraus auf — mit dem Instanznamen koennte er es nicht.
+      const modell = resolveDeviceType(e.deviceTypeId)?.template.name
+      const kategorie = kategorieAus(e)
+      return {
+        id: e.id,
+        name: e.name,
+        ...(e.subtitle ? { sub: e.subtitle } : {}),
+        ...(modell ? { model: modell } : {}),
+        ...(kategorie ? { kategorie } : {}),
+        nx: Math.min(1, Math.max(0, e.x / CANVAS_W)),
+        ny: Math.min(1, Math.max(0, e.y / CANVAS_H)),
+      }
+    }),
     cables: (project.cables ?? []).map((c) => ({
       id: c.id,
       label: c.name,

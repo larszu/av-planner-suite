@@ -39,6 +39,7 @@
 // ───────────────────────────────────────────────────────────────────────────
 
 import type { Rundown } from './rundown'
+import { imKameraplan, imLichtplan, imSignalplan } from './geraet'
 import type { SuiteSeed } from './seed'
 import { GEAR_GONE, NO_TIME_ON_SHEET, type GearSheet } from './rundownViews'
 
@@ -94,13 +95,17 @@ const minutenAlsUhr = (min: number | null | undefined): string =>
 const nameHeute = (seed: SuiteSeed, kind: string, id: string): string => {
   const suche = <T extends { id: string; name: string }>(xs: readonly T[]): string | undefined =>
     xs.find((x) => x.id === id)?.name
+  // Die Art entscheidet, in WELCHEM Plan gesucht wird — und ein Geraet steht
+  // in mehreren. Gesucht wird deshalb gefiltert und nicht in einer eigenen
+  // Liste je Art: die gab es bis Stufe 4, und dasselbe Geraet stand in zweien
+  // davon.
   const name =
     kind === 'camera'
-      ? suche(seed.cameras)
+      ? suche(imKameraplan(seed.geraete))
       : kind === 'fixture'
-        ? suche(seed.fixtures)
+        ? suche(imLichtplan(seed.geraete))
         : kind === 'device'
-          ? suche(seed.devices)
+          ? suche(imSignalplan(seed.geraete))
           : seed.cables.find((c) => c.id === id)?.label
   return name ?? GEAR_GONE
 }

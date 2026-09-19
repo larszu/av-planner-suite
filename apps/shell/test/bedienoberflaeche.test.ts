@@ -31,9 +31,8 @@ const seed: SuiteSeed = {
   revision: 1,
   projectName: 'Testabend',
   venue: { name: 'Halle' },
-  cameras: [{ id: 'cam1', name: 'Kamera 1' }],
-  fixtures: [],
-  devices: [
+  geraete: [
+    { id: 'cam1', name: 'Kamera 1', kategorie: 'Cameras' },
     { id: 'dev1', name: 'Mischer' },
     { id: 'dev2', name: 'Recorder' },
   ],

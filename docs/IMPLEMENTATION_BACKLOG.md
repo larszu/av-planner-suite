@@ -2181,6 +2181,189 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
   wird aufaddiert statt der Dauer des letzten Punktes.
 * **Aufwand:** ~~groß~~ erledigt
 
+### B-80 · Drei Listen für dasselbe Blech — ADR-001 galt im Planer und nicht dazwischen
+
+* **Status:** erledigt am 2026-09-19 — alle vier Stufen gebaut (ADR-011).
+
+* **Die Entscheidung.** Eigentümer, 2026-09-19: „Es gibt nur ein universelles
+  device pro Gerät und nicht pro planner. Dieses device hat alle Felder und
+  Inhalte von Cable planner, multicam planner, light planner und allen
+  anderen Planern. So sollte es auch im Plan gestanden haben."
+
+* **Er hatte recht, und das Papier gab ihm schon recht.** ADR-001, erster
+  Absatz: „Jedes reale Ding bekommt genau einen Datensatz […], nie eine zweite
+  Wahrheit." Der `suite-seed` hielt sich daran INNERHALB eines Planers und
+  brach es DAZWISCHEN: `cameras`, `fixtures` und `devices` waren drei Listen,
+  und die Kamera `cam2` und ihr Knoten `n_cam2` zwei Datensätze für dasselbe
+  Blech.
+
+* **Wie es dazu kam — nicht aus Nachlässigkeit.** `mergeSeedPatch` teilt das
+  Eigentum **je Liste** zu. Das verhindert, dass zwei Planer sich gegenseitig
+  überschreiben, und diese Zusicherung bleibt. Die Regel brauchte nur Listen,
+  um zu greifen — und wer Listen braucht, baut Listen.
+
+* **Gebaut (Stufe 1).** `packages/ui/src/geraet.ts`: `SeedGeraet` mit `id`,
+  `kategorie`, gemeinsamen Feldern und je einer Gruppe `kamera`/`licht`; die
+  Kategorie ordnet einem Gerät **mehrere** Pläne zugleich zu (`gewerkeFuer`).
+  `geraeteAus` legt die drei Listen der Shell über die **erklärte**
+  Entsprechung (`represents`) zusammen — wo niemand sie erklärt hat, bleiben
+  es zwei Geräte, und das ist die richtige Antwort. `alsKameras`,
+  `alsLeuchten` und `alsSignalGeraete` sind seither die einzigen Erzeuger der
+  drei Listen im Seed.
+
+* **Was damit sofort anders ist:** der Signalplan bekommt **alle** Geräte,
+  Kameras und Leuchten eingeschlossen — der sichtbare Teil des Auftrags.
+
+* **Das Gerüst, das dazugehört, und warum es Gerüst ist.** `altIds` trägt die
+  alte Id je Sicht durch die Übergangszeit; ohne sie wäre jede Kamera in jedem
+  bestehenden Projekt eine neue, samt verlorener Ausrichtung und Brennweite.
+  Und `applyPatchToSuite` übernimmt aus der Signal-Meldung keine Geräte, deren
+  Id einer Kamera oder Leuchte gehört — sonst käme die Kamera als Knoten
+  zurück und stünde beim nächsten Senden wieder doppelt da. Das ist keine
+  Sonderregel, sondern die Eigentumsregel an der Stelle, an der sie ohnehin
+  gilt. **Beides fällt mit Stufe 2 bzw. 3.**
+
+* **`SeedDevice.gewerk` aus B-79 ist entfallen.** Es war die enge Fassung
+  derselben Idee („ist das auch eine Kamera?"), und die Kategorie beantwortet
+  sie allgemeiner. Beides zu führen wären zwei Wahrheiten über dieselbe
+  Sache — in einem Umbau gegen zweite Wahrheiten.
+
+* **Stufe 2, gebaut am selben Tag.** Das Shell-Projekt führt jetzt `geraete`.
+  Was dabei **verschwunden** ist — nicht abgeschaltet, gelöscht:
+  `SignalNode.represents` (es gibt nichts mehr zu verbinden; das Feld lebt nur
+  noch in der Migration alter Dateien weiter), `altIds`, die Sonderregel auf
+  dem Rückweg, und **die Kamera-Übergabe aus B-79** samt ihrem Streifen.
+  Das Eigentum ist dabei von „je Liste" auf „je **Feldgruppe**" gewandert —
+  gezogen wurde das mit Stufe 2 und nicht erst mit Stufe 3, weil eine Meldung
+  die eine Liste sonst gar nicht erreicht hätte.
+
+* **Stufe 3, gebaut am selben Tag.** Alle drei Planer lesen `seed.geraete` und
+  melden `patch.geraete`. Dabei fiel ein Fehler auf, den es ohne den Umbau
+  nicht zu finden gab: **ein Feld hieß in zwei Welten verschieden** — die
+  Shell führte `sub`, das Protokoll `subtitle`. Der Untertitel verschwand auf
+  dem Weg zum Planer, und zwar still, weil ein `undefined` nirgends auffällt.
+
+* **Stufe 4, gebaut am selben Tag.** Die Sichten `cameras`/`fixtures`/`devices`
+  sind aus `SuiteSeed` und `SeedPatch` verschwunden, mit ihnen die Typen
+  `SeedCamera`, `SeedFixture`, `SeedDevice`. Ein Plan ist jetzt ein FILTER auf
+  die eine Liste (`imKameraplan`, `imLichtplan`, `imSignalplan`) und gibt
+  dieselben `SeedGeraet` zurück, die der Seed führt.
+
+  Zwei Befunde, die erst das Löschen sichtbar machte — beide hingen daran,
+  dass die getrennten Listen die Zuständigkeit nebenbei mitcodierten:
+
+  * **Lager und Gebäude durften den Plan schreiben.** `mergeSeedPatch`
+    arbeitete jedes `geraete` im Patch ein, gleich aus welcher Domäne. Mit
+    getrennten Listen fiel das nicht auf — ein Lager schickte eben kein
+    `cameras`. Mit einer gemeinsamen Liste hätte ein Lager den Plan leeren
+    können: ADR-006 in der Gegenrichtung durchbrochen. Jetzt melden nur
+    `signal`, `cameras` und `fixtures` Geräte.
+  * **Die leere Feldgruppe war eine Aussage.** `kamera: {}` heißt „steht im
+    Kameraplan" (`imPlan`). Der Rückweg legte sie unbedingt an — eine Meldung
+    des Kameraplans zog damit jedes darin erwähnte fremde Gerät in den
+    Kameraplan, den Mischer eingeschlossen. Die Gruppe entsteht jetzt nur, wo
+    schon eine ist oder wo der Planer etwas dazu sagt.
+
+* **Guards.** `packages/ui/test/geraet.test.ts` (8),
+  `packages/ui/test/seed.test.ts` (10, darunter der Fall „zieht ein fremdes
+  Gerät nicht in den Kameraplan"), `apps/shell/test/kategorieAussage.test.ts`
+  (4), zwei Fälle in `apps/cable-planner/tests/shellSeed.test.ts`.
+
+---
+
+### B-79 · Die Kamera aus dem Signalplan kam im Kameraplan nie an
+
+* **Status:** erledigt am 2026-09-19 — und am selben Tag **wieder ausgebaut**,
+  weil B-80 das Problem entfernt hat statt es zu überbrücken. Der Eintrag
+  bleibt stehen: er erklärt, warum der Code eine Zeitlang da war, und was ihn
+  überflüssig gemacht hat.
+
+* **Nachtrag, 2026-09-19 (B-80, ADR-011 Stufe 2).** `data/kameraUebergabe.ts`,
+  `shell/KameraUebergabeBar.tsx` und ihr Test sind gelöscht. Die Übergabe
+  fragte, ob eine im Signalplan angelegte Kamera auch in den Kameraplan soll —
+  eine Frage, die es nur gab, weil Shell und Seed drei getrennte Listen
+  führten. Mit einer Liste steht ein Gerät der Kategorie „Cameras" in beiden
+  Plänen, und der Eigentümer hat genau das verlangt: „Alle Geräte sind in
+  allen Planern verfügbar."
+
+  Die Begründung der Übergabe war nicht falsch, sondern galt für ein Modell,
+  das es nicht mehr gibt. Sie hier zu löschen ist billiger, als sie zu
+  pflegen — und ehrlicher, als sie als toten Code stehenzulassen.
+
+* **Die Meldung.** Nutzer, 2026-09-19: „Wenn ich im ab planner suite den Cable
+  planner geöffnet habe und dort eine Kamera anlege muss diese auch im
+  Multicam planner angelegt und gezeigt werden."
+
+* **Der Befund, nachgemessen und nicht vermutet.** `mergeSeedPatch` teilt die
+  Domänen-Listen je genau einem Eigentümer zu: der Cable-Planer schreibt
+  `devices` und `cables`, der MultiCam-Planer `cameras`. Wer im eingebetteten
+  Cable-Planer eine Kamera anlegte, erzeugte deshalb einen **Signalknoten** —
+  und `apps/multicam-planner/src/utils/shellSeedBridge.ts` liest
+  ausschließlich `seed.cameras`. Die Kamera kam drüben nie an, und zwar still.
+
+  Die Gegenrichtung ebenso: `suiteToSeed` bildet `devices` allein aus
+  `project.nodes` ab, Kameras werden nicht mit hineinprojiziert.
+
+  `SignalNode.represents` (B-18) wäre die Brücke — aber sie wurde im ganzen
+  Baum **nur in den Demo-Daten** gesetzt (`cam1`, `cam2`). Es gab keinen Weg,
+  auf dem sie beim Anlegen entstanden wäre. Die vier Cross-Link-Knöpfe
+  funktionierten damit nur für diese zwei Beispiel-Kameras.
+
+* **Was NICHT die Reparatur war.** Die Eigentumsregel für „aber Kameras schon"
+  aufzuweichen. Sie ist der Grund, dass zwei Planer sich nicht gegenseitig
+  überschreiben; eine Ausnahme wäre genau die Sorte Sonderfall, die später
+  niemand mehr erklären kann. Die Gewerks-Grenze gehört der **Shell** (B-18) —
+  also entscheidet sie, und die Planer bleiben bei ihrem eigenen Id-Raum.
+
+* **Gebaut, in fünf Teilen:**
+
+  1. **Ein Kanal für die Aussage.** `SeedDevice.gewerk?: 'camera'`, **erklärt**
+     vom führenden Planer aus seinem **Katalog** (`deviceTypeId` → Kategorie
+     des Datenblatt-Templates), nie aus dem Namen. Fehlt das Feld, hat niemand
+     etwas gesagt — das ist nicht „keine Kamera". Dazu fährt endlich `model`
+     mit, das der Rückweg bisher wegließ: der Kameraplan löst seinen
+     Katalog-Eintrag daraus auf, und mit „Kamera 1" fiele jede Übernahme
+     durch (ADR-002).
+  2. **Die Shell entscheidet.** `SignalNode.gewerk` und `.model` werden über
+     den Rückweg **erhalten** — dieselbe Stelle, an der `represents` bis zum
+     2026-09-18 verlorenging.
+  3. **Übergabe statt stiller Übernahme.** `data/kameraUebergabe.ts` (rein) +
+     `shell/KameraUebergabeBar.tsx`. Im Signalplan steht auch die Kamera, die
+     nur als **Quelle** gebraucht wird und im Bildplan nichts zu suchen hat;
+     ungefragt zu übernehmen wäre „letzter gewinnt". Dieselben zwei Knöpfe wie
+     beim Konflikt-Streifen, und die Ablehnung wird am Projekt gemerkt
+     (`kameraUebergabeAbgelehnt`) — ein Streifen, der nach dem dritten „nein"
+     unverändert dasteht, wird weggeklickt statt gelesen.
+  4. **Keine erfundene Position.** `SignalNode.nx/ny` sind Diagramm-Koordinaten
+     zwischen 0 und 1. Mal Hallenbreite gerechnet ergäben sie Meter, die
+     aussähen wie eine Vermessung. Die übernommene Kamera bekommt deshalb
+     keine — `Camera.x/y` sind jetzt **optional**. Nebenbefund, mitgefixt: der
+     Rückweg setzte für eine Kamera ohne Angabe `0`, also die Ecke der Halle,
+     und die Vorschau zeichnete sie dort als Tatsache. Sie wird jetzt nicht
+     gezeichnet, und die Eigenschaften-Leiste sagt „noch nicht platziert".
+     Der Kameraplan hat für diesen Fall längst eine ausdrücklich als
+     „Anfangswert einer Platzierung" markierte Startstelle.
+  5. **Übernehmen heißt beides:** Kamera anlegen **und** `represents` setzen.
+     Nur das erste wäre die Doppelzählung im Bedarf, die `deriveBedarf` eigens
+     vermeidet.
+
+* **Guards.** `apps/shell/test/kameraUebergabe.test.ts` (7),
+  `apps/shell/test/gewerksAussage.test.ts` (4 — die Aussage überlebt den
+  Rundlauf, die Position wird nicht erfunden), und zwei Fälle in
+  `apps/cable-planner/tests/shellSeed.test.ts`: die Aussage kommt aus dem
+  Katalog, und wo der Katalog nichts sagt, schweigt der Planer — auch wenn das
+  Gerät „Kamera 1" heißt.
+
+* **Was offen bleibt.** Der Kameraplan lässt eine Kamera aus, deren Modell er
+  nicht **eindeutig** in seinem eigenen Katalog trifft; die beiden Kataloge
+  sind verschiedene Listen. Der Streifen nennt deshalb das Modell mit und sagt
+  es ausdrücklich, wenn keines dasteht — aber ein Modell, das drüben fehlt,
+  fällt weiter nur in der Konsole auf. Das ist der nächste Schritt und ein
+  eigener: die `ausgelassen`-Meldung der drei Planer gehört sichtbar gemacht,
+  nicht nur diese eine.
+
+---
+
 ### B-78 · Zwei Module in der Leiste ohne einen einzigen Datenweg
 
 * **Status:** **ERLEDIGT 2026-09-18** — beide Brücken gebaut, `seed:check` hält

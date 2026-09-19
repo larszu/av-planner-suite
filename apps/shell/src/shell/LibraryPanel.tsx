@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Icon } from '@avplan/ui'
+import { kameraGeraete, lichtGeraete, signalGeraete } from '../data/project'
 import type { SuiteProject } from '../data/project'
 import type { ModuleDef, ModuleId } from '../modules/registry'
 import { useT, format, type TFunc } from '../i18n'
@@ -27,16 +28,16 @@ const deriveGroups = (module: ModuleId, project: SuiteProject | null, t: TFunc):
   switch (module) {
     case 'signal':
       return [
-        { group: t('panels.lib.signal.devices', 'Geräte'), entries: project.nodes.map((n) => ({ id: n.id, name: n.name, sub: n.sub })) },
+        { group: t('panels.lib.signal.devices', 'Geräte'), entries: signalGeraete(project).map((n) => ({ id: n.id, name: n.name, sub: n.sub ?? '' })) },
         { group: t('panels.lib.signal.cablesGroup', 'Kabel'), entries: project.cables.map((c) => ({ id: c.id, name: c.label, sub: join(c.type, `${c.lengthM} m`) })) },
       ].filter((g) => g.entries.length > 0)
     case 'cameras':
       return [
-        { group: t('panels.lib.cameras.title', 'Kameras'), entries: project.cameras.map((c) => ({ id: c.id, name: c.name, sub: join(c.model, c.lens) })) },
+        { group: t('panels.lib.cameras.title', 'Kameras'), entries: kameraGeraete(project).map((c) => ({ id: c.id, name: c.name, sub: join(c.model, c.kamera?.lens) })) },
       ].filter((g) => g.entries.length > 0)
     case 'licht':
       return [
-        { group: t('panels.lib.licht.title', 'Fixtures'), entries: project.fixtures.map((f) => ({ id: f.id, name: f.name, sub: join(f.model, f.purpose) })) },
+        { group: t('panels.lib.licht.title', 'Fixtures'), entries: lichtGeraete(project).map((f) => ({ id: f.id, name: f.name, sub: join(f.model, f.licht?.purpose) })) },
       ].filter((g) => g.entries.length > 0)
     // ─── DAS BOARD HAT KEINE BIBLIOTHEK MEHR ─────────────────────────────
     //

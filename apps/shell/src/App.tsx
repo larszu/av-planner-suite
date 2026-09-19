@@ -55,6 +55,8 @@ import { LibraryPanel } from './shell/LibraryPanel'
 import { PropertiesPanel } from './shell/PropertiesPanel'
 import { TabDeck } from './shell/TabDeck'
 import type { HeaderDraft } from './shell/dashboardEditors'
+import { imPlan } from '@avplan/ui/embed'
+import { geraetMit } from './data/project'
 import { SeedConflictBar } from './shell/SeedConflictBar'
 import { SeedHandoffBar } from './shell/SeedHandoffBar'
 import { StatusBar } from './shell/StatusBar'
@@ -756,10 +758,15 @@ export function App() {
     (id: string): 'device' | 'cable' | 'camera' | 'fixture' | undefined => {
       if (!project) return undefined
       if (project.cables.some((c) => c.id === id)) return 'cable'
-      if (project.nodes.some((n) => n.id === id)) return 'device'
-      if (project.cameras.some((c) => c.id === id)) return 'camera'
-      if (project.fixtures.some((f) => f.id === id)) return 'fixture'
-      return undefined
+      const g = geraetMit(project, id)
+      if (!g) return undefined
+      // Die Reihenfolge ist eine Aussage und keine Willkuer: ein Geraet kann
+      // in mehreren Plaenen stehen, die Zeig-Bitte traegt aber genau EINE
+      // Art. Genannt wird die speziellste — wer eine Kamera sucht, sucht sie
+      // als Kamera und nicht als „irgendein Geraet mit Anschluessen".
+      if (imPlan(g, 'kamera')) return 'camera'
+      if (imPlan(g, 'licht')) return 'fixture'
+      return 'device'
     },
     [project],
   )

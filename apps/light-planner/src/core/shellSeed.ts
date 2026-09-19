@@ -33,7 +33,7 @@
 //     Kabellaenge zum Scheinwerfer, und die Stueckliste zieht sie aus
 //     demselben Projekt.
 // ───────────────────────────────────────────────────────────────────────────
-import type { SeedFixture, SuiteSeed } from '@avplan/ui/embed';
+import { imLichtplan, type SeedGeraet, type SuiteSeed } from '@avplan/ui/embed';
 import { fixtureLibrary } from './fixtureLibrary';
 import type { Fixture, PlacedFixture, Shape } from '../types';
 
@@ -52,7 +52,7 @@ const passt = (katalog: string, kandidat: string): boolean => {
 
 /** Genau ein Treffer oder null; mehrdeutig zaehlt als kein Treffer. */
 export function katalogFixture(
-  seed: Pick<SeedFixture, 'model' | 'name'>,
+  seed: Pick<SeedGeraet, 'model' | 'name'>,
   eigene: Fixture[] = [],
 ): Fixture | null {
   const alle = [...fixtureLibrary, ...eigene];
@@ -92,7 +92,14 @@ export function seedToFixtures(
   const ausgelassen: FixtureUebernahme['ausgelassen'] = [];
   const schonDa = new Map(vorhandene.map((p) => [p.id, p]));
 
-  for (const f of seed.fixtures) {
+  // ── Gelesen wird die EINE Liste (ADR-011, Stufe 3) ──────────────────────
+  //
+  // `alsLeuchten` ist dieselbe Sicht, die die Shell bisher mitschickte —
+  // gerechnet statt uebertragen. Eine im Cable-Planer angelegte Lampe mit der
+  // Kategorie „Licht" steht damit hier, ohne dass jemand sie uebergibt. Genau
+  // das war der Auftrag: „Lampen die ich im Cable planner anlege muessen auch
+  // im light planner erscheinen."
+  for (const f of imLichtplan(seed.geraete)) {
     const def = katalogFixture(f, eigene);
     if (!def) {
       ausgelassen.push({
@@ -117,7 +124,7 @@ export function seedToFixtures(
       // Der Seed nennt die Hoehe, sonst behaelt ein schon platzierter
       // Scheinwerfer seine. Die Voreinstellung gilt nur fuer einen wirklich
       // neuen — dort ist sie der Anfangswert einer Platzierung.
-      mountingHeight: f.rigHeightM ?? alt?.mountingHeight ?? haengehoehe,
+      mountingHeight: f.licht?.rigHeightM ?? alt?.mountingHeight ?? haengehoehe,
       // Kein Ziel im Seed: eine bereits ausgerichtete Lampe behaelt ihres,
       // eine neue zeigt auf ihre eigene Stelle — dieselbe Voreinstellung wie
       // beim Platzieren von Hand. Ein erfundenes Ziel waere eine
@@ -125,10 +132,10 @@ export function seedToFixtures(
       aimX: alt && !zieltAufSichSelbst ? alt.aimX : x,
       aimY: alt && !zieltAufSichSelbst ? alt.aimY : y,
       bodyRotation: alt?.bodyRotation ?? 0,
-      dimming: f.dimmerPct ?? 100,
-      ...(f.dmxChannel !== undefined ? { channel: f.dmxChannel } : {}),
-      ...(f.universe !== undefined ? { universe: f.universe } : {}),
-      ...(f.purpose ? { purpose: f.purpose } : {}),
+      dimming: f.licht?.dimmerPct ?? 100,
+      ...(f.licht?.dmxChannel !== undefined ? { channel: f.licht.dmxChannel } : {}),
+      ...(f.licht?.universe !== undefined ? { universe: f.licht.universe } : {}),
+      ...(f.licht?.purpose ? { purpose: f.licht.purpose } : {}),
       unitNumber: f.name,
     });
   }
@@ -136,22 +143,35 @@ export function seedToFixtures(
   return { fixtures, ausgelassen };
 }
 
-/** Rueckweg: die platzierten Scheinwerfer als Seed-Domaene „fixtures". */
-export function fixturesToSeedPatch(fixtures: PlacedFixture[]): { fixtures: SeedFixture[] } {
+/**
+ * Rueckweg: die platzierten Scheinwerfer als Meldung auf der EINEN
+ * Geraeteliste (ADR-011, Stufe 3).
+ *
+ * Die Licht-Felder stehen in der Fachgruppe `licht` — die Shell schreibt
+ * daraus nur, was dem Lichtplan gehoert, und laesst alles andere am Geraet
+ * stehen. Vorher trug die Meldung den Scheinwerfer als GANZEN Datensatz.
+ *
+ * `kategorie: 'Licht'` faehrt mit: ein hier angelegter Scheinwerfer haengt an
+ * einem Kabel und gehoert damit auch in den Signalplan.
+ */
+export function fixturesToSeedPatch(fixtures: PlacedFixture[]): { geraete: SeedGeraet[] } {
   return {
-    fixtures: fixtures.map((p) => ({
+    geraete: fixtures.map((p) => ({
       id: p.id,
       name: p.unitNumber || p.fixture.name,
+      kategorie: 'Licht',
       model: `${p.fixture.manufacturer} ${p.fixture.name}`.trim(),
-      ...(p.purpose ? { purpose: p.purpose } : {}),
-      dimmerPct: p.dimming,
-      // Die Haenge-Hoehe geht mit zurueck: sie ist hier gesetzt worden, und
-      // ohne sie faende die Stueckliste die Kabel zum Scheinwerfer zu kurz.
-      rigHeightM: p.mountingHeight,
-      ...(p.channel !== undefined ? { dmxChannel: p.channel } : {}),
-      ...(p.universe !== undefined ? { universe: p.universe } : {}),
       x: p.x,
       y: p.y,
+      licht: {
+        ...(p.purpose ? { purpose: p.purpose } : {}),
+        dimmerPct: p.dimming,
+        // Die Haenge-Hoehe geht mit zurueck: sie ist hier gesetzt worden, und
+        // ohne sie faende die Stueckliste die Kabel zum Scheinwerfer zu kurz.
+        rigHeightM: p.mountingHeight,
+        ...(p.channel !== undefined ? { dmxChannel: p.channel } : {}),
+        ...(p.universe !== undefined ? { universe: p.universe } : {}),
+      },
     })),
   };
 }

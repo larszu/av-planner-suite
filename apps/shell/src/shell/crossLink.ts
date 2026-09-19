@@ -38,6 +38,8 @@
 // Ziel-Moduls zuhoert. `zustellung` ist diese Entscheidung, als reine
 // Funktion, damit sie pruefbar ist, ohne die halbe Shell zu rendern.
 // ---------------------------------------------------------------------------
+import { imPlan } from '@avplan/ui/embed'
+import { geraetMit } from '../data/project'
 import type { SuiteProject } from '../data/project'
 import type { ModuleId } from '../modules/registry'
 
@@ -51,15 +53,29 @@ const GEWERK: Partial<Record<ModuleId, Gewerk>> = {
 }
 
 /**
- * Der Knoten im Signalweg, der erklaertermassen fuer diese Kamera / dieses
- * Fixture steht. `undefined` heisst „niemand hat es erklaert".
+ * Der Knoten im Signalweg zu dieser Kamera / diesem Fixture.
+ *
+ * ─── SEIT ADR-011 STUFE 2 IST DAS DIESELBE ID ──────────────────────────────
+ *
+ * Hier stand die Aufloesung ueber `SignalNode.represents`: die Kamera `cam2`
+ * und ihr Knoten `n_cam2` waren zwei Datensaetze, und ohne eine ERKLAERTE
+ * Zuordnung zeigte der Sprung ins Leere (B-18). Mit einer Geraeteliste gibt
+ * es nichts mehr aufzuloesen — das Geraet IST der Knoten.
+ *
+ * Die Funktion bleibt trotzdem, und sie gibt weiter `undefined` zurueck, wenn
+ * das Geraet in diesem Plan gar nicht steht. Das ist keine Formsache: ein
+ * Mischer hat keinen Platz im Kameraplan, und ein Sprung dorthin waere eine
+ * Auswahl, die es nicht gibt.
  */
 export const knotenFuer = (
   project: SuiteProject,
   kind: 'camera' | 'fixture',
   id: string,
-): string | undefined =>
-  project.nodes.find((n) => n.represents?.kind === kind && n.represents.id === id)?.id
+): string | undefined => {
+  const g = geraetMit(project, id)
+  if (!g) return undefined
+  return imPlan(g, kind === 'camera' ? 'kamera' : 'licht') ? g.id : undefined
+}
 
 /**
  * Das Objekt des Ziel-Gewerks an einem Kabel: das Kabel haengt an zwei Knoten,
@@ -78,8 +94,8 @@ export const objektAmKabel = (
   const kabel = project.cables.find((c) => c.id === cableId)
   if (!kabel) return undefined
   for (const knotenId of [kabel.from, kabel.to]) {
-    const knoten = project.nodes.find((n) => n.id === knotenId)
-    if (knoten?.represents?.kind === kind) return knoten.represents.id
+    const g = geraetMit(project, knotenId)
+    if (g && imPlan(g, kind === 'camera' ? 'kamera' : 'licht')) return g.id
   }
   return undefined
 }

@@ -41,13 +41,19 @@ beschreibt (`research/workflow-chain.md`, Zeile 172).
 
 ## 2 · Der laufende Austausch: `suite-seed`
 
-`packages/ui/src/seed.ts`, Formatversion **2**. Die Schale schickt ein
+`packages/ui/src/seed.ts`, Formatversion **3**. Die Schale schickt ein
 neutrales Projektmodell an jeden eingebetteten Planer; der Planer schickt
 `SeedPatch` zurück.
 
 - **Fünf Domänen:** `cameras`, `fixtures`, `signal`, `lager`, `gebaeude`.
-- **Inhalt:** `venue`, `cameras`, `fixtures`, `devices`, `cables`, `bedarf`,
-  `deckung`, `anschluesse`.
+- **Eine Geräteliste:** `geraete` — seit ADR-011 (2026-09-19) steht jedes
+  Gerät genau **einmal** darin, mit seiner Kategorie und den Feldern aller
+  Planer. `cameras`, `fixtures` und `devices` sind seither **Sichten** darauf
+  (`alsKameras`, `alsLeuchten`, `alsSignalGeraete`) und keine eigenen
+  Wahrheiten mehr. Die Kategorie ordnet ein Gerät **mehreren** Plänen zugleich
+  zu: eine Kamera steht im Kameraplan *und* im Signalplan.
+- **Inhalt:** `venue`, `geraete`, `cameras`, `fixtures`, `devices`, `cables`,
+  `bedarf`, `deckung`, `anschluesse`.
 - **`bedarf` ist abgeleitet und wird nie geführt** — `suiteToSeed` rechnet ihn
   bei jedem Senden neu (ADR-001: eine gespeicherte Ableitung ist eine zweite
   Wahrheit; ADR-006: der Plan rechnet seinen Bedarf selbst).

@@ -98,6 +98,7 @@ exchange format with the MultiCam Planner. **React · three.js · Electron.**
 | **@avplan/ui** | Design system: theme tokens (Dark/Light + per-module accents), accessible primitives (Button, Modal, Menu, Badge, Tabs, Kbd), `ModuleRail`, `CommandPalette`, theme-aware imperative dialogs, and the `embed` bridge (postMessage theme/settings/history sync for embedded planners). |
 | **@avplan/inventory-core** | Shared inventory domain model + the portable `avplan-inventory` wire format (`serializeInventory`/`parseInventory`/`resolveInventoryCode`). The wire contract is frozen by a test — deliberate format changes require bumping `INVENTORY_FORMAT_VERSION`. |
 | **@avplan/onboarding-core** | Suite-wide onboarding: `WelcomeDialog` + `TourDialog` + `createOnboardingState` (seen-flags with injectable storage and legacy-key migration) + de/en strings. All apps render the same dialog look. |
+| **@avplan/device-catalog** | **One** device-type catalogue for every planner (ADR-002, ADR-011): the identity of a model — id, manufacturer, model, category, data sheet. 916 types, merged from the cabling planner's 19 catalogues (467), the camera list (377) and the lighting fixture library (84). The trade-specific facts stay with the planner that understands them; a package that carried ports would drag half the cable graph with it. Merging **reports** disagreements instead of silently picking, and `katalog:parity` keeps the generated types tied to their source. |
 | **@avplan/lexware-core** | Neutral billing model (`BillingDoc`) mapped to Lexware Office (lexoffice) **quotation/invoice** payloads — net/gross/§19 tax, discounts, totals — plus a REST client with injectable `fetch` and line-item derivation from inventory and budget. |
 
 ---
@@ -165,6 +166,34 @@ embedded.
 #   VITE_PLANNER_LICHT    (default http://localhost:4183)  → light-planner
 # If a planner isn't running, the shell shows a fallback instead of a dead frame.
 ```
+
+### One device, many plans
+
+There is **one** device per piece of kit — not one per planner (ADR-011). Both the shell's project
+and the `suite-seed` hold a single `geraete` list with every device exactly once, its category and
+the fields of *all* planners. A plan is a **filter** on that list — `imKameraplan`, `imLichtplan`,
+`imSignalplan` — and no longer a list of its own: the seed carries `geraete` and `cables`, nothing
+else.
+
+The **category** does the assigning, and it assigns to several plans at once: a camera belongs to
+the camera plan *and* to the signal plan, because it has a standpoint *and* connectors. A mixer
+belongs to the signal plan only. The category is declared from the owning planner's **catalogue**
+(via the data-sheet template) — never guessed from the name, and never taken from the free-text
+category field a user types. Without one, a device still belongs to the signal plan: “not stated”
+is not “nowhere”.
+
+Seeing a device is not the same as writing to it. Ownership moves from *per list* to *per field
+group*: focal length belongs to the camera plan, the DMX address to the lighting plan, the ports
+to the signal plan. Nothing a planner does not own can be overwritten by it.
+
+A camera created in the cabling planner therefore *is* a camera in the camera plan — nothing to
+confirm, nothing to link, and the bill of materials counts one device because there is one. Project
+files written before this are migrated on load over the **declared** correspondence they carried,
+and over nothing else: two records nobody connected are two things, however similar their names.
+
+No position is invented anywhere. A device's `nx`/`ny` are diagram coordinates, not metres in the
+hall; a device without a place in the hall is shown as "not placed yet" rather than drawn at the
+origin.
 
 ---
 
