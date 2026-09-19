@@ -75,11 +75,32 @@ lauffähigen Stand.
 | Stufe | Was | Stand |
 | --- | --- | --- |
 | 1 | `geraete` ist die Wahrheit **im Seed**; `cameras`/`fixtures`/`devices` werden daraus abgeleitet (`alsKameras`, `alsLeuchten`, `alsSignalGeraete`). Die Kategorie fährt mit. Der Signalplan sieht ab hier alle Geräte. | **gebaut, 2026-09-19** |
-| 2 | Das Shell-Projekt führt `geraete` statt drei Listen. Damit verschwindet die Sonderregel auf dem Rückweg (siehe unten) und `altIds`. | offen |
-| 3 | Die drei Planer lesen und melden `geraete` statt ihrer Liste. Das Eigentum steht dann je Feldgruppe in `mergeSeedPatch`. | offen |
+| 2 | Das Shell-Projekt führt `geraete` statt drei Listen. Damit verschwindet die Sonderregel auf dem Rückweg (siehe unten) und `altIds`. | **gebaut, 2026-09-19** |
+| 3 | Die drei Planer lesen und melden `geraete` statt ihrer Liste. | offen — **das Eigentum je Feldgruppe steht aber schon** (mit Stufe 2 in `mergeSeedPatch` gezogen, weil eine Meldung sonst die eine Liste gar nicht erreicht hätte) |
 | 4 | `cameras`, `fixtures`, `devices` und `altIds` fallen aus dem Seed. | offen |
 
-### Was Stufe 1 an Gerüst braucht, und warum
+### Was Stufe 2 abgeräumt hat
+
+Drei Dinge sind **weg**, nicht abgeschaltet:
+
+* **`SignalNode.represents`.** Mit einer Liste gibt es nichts mehr zu verbinden. Das Feld überlebt
+  genau an einer Stelle: in `projectFile.ts`, wo es alte Projektdateien zusammenlegt. Das Gerüst
+  aus Stufe 1 ist damit zur Migration geworden — die ehrliche Art, wie Gerüst endet.
+* **`altIds`.** Es trug die alte Id je Sicht durch die Übergangszeit. Die Shell führt jetzt eine
+  Liste, also gibt es nur noch eine Id.
+* **Die Sonderregel auf dem Rückweg**, die Kameras und Leuchten aus der Signal-Meldung heraushielt,
+  damit sie nicht als Knoten zurückkamen. Sie war die Naht zwischen den zwei Modellen.
+
+Und zwei Dinge sind **kleiner** geworden statt umgebaut:
+
+* **Die Kamera-Übergabe aus B-79** (`kameraUebergabe.ts`, `KameraUebergabeBar.tsx`) ist gelöscht.
+  Sie fragte, ob eine im Signalplan angelegte Kamera auch in den Kameraplan soll — eine Frage, die
+  nur im Drei-Listen-Modell entstand. Ein Gerät mit der Kategorie „Cameras" steht jetzt in beiden
+  Plänen, und der Eigentümer hat genau das verlangt: „Alle Geräte sind in allen Planern verfügbar."
+* **Der Cross-Link (B-18)** löst nichts mehr auf. `knotenFuer` gibt dieselbe Id zurück und
+  antwortet nur noch auf die verbliebene Frage: steht das Gerät im Ziel-Plan überhaupt?
+
+### Was Stufe 1 an Gerüst brauchte, und warum
 
 **`altIds`.** Das zusammengelegte Gerät hat eine Id. Die Planer stehen aber noch auf ihren
 Listen und kennen dort ihre eigene: der Kameraplan `cam2`, der Signalplan `n_cam2`. Nähme die

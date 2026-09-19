@@ -38,7 +38,9 @@
 // die echten Befunde unsichtbar.
 // ───────────────────────────────────────────────────────────────────────────
 
+import { alsKameras, alsLeuchten, alsSignalGeraete, imPlan, type SeedGeraet } from './geraet'
 import type {
+  SeedDomain,
   SeedHold,
   SeedPatch,
   SeedSharedField,
@@ -210,23 +212,65 @@ export function mergeSeedPatch(seed: SuiteSeed, patch: SeedPatch): SeedMerge {
     if (geaendert) naechster = { ...naechster, venue, holds }
   }
 
-  // ── Die Domaenen-Listen: je genau ein Eigentuemer ────────────────────────
+  // ── Die Geraeteliste: Eigentum je FELDGRUPPE ─────────────────────────────
+  //
+  // Bis 2026-09-19 stand hier ein `switch`, der drei getrennte Listen
+  // ersetzte: `cameras`, `fixtures`, `devices`. Das war die Regel, die das
+  // Drei-Listen-Modell ueberhaupt noetig machte — sie brauchte Listen, um zu
+  // greifen, und wer Listen braucht, baut Listen (ADR-011).
+  //
+  // Jetzt gibt es EINE Liste, und die Regel wird feiner statt schwaecher:
+  //
+  //   `signal`   schreibt die gemeinsamen Felder und die Lage im Diagramm
+  //   `cameras`  schreibt die Gruppe `kamera` und die Lage im Raum
+  //   `fixtures` schreibt die Gruppe `licht` und die Lage im Raum
+  //
+  // Was einem Planer nicht gehoert, kann er nicht ueberschreiben — dieselbe
+  // Zusicherung wie vorher, nur eine Ebene genauer. Die Brennweite gehoert
+  // dem Kameraplan, die DMX-Adresse dem Lichtplan, die Ports dem Signalplan.
+  const gemeldet = geraeteAusPatch(patch)
+  if (gemeldet) {
+    const jeId = new Map(naechster.geraete.map((g) => [g.id, g]))
+    const geraete: SeedGeraet[] = []
+    const gesehen = new Set<string>()
+
+    for (const neu of gemeldet) {
+      gesehen.add(neu.id)
+      const alt = jeId.get(neu.id)
+      geraete.push(alt ? nurEigenes(alt, neu, patch.domain) : neu)
+    }
+
+    // Was der Melder NICHT genannt hat, bleibt stehen — es sei denn, es
+    // gehoert ihm. Ein Kameraplan, der drei Kameras meldet, hat damit nichts
+    // ueber den Mischer gesagt; ein Signalplan, der den Mischer loescht,
+    // schon.
+    for (const g of naechster.geraete) {
+      if (gesehen.has(g.id)) continue
+      if (!gehoertDomaene(g, patch.domain)) geraete.push(g)
+    }
+
+    naechster = {
+      ...naechster,
+      geraete,
+      // Die drei Sichten werden NEU GERECHNET und nicht mitgeschrieben. Sonst
+      // waeren sie wieder eine zweite Wahrheit — genau die, gegen die die
+      // eine Liste steht.
+      cameras: alsKameras(geraete),
+      fixtures: alsLeuchten(geraete),
+      devices: alsSignalGeraete(geraete),
+    }
+  }
+
+  // Kabel gehoeren dem Signalplan und liegen NEBEN der Geraeteliste: sie
+  // verbinden zwei Geraete, sind aber keines. Beim Umbau auf die eine Liste
+  // fielen sie am 2026-09-19 kurzzeitig heraus — der Test „nimmt bei signal
+  // Geraete und Kabel zusammen" hat es gemeldet, bevor es jemand im Plan
+  // bemerkt haette.
+  if (patch.domain === 'signal' && patch.cables) {
+    naechster = { ...naechster, cables: patch.cables }
+  }
+
   switch (patch.domain) {
-    case 'cameras':
-      if (patch.cameras) naechster = { ...naechster, cameras: patch.cameras }
-      break
-    case 'fixtures':
-      if (patch.fixtures) naechster = { ...naechster, fixtures: patch.fixtures }
-      break
-    case 'signal':
-      if (patch.devices || patch.cables) {
-        naechster = {
-          ...naechster,
-          devices: patch.devices ?? naechster.devices,
-          cables: patch.cables ?? naechster.cables,
-        }
-      }
-      break
     case 'lager':
       // Das Lager meldet die Deckung und sonst nichts. Es besitzt keine
       // Plan-Liste: wuerde es `devices` mitschicken duerfen, haette es eine
@@ -240,6 +284,8 @@ export function mergeSeedPatch(seed: SuiteSeed, patch: SeedPatch): SeedMerge {
       // dafuer: ein Planer, der sie mitschickte, haette eine Meinung ueber die
       // Hausinstallation statt sie nachzulesen.
       if (patch.anschluesse) naechster = { ...naechster, anschluesse: patch.anschluesse }
+      break
+    default:
       break
   }
 
@@ -269,3 +315,114 @@ export function acceptProposal(seed: SuiteSeed, conflict: SeedConflict): SuiteSe
 
 /** Kurzform fuer die Anzeige: `venue.widthM` → `widthM`. */
 export const conflictFieldName = (field: SeedVenueField): keyof SeedVenue => VENUE_PFAD[field]
+
+
+// ───────────────────────────────────────────────────────────────────────────
+// WER WAS SCHREIBEN DARF — die Regel als Code, nicht als Kommentar
+// ───────────────────────────────────────────────────────────────────────────
+
+/** Die gemeldete Liste dieser Domaene, in Geraete-Form. */
+function geraeteAusPatch(patch: SeedPatch): SeedGeraet[] | undefined {
+  if (patch.domain === 'signal') {
+    return patch.devices?.map((d) => ({
+      id: d.id,
+      name: d.name,
+      ...(d.subtitle !== undefined ? { sub: d.subtitle } : {}),
+      ...(d.model !== undefined ? { model: d.model } : {}),
+      ...(d.kategorie !== undefined ? { kategorie: d.kategorie } : {}),
+      ...(d.nx !== undefined ? { nx: d.nx } : {}),
+      ...(d.ny !== undefined ? { ny: d.ny } : {}),
+      ...(d.x !== undefined ? { x: d.x } : {}),
+      ...(d.y !== undefined ? { y: d.y } : {}),
+    }))
+  }
+  if (patch.domain === 'cameras') {
+    return patch.cameras?.map((c) => ({
+      id: c.id,
+      name: c.name,
+      ...(c.model !== undefined ? { model: c.model } : {}),
+      ...(c.x !== undefined ? { x: c.x } : {}),
+      ...(c.y !== undefined ? { y: c.y } : {}),
+      kamera: {
+        ...(c.lens !== undefined ? { lens: c.lens } : {}),
+        ...(c.focalMm !== undefined ? { focalMm: c.focalMm } : {}),
+        ...(c.hfovDeg !== undefined ? { hfovDeg: c.hfovDeg } : {}),
+      },
+    }))
+  }
+  if (patch.domain === 'fixtures') {
+    return patch.fixtures?.map((f) => ({
+      id: f.id,
+      name: f.name,
+      ...(f.model !== undefined ? { model: f.model } : {}),
+      ...(f.x !== undefined ? { x: f.x } : {}),
+      ...(f.y !== undefined ? { y: f.y } : {}),
+      licht: {
+        ...(f.purpose !== undefined ? { purpose: f.purpose } : {}),
+        ...(f.dimmerPct !== undefined ? { dimmerPct: f.dimmerPct } : {}),
+        ...(f.dmxChannel !== undefined ? { dmxChannel: f.dmxChannel } : {}),
+        ...(f.universe !== undefined ? { universe: f.universe } : {}),
+        ...(f.rigHeightM !== undefined ? { rigHeightM: f.rigHeightM } : {}),
+      },
+    }))
+  }
+  return undefined
+}
+
+/**
+ * Darf diese Domaene ein Geraet ENTFERNEN, das sie nicht mehr meldet?
+ *
+ * Nur, wenn es in ihrem Plan steht. Der Kameraplan, der zwei statt drei
+ * Kameras meldet, hat eine geloescht; derselbe Kameraplan sagt damit nichts
+ * ueber den Mischer, den er gar nicht zeigt.
+ */
+function gehoertDomaene(g: SeedGeraet, domain: SeedDomain): boolean {
+  if (domain === 'signal') return imPlan(g, 'signal')
+  if (domain === 'cameras') return imPlan(g, 'kamera')
+  if (domain === 'fixtures') return imPlan(g, 'licht')
+  return false
+}
+
+/**
+ * Den gemeldeten Stand einarbeiten — aber nur die Felder, die dem Melder
+ * gehoeren.
+ *
+ * DAS IST DIE STELLE, AN DER DIE ZUSICHERUNG HAENGT. Ohne sie wuerde eine
+ * Meldung des Kameraplans die DMX-Adresse einer Leuchte loeschen, sobald
+ * jemand drueben etwas anfasst — und niemand saehe, wann es passierte.
+ */
+function nurEigenes(alt: SeedGeraet, neu: SeedGeraet, domain: SeedDomain): SeedGeraet {
+  if (domain === 'signal') {
+    // Der Signalplan fuehrt das Geraet als solches: Name, Beschriftung,
+    // Modell, Kategorie, Lage im Diagramm. Die Fachgruppen fasst er nicht an.
+    const { kamera, licht, x, y, ...rest } = neu
+    void kamera
+    void licht
+    void x
+    void y
+    return { ...alt, ...rest }
+  }
+  if (domain === 'cameras') {
+    return {
+      ...alt,
+      // Name und Modell gehoeren dem fuehrenden Plan; der Kameraplan darf sie
+      // setzen, wenn er sie nennt, aber nicht leeren.
+      ...(neu.name ? { name: neu.name } : {}),
+      ...(neu.model !== undefined ? { model: neu.model } : {}),
+      ...(neu.x !== undefined ? { x: neu.x } : {}),
+      ...(neu.y !== undefined ? { y: neu.y } : {}),
+      kamera: { ...alt.kamera, ...neu.kamera },
+    }
+  }
+  if (domain === 'fixtures') {
+    return {
+      ...alt,
+      ...(neu.name ? { name: neu.name } : {}),
+      ...(neu.model !== undefined ? { model: neu.model } : {}),
+      ...(neu.x !== undefined ? { x: neu.x } : {}),
+      ...(neu.y !== undefined ? { y: neu.y } : {}),
+      licht: { ...alt.licht, ...neu.licht },
+    }
+  }
+  return alt
+}

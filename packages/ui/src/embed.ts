@@ -48,6 +48,7 @@ export {
   alsSignalGeraete,
   gehoertZu,
   geraeteAus,
+  imPlan,
   gewerkeFuer,
 } from './geraet'
 export type { SeedConflict, SeedMerge, SeedVenueField } from './seedOwnership'

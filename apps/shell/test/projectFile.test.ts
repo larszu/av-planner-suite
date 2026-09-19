@@ -6,7 +6,7 @@ describe('projectFile', () => {
   it('serialize → parse ist ein Roundtrip (Demo-Projekt)', () => {
     const round = parseProject(serializeProject(PROJECT))
     expect(round.meta.name).toBe(PROJECT.meta.name)
-    expect(round.cameras).toHaveLength(PROJECT.cameras.length)
+    expect(round.geraete).toHaveLength(PROJECT.geraete.length)
     expect(round.cables).toHaveLength(PROJECT.cables.length)
     expect(round.show.board.cards.length).toBe(PROJECT.show.board.cards.length)
   })
@@ -15,7 +15,7 @@ describe('projectFile', () => {
     const p = blankProject('Test')
     expect(p.meta.name).toBe('Test')
     expect(p.meta.saved).toBe(false)
-    expect(p.cameras).toEqual([])
+    expect(p.geraete).toEqual([])
     expect(p.show.board.cards).toEqual([])
     expect(p.inventory.items).toEqual([])
   })
@@ -25,7 +25,7 @@ describe('projectFile', () => {
     const p = parseProject(raw)
     expect(p.meta.name).toBe('Roh')
     expect(p.meta.saved).toBe(true) // geladene Datei gilt als gespeichert
-    expect(Array.isArray(p.cameras)).toBe(true)
+    expect(Array.isArray(p.geraete)).toBe(true)
     expect(p.show.board).toBeDefined()
   })
 

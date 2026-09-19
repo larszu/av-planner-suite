@@ -543,10 +543,16 @@ export function isSuiteSeed(value: unknown): value is SuiteSeed {
  * Smoke-Test misst, damit ein leer bleibender Planer wieder auffaellt.
  */
 export function seedContentCount(seed: SuiteSeed): number {
-  // `bedarf` zaehlt hier bewusst NICHT mit: er ist aus denselben drei Listen
-  // abgeleitet, und ihn mitzuzaehlen hiesse, denselben Inhalt zweimal zu
-  // zaehlen — ein Seed saehe voller aus, als er ist.
-  return seed.cameras.length + seed.fixtures.length + seed.devices.length + seed.cables.length
+  // ÜBER `geraete` UND NICHT ÜBER DIE DREI SICHTEN (ADR-011, Stufe 2).
+  //
+  // Eine Kamera steht in `cameras` UND in `devices` — sie zu addieren hiesse,
+  // sie zweimal zu zaehlen. Gemessen am 2026-09-19: ein Seed mit drei
+  // Geraeten und einem Kabel meldete `6` statt `4`. Die Zahl entscheidet
+  // ausserdem, ob ein Planer einen Seed als „leer" behandelt, und ein zu
+  // voller Seed ist dort die gefaehrlichere Richtung.
+  //
+  // `bedarf` zaehlt aus demselben Grund nicht mit: er ist abgeleitet.
+  return seed.geraete.length + seed.cables.length
 }
 
 // Das Einarbeiten einer Rueckmeldung steht NICHT hier, sondern in

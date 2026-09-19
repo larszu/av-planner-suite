@@ -1,9 +1,10 @@
 import {
   LAYER_COLOR,
+  kameraGeraete,
+  lichtGeraete,
+  signalGeraete,
   type Cable,
-  type Camera,
-  type Fixture,
-  type SignalNode,
+  type SuiteGeraet,
   type SuiteProject,
 } from '../data/project'
 import { useT, format } from '../i18n'
@@ -92,7 +93,13 @@ interface Rect {
   y: number
 }
 
-const nodeRect = (n: SignalNode): Rect => ({ x: n.nx * VB_W, y: n.ny * VB_H })
+// `?? 0.5` und nicht `!`: ein Geraet ohne Lage im Diagramm ist noch nicht
+// platziert — im Signalfluss ist die Mitte dafuer der ehrliche Anfangswert,
+// denn dort gibt es keine „richtige" Stelle, die man behaupten koennte.
+const nodeRect = (n: Pick<SuiteGeraet, 'nx' | 'ny'>): Rect => ({
+  x: (n.nx ?? 0.5) * VB_W,
+  y: (n.ny ?? 0.5) * VB_H,
+})
 
 export function SignalPreview({
   project,
@@ -105,7 +112,13 @@ export function SignalPreview({
 }) {
   const t = useT()
   if (!project) return <StandaloneHint label={t('chrome.preview.signalLabel', 'Der Signal-Flow')} />
-  const rects = new Map<string, Rect>(project.nodes.map((n) => [n.id, nodeRect(n)]))
+  const knoten = signalGeraete(project)
+  const rects = new Map<string, Rect>(knoten.map((n) => [n.id, nodeRect(n)]))
+  // Die beiden Ueberschriften standen bis 2026-09-19 an `nodes[0]` und
+  // `nodes[3]` — an Positionen in einer Liste also, nicht an dem, was sie
+  // beschriften. Eine eingefuegte Zeile haette „REGIE / OB" ueber die Buehne
+  // geschrieben. Jetzt fragen sie das Feld, das die Aussage traegt.
+  const erstesDer = (gruppe: 'floor' | 'regie') => knoten.find((n) => n.group === gruppe)
 
   const link = (c: Cable): { d: string; mx: number; my: number } | null => {
     const a = rects.get(c.from)
@@ -125,8 +138,18 @@ export function SignalPreview({
 
   return (
     <svg viewBox={`0 0 ${VB_W} ${VB_H}`} className="h-full w-full" preserveAspectRatio="xMidYMid meet">
-      <text x={project.nodes[0].nx * VB_W} y={project.nodes[0].ny * VB_H - 14} className="fill-[var(--av-text-faint)]" fontSize={13} fontWeight={600} letterSpacing="0.08em">{t('chrome.preview.stageFloor', 'BÜHNE / FLOOR')}</text>
-      <text x={project.nodes[3].nx * VB_W} y={project.nodes[3].ny * VB_H - 14} className="fill-[var(--av-text-faint)]" fontSize={13} fontWeight={600} letterSpacing="0.08em">{t('chrome.preview.regieOb', 'REGIE / OB')}</text>
+      {(['floor', 'regie'] as const).map((gruppe) => {
+        const n = erstesDer(gruppe)
+        if (!n) return null
+        const r = nodeRect(n)
+        return (
+          <text key={gruppe} x={r.x} y={r.y - 14} className="fill-[var(--av-text-faint)]" fontSize={13} fontWeight={600} letterSpacing="0.08em">
+            {gruppe === 'floor'
+              ? t('chrome.preview.stageFloor', 'BÜHNE / FLOOR')
+              : t('chrome.preview.regieOb', 'REGIE / OB')}
+          </text>
+        )
+      })}
 
       {project.cables.map((c) => {
         const l = link(c)
@@ -143,7 +166,7 @@ export function SignalPreview({
         )
       })}
 
-      {project.nodes.map((n) => {
+      {knoten.map((n) => {
         const r = rects.get(n.id)!
         return (
           <g key={n.id} transform={`translate(${r.x}, ${r.y})`}>
@@ -226,8 +249,8 @@ export function PlanPreview({
       </>
 
       {mode === 'cameras'
-        ? project.cameras.map((cam) => <CameraMark key={cam.id} cam={cam} mx={mx} my={my} scale={scale} stageCx={stageCx} stageCy={stageCy} active={cam.id === selectedId} onSelect={onSelect} showFov={showFov} />)
-        : project.fixtures.map((fx) => <FixtureMark key={fx.id} fx={fx} mx={mx} my={my} scale={scale} stageCx={stageCx} stageCy={stageCy} active={fx.id === selectedId} onSelect={onSelect} showHeat={showHeat} />)}
+        ? kameraGeraete(project).map((cam) => <CameraMark key={cam.id} cam={cam} mx={mx} my={my} scale={scale} stageCx={stageCx} stageCy={stageCy} active={cam.id === selectedId} onSelect={onSelect} showFov={showFov} />)
+        : lichtGeraete(project).map((fx) => <FixtureMark key={fx.id} fx={fx} mx={mx} my={my} scale={scale} stageCx={stageCx} stageCy={stageCy} active={fx.id === selectedId} onSelect={onSelect} showHeat={showHeat} />)}
     </svg>
   )
 }
@@ -235,7 +258,7 @@ export function PlanPreview({
 function CameraMark({
   cam, mx, my, scale, stageCx, stageCy, active, onSelect, showFov,
 }: {
-  cam: Camera
+  cam: SuiteGeraet
   mx: (x: number) => number
   my: (y: number) => number
   scale: number
@@ -253,7 +276,7 @@ function CameraMark({
   const cx = mx(cam.x)
   const cy = my(cam.y)
   const ang = Math.atan2(my(stageCy) - cy, mx(stageCx) - cx)
-  const half = (cam.hfovDeg * Math.PI) / 180 / 2
+  const half = ((cam.kamera?.hfovDeg ?? 0) * Math.PI) / 180 / 2
   const len = 3.4 * scale
   const p1 = [cx + Math.cos(ang - half) * len, cy + Math.sin(ang - half) * len]
   const p2 = [cx + Math.cos(ang + half) * len, cy + Math.sin(ang + half) * len]
@@ -262,7 +285,7 @@ function CameraMark({
     <g onClick={() => onSelect(cam.id)} style={{ cursor: 'pointer' }}>
       {showFov && <path d={`M ${cx} ${cy} L ${p1[0]} ${p1[1]} L ${p2[0]} ${p2[1]} Z`} fill={color} opacity={active ? 0.24 : 0.12} />}
       <circle cx={cx} cy={cy} r={active ? 8 : 6} fill={color} opacity={active ? 1 : 0.85} />
-      <text x={cx} y={cy + 22} textAnchor="middle" className="fill-[var(--av-text-muted)]" fontSize={11} fontFamily="var(--av-font-mono)">{cam.name} · {cam.focalMm}mm</text>
+      <text x={cx} y={cy + 22} textAnchor="middle" className="fill-[var(--av-text-muted)]" fontSize={11} fontFamily="var(--av-font-mono)">{cam.name} · {cam.kamera?.focalMm ?? 0}mm</text>
     </g>
   )
 }
@@ -270,7 +293,7 @@ function CameraMark({
 function FixtureMark({
   fx, mx, my, scale, stageCx, stageCy, active, onSelect, showHeat,
 }: {
-  fx: Fixture
+  fx: SuiteGeraet
   mx: (x: number) => number
   my: (y: number) => number
   scale: number
@@ -280,13 +303,17 @@ function FixtureMark({
   onSelect: (id: string) => void
   showHeat: boolean
 }) {
+  // Dieselbe Regel wie bei der Kamera: eine Leuchte ohne Position wird NICHT
+  // gezeichnet. Ein Punkt auf dem Plan sieht aus wie eine Angabe, egal wie er
+  // entstanden ist.
+  if (fx.x === undefined || fx.y === undefined) return null
   const cx = mx(fx.x)
   const cy = my(fx.y)
   const tx = mx(stageCx)
   const ty = my(stageCy)
   const color = 'var(--mod-licht)'
   // Heatmap: warmer Lichtpool am Ziel, Intensität steigt mit Dimmer-Wert.
-  const heatR = (1.2 + (fx.dimmerPct / 100) * 1.4) * scale
+  const heatR = (1.2 + ((fx.licht?.dimmerPct ?? 0) / 100) * 1.4) * scale
   return (
     <g onClick={() => onSelect(fx.id)} style={{ cursor: 'pointer' }}>
       {showHeat && <circle cx={tx} cy={ty} r={heatR} fill="url(#lp-heat)" style={{ pointerEvents: 'none' }} />}

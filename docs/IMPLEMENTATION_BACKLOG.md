@@ -2183,8 +2183,8 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
 
 ### B-80 · Drei Listen für dasselbe Blech — ADR-001 galt im Planer und nicht dazwischen
 
-* **Status:** Stufe 1 von 4 gebaut am 2026-09-19 (ADR-011); Stufen 2–4 offen und
-  dort benannt.
+* **Status:** Stufen 1 und 2 von 4 gebaut am 2026-09-19 (ADR-011); Stufen 3 und 4
+  offen und dort benannt.
 
 * **Die Entscheidung.** Eigentümer, 2026-09-19: „Es gibt nur ein universelles
   device pro Gerät und nicht pro planner. Dieses device hat alle Felder und
@@ -2229,12 +2229,17 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
   sie allgemeiner. Beides zu führen wären zwei Wahrheiten über dieselbe
   Sache — in einem Umbau gegen zweite Wahrheiten.
 
-* **Offen, und im ADR als Stufen benannt:** das Shell-Projekt führt weiter
-  drei Listen (Stufe 2), die Planer lesen weiter ihre Sicht (Stufe 3), und
-  erst danach fallen die Sichten und das Gerüst weg (Stufe 4). Solange Stufe 2
-  aussteht, bleibt die Übergabe aus B-79 die Brücke: eine im Signalplan
-  angelegte Kamera wird erst zur Kamera des Kameraplans, wenn jemand die
-  Entsprechung erklärt.
+* **Stufe 2, gebaut am selben Tag.** Das Shell-Projekt führt jetzt `geraete`.
+  Was dabei **verschwunden** ist — nicht abgeschaltet, gelöscht:
+  `SignalNode.represents` (es gibt nichts mehr zu verbinden; das Feld lebt nur
+  noch in der Migration alter Dateien weiter), `altIds`, die Sonderregel auf
+  dem Rückweg, und **die Kamera-Übergabe aus B-79** samt ihrem Streifen.
+  Das Eigentum ist dabei von „je Liste" auf „je **Feldgruppe**" gewandert —
+  gezogen wurde das mit Stufe 2 und nicht erst mit Stufe 3, weil eine Meldung
+  die eine Liste sonst gar nicht erreicht hätte.
+
+* **Offen:** die Planer lesen weiter ihre Sicht (Stufe 3), danach fallen die
+  Sichten aus dem Seed (Stufe 4).
 
 * **Guards.** `packages/ui/test/geraet.test.ts` (7),
   `apps/shell/test/kategorieAussage.test.ts` (4), zwei Fälle in
@@ -2244,7 +2249,22 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
 
 ### B-79 · Die Kamera aus dem Signalplan kam im Kameraplan nie an
 
-* **Status:** erledigt am 2026-09-19.
+* **Status:** erledigt am 2026-09-19 — und am selben Tag **wieder ausgebaut**,
+  weil B-80 das Problem entfernt hat statt es zu überbrücken. Der Eintrag
+  bleibt stehen: er erklärt, warum der Code eine Zeitlang da war, und was ihn
+  überflüssig gemacht hat.
+
+* **Nachtrag, 2026-09-19 (B-80, ADR-011 Stufe 2).** `data/kameraUebergabe.ts`,
+  `shell/KameraUebergabeBar.tsx` und ihr Test sind gelöscht. Die Übergabe
+  fragte, ob eine im Signalplan angelegte Kamera auch in den Kameraplan soll —
+  eine Frage, die es nur gab, weil Shell und Seed drei getrennte Listen
+  führten. Mit einer Liste steht ein Gerät der Kategorie „Cameras" in beiden
+  Plänen, und der Eigentümer hat genau das verlangt: „Alle Geräte sind in
+  allen Planern verfügbar."
+
+  Die Begründung der Übergabe war nicht falsch, sondern galt für ein Modell,
+  das es nicht mehr gibt. Sie hier zu löschen ist billiger, als sie zu
+  pflegen — und ehrlicher, als sie als toten Code stehenzulassen.
 
 * **Die Meldung.** Nutzer, 2026-09-19: „Wenn ich im ab planner suite den Cable
   planner geöffnet habe und dort eine Kamera anlege muss diese auch im

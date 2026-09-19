@@ -4,6 +4,7 @@ import type { SuiteProject } from '../data/project'
 import type { ModuleDef, ModuleId } from '../modules/registry'
 import { useT, type TFunc } from '../i18n'
 import { RUNTIMES } from '../modules/runtimes'
+import { geraetMit, kameraGeraete, lichtGeraete } from '../data/project'
 import { knotenFuer, objektAmKabel } from './crossLink'
 import type { RuntimeHealth } from './runtimeHealth'
 
@@ -161,8 +162,8 @@ export function PropertiesPanel({
 
   if (module.id === 'signal') {
     const cable = project.cables.find((c) => c.id === selectedId) ?? project.cables[0]
-    const from = project.nodes.find((n) => n.id === cable.from)
-    const to = project.nodes.find((n) => n.id === cable.to)
+    const from = geraetMit(project, cable.from)
+    const to = geraetMit(project, cable.to)
     return (
       <div className="flex h-full flex-col bg-av-surface-1">
         <Header eyebrow={modEyebrow} title={`${from?.name.split(' — ')[0]} → ${to?.name.split(' ')[0]} In`} sub={`${cable.type} · BNC ↔ BNC · Layer Video`} accent={accent} />
@@ -194,10 +195,11 @@ export function PropertiesPanel({
   }
 
   if (module.id === 'cameras') {
-    const cam = project.cameras.find((c) => c.id === selectedId) ?? project.cameras[1]
+    const kameras = kameraGeraete(project)
+    const cam = kameras.find((c) => c.id === selectedId) ?? kameras[1]
     return (
       <div className="flex h-full flex-col bg-av-surface-1">
-        <Header eyebrow={modEyebrow} title={`${cam.name} — ${cam.model}`} sub={`${cam.lens}`} accent={accent} />
+        <Header eyebrow={modEyebrow} title={`${cam.name} — ${cam.model ?? ''}`} sub={`${cam.kamera?.lens ?? ''}`} accent={accent} />
         <div className="av-scroll flex-1 overflow-auto">
           <Group title={t('panels.group.positionView', 'Position & Blick')}>
             {/* „Noch nicht platziert" und nicht „0,0 / 0,0 m": eine Kamera, die
@@ -208,8 +210,8 @@ export function PropertiesPanel({
                 ? `${cam.x.toFixed(1)} / ${cam.y.toFixed(1)} m`
                 : t('panels.value.notPlaced', 'noch nicht platziert')}
             </Field>
-            <Field label={t('panels.field.focalLength', 'Brennweite')}>{cam.focalMm} mm</Field>
-            <Field label="H-FOV">{cam.hfovDeg.toFixed(1)}°</Field>
+            <Field label={t('panels.field.focalLength', 'Brennweite')}>{cam.kamera?.focalMm ?? 0} mm</Field>
+            <Field label="H-FOV">{(cam.kamera?.hfovDeg ?? 0).toFixed(1)}°</Field>
           </Group>
           <Group title={t('panels.group.cabling', 'Verkabelung')} icon="signal" accent="var(--mod-signal)">
             <Button
@@ -269,27 +271,34 @@ export function PropertiesPanel({
   }
 
   // licht
-  const fx = project.fixtures.find((f) => f.id === selectedId) ?? project.fixtures[2]
+  const leuchten = lichtGeraete(project)
+  const fx = leuchten.find((f) => f.id === selectedId) ?? leuchten[2]
   return (
     <div className="flex h-full flex-col bg-av-surface-1">
-      <Header eyebrow={modEyebrow} title={`${fx.name} — ${fx.model}`} sub={`Truss 1 · Purpose: ${fx.purpose}`} accent={accent} />
+      <Header eyebrow={modEyebrow} title={`${fx.name} — ${fx.model ?? ''}`} sub={`Truss 1 · Purpose: ${fx.licht?.purpose ?? ''}`} accent={accent} />
       <div className="av-scroll flex-1 overflow-auto">
         <Group title={t('panels.group.positionAim', 'Position & Aim')}>
-          <Field label={t('panels.field.xy', 'X / Y')}>{fx.x.toFixed(1)} / {fx.y.toFixed(1)} m</Field>
+          {/* Dieselbe Regel wie bei der Kamera: die Null waere die Ecke der Halle,
+              und zwar als Tatsache. */}
+          <Field label={t('panels.field.xy', 'X / Y')}>
+            {fx.x !== undefined && fx.y !== undefined
+              ? `${fx.x.toFixed(1)} / ${fx.y.toFixed(1)} m`
+              : t('panels.value.notPlaced', 'noch nicht platziert')}
+          </Field>
           {/* Die Haenge-Hoehe kommt aus dem Licht-Planer und steht nur da,
               wenn sie jemand gesetzt hat. „—" waere hier falsch: es sieht aus
               wie eine Angabe, und die Shell plant keine Rigging-Hoehen. */}
-          {fx.rigHeightM !== undefined && (
+          {fx.licht?.rigHeightM !== undefined && (
             <Field label={t('panels.field.rigHeight', 'Hänge-Höhe')}>
-              {fx.rigHeightM.toFixed(1)} m
+              {fx.licht.rigHeightM.toFixed(1)} m
             </Field>
           )}
         </Group>
         <Group title={t('panels.group.dimmerBeam', 'Dimmer & Beam')} accent={accent}>
-          <Field label="Dimmer">{fx.dimmerPct} %</Field>
+          <Field label="Dimmer">{(fx.licht?.dimmerPct ?? 0)} %</Field>
         </Group>
         <Group title={t('panels.group.dmxPatch', 'DMX-Patch')} icon="modules">
-          <Field label={t('panels.field.channelUniverse', 'Kanal / Universe')}>{fx.dmxChannel} / 1</Field>
+          <Field label={t('panels.field.channelUniverse', 'Kanal / Universe')}>{(fx.licht?.dmxChannel ?? 0)} / 1</Field>
         </Group>
         <Group title={t('panels.group.cablingPower', 'Verkabelung & Strom')} icon="signal" accent="var(--mod-signal)">
           <Button

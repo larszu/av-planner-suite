@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { seedToFixtures, fixturesToSeedPatch } from '../../light-planner/src/core/shellSeed'
 import { emptySeed, type SuiteSeed } from '@avplan/ui/embed'
 import type { PlacedFixture } from '../../light-planner/src/types'
-import { PROJECT } from '../src/data/project'
+import { PROJECT, lichtGeraete } from '../src/data/project'
 import { applyPatchToSuite, suiteToSeed } from '../src/data/seed'
 
 /**
@@ -141,7 +141,15 @@ describe('Die Hoehe geht in die Suite zurueck', () => {
 })
 
 describe('Die Shell fuehrt die Hoehe mit, ohne sie zu planen', () => {
-  const projekt = { ...PROJECT, fixtures: PROJECT.fixtures.map((f) => ({ ...f })) }
+  const projekt = { ...PROJECT, geraete: PROJECT.geraete.map((g) => ({ ...g })) }
+  const ersteLeuchte = lichtGeraete(projekt)[0]
+  const alsSeedLeuchte = (rigHeightM?: number) => ({
+    id: ersteLeuchte.id,
+    name: ersteLeuchte.name,
+    ...(rigHeightM !== undefined ? { rigHeightM } : {}),
+  })
+  const hoeheVon = (p: typeof projekt) =>
+    p.geraete.find((g) => g.id === ersteLeuchte.id)?.licht?.rigHeightM
 
   it('erfindet keine, wo keine gemeldet ist', () => {
     // Ein `rigHeightM: 0` im Seed hiesse „haengt am Boden" und ueberschriebe
@@ -154,9 +162,9 @@ describe('Die Shell fuehrt die Hoehe mit, ohne sie zu planen', () => {
     const { project: nachher } = applyPatchToSuite(projekt, {
       domain: 'fixtures',
       revision: 1,
-      fixtures: [{ ...projekt.fixtures[0], rigHeightM: 7.5 }],
+      fixtures: [alsSeedLeuchte(7.5)],
     }, 1)
-    expect(nachher.fixtures[0].rigHeightM).toBe(7.5)
+    expect(hoeheVon(nachher)).toBe(7.5)
     expect(suiteToSeed(nachher, 2).fixtures[0].rigHeightM).toBe(7.5)
   })
 
@@ -166,18 +174,14 @@ describe('Die Shell fuehrt die Hoehe mit, ohne sie zu planen', () => {
     const { project: mitHoehe } = applyPatchToSuite(projekt, {
       domain: 'fixtures',
       revision: 1,
-      fixtures: [{ ...projekt.fixtures[0], rigHeightM: 7.5 }],
+      fixtures: [alsSeedLeuchte(7.5)],
     }, 1)
-    const ohneAngabe = mitHoehe.fixtures.map((f) => {
-      const kopie = { ...f }
-      delete kopie.rigHeightM
-      return kopie
-    })
+    // Die zweite Meldung nennt dieselbe Leuchte OHNE Hoehe.
     const { project: danach } = applyPatchToSuite(mitHoehe, {
       domain: 'fixtures',
       revision: 2,
-      fixtures: ohneAngabe,
+      fixtures: [alsSeedLeuchte()],
     }, 2)
-    expect(danach.fixtures[0].rigHeightM).toBe(7.5)
+    expect(hoeheVon(danach)).toBe(7.5)
   })
 })

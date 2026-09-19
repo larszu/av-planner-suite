@@ -210,7 +210,7 @@ const wenn = <T>(wert: T | undefined, feld: string): Record<string, T> =>
  * Die Vereinigung und nicht der Vorrang: ein Geraet kann aus beiden Gruenden
  * dazugehoeren, und keiner von beiden nimmt dem anderen etwas weg.
  */
-const imPlan = (g: SeedGeraet, gewerk: Gewerk): boolean =>
+export const imPlan = (g: Pick<SeedGeraet, 'kategorie' | 'kamera' | 'licht'>, gewerk: Gewerk): boolean =>
   gehoertZu(g.kategorie, gewerk) ||
   (gewerk === 'kamera' && g.kamera !== undefined) ||
   (gewerk === 'licht' && g.licht !== undefined)

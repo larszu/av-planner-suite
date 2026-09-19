@@ -169,10 +169,10 @@ embedded.
 
 ### One device, many plans
 
-There is **one** device per piece of kit — not one per planner (ADR-011). The project travels as
-a `suite-seed` whose single `geraete` list holds every device exactly once, with its category and
-the fields of *all* planners. `cameras`, `fixtures` and `devices` still appear in the seed, but
-as **views** on that one list, and they will disappear once every planner reads it directly.
+There is **one** device per piece of kit — not one per planner (ADR-011). Both the shell's project
+and the `suite-seed` hold a single `geraete` list with every device exactly once, its category and
+the fields of *all* planners. `cameras`, `fixtures` and `devices` still appear in the seed, but as
+**views** on that one list, and they will disappear once every planner reads it directly.
 
 The **category** does the assigning, and it assigns to several plans at once: a camera belongs to
 the camera plan *and* to the signal plan, because it has a standpoint *and* connectors. A mixer
@@ -185,12 +185,14 @@ Seeing a device is not the same as writing to it. Ownership moves from *per list
 group*: focal length belongs to the camera plan, the DMX address to the lighting plan, the ports
 to the signal plan. Nothing a planner does not own can be overwritten by it.
 
-Where the shell still keeps three lists, they are merged over the **declared** correspondence
-(`SignalNode.represents`) and over nothing else. Two records nobody has connected are two things,
-however similar their names. For a camera created in the cabling planner the shell therefore
-*offers* to create it in the camera plan rather than doing it silently — and accepting records the
-correspondence, so the bill of materials counts one device and not two. No position is invented
-on the way: a node's `nx`/`ny` are diagram coordinates, not metres in the hall.
+A camera created in the cabling planner therefore *is* a camera in the camera plan — nothing to
+confirm, nothing to link, and the bill of materials counts one device because there is one. Project
+files written before this are migrated on load over the **declared** correspondence they carried,
+and over nothing else: two records nobody connected are two things, however similar their names.
+
+No position is invented anywhere. A device's `nx`/`ny` are diagram coordinates, not metres in the
+hall; a device without a place in the hall is shown as "not placed yet" rather than drawn at the
+origin.
 
 ---
 

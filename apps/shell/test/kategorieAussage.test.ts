@@ -15,8 +15,7 @@ import type { SuiteProject } from '../src/data/project'
 
 const basis: SuiteProject = {
   ...PROJECT,
-  cameras: [],
-  nodes: [
+  geraete: [
     { id: 'n1', name: 'CAM 1', sub: '3x SDI Out', group: 'floor', venue: true, nx: 0.1, ny: 0.2 },
   ],
   cables: [],
@@ -30,8 +29,8 @@ describe('Kategorie und Modell im Rückweg', () => {
     const next = melde(basis, [
       { id: 'n1', name: 'CAM 1', subtitle: '3x SDI Out', kategorie: 'Cameras', model: 'Sony FX9', nx: 0.1, ny: 0.2 },
     ])
-    expect(next.nodes[0].kategorie).toBe('Cameras')
-    expect(next.nodes[0].model).toBe('Sony FX9')
+    expect(next.geraete[0].kategorie).toBe('Cameras')
+    expect(next.geraete[0].model).toBe('Sony FX9')
   })
 
   it('sie geht nicht verloren, wenn eine Meldung sie nicht mitschickt', () => {
@@ -45,9 +44,9 @@ describe('Kategorie und Modell im Rückweg', () => {
       { domain: 'signal', revision: 0, devices: [{ id: 'n1', name: 'CAM 1 neu', nx: 0.3, ny: 0.4 }] },
       0,
     ).project
-    expect(ohne.nodes[0].name).toBe('CAM 1 neu')
-    expect(ohne.nodes[0].kategorie).toBe('Cameras')
-    expect(ohne.nodes[0].model).toBe('Sony FX9')
+    expect(ohne.geraete[0].name).toBe('CAM 1 neu')
+    expect(ohne.geraete[0].kategorie).toBe('Cameras')
+    expect(ohne.geraete[0].model).toBe('Sony FX9')
   })
 
   it('und sie fährt zu den Planern zurück', () => {
@@ -67,27 +66,27 @@ describe('Kategorie und Modell im Rückweg', () => {
       {
         domain: 'cameras',
         revision: 0,
-        cameras: [{ id: 'cam_n1', name: 'CAM 1', model: 'Sony FX9' }],
+        cameras: [{ id: 'n1', name: 'CAM 1', model: 'Sony FX9' }],
       },
       0,
     ).project
-    expect(next.cameras[0].x).toBeUndefined()
-    expect(next.cameras[0].y).toBeUndefined()
+    expect(next.geraete[0].x).toBeUndefined()
+    expect(next.geraete[0].y).toBeUndefined()
 
     // Nennt der Kameraplan eine, gilt sie — und sie bleibt beim nächsten Mal
     // stehen, auch wenn er sie nicht wiederholt.
     const platziert = applyPatchToSuite(
       next,
-      { domain: 'cameras', revision: 0, cameras: [{ id: 'cam_n1', name: 'CAM 1', x: 4.2, y: 10.8 }] },
+      { domain: 'cameras', revision: 0, cameras: [{ id: 'n1', name: 'CAM 1', x: 4.2, y: 10.8 }] },
       0,
     ).project
-    expect(platziert.cameras[0].x).toBe(4.2)
+    expect(platziert.geraete[0].x).toBe(4.2)
     const spaeter = applyPatchToSuite(
       platziert,
-      { domain: 'cameras', revision: 0, cameras: [{ id: 'cam_n1', name: 'CAM 1' }] },
+      { domain: 'cameras', revision: 0, cameras: [{ id: 'n1', name: 'CAM 1' }] },
       0,
     ).project
-    expect(spaeter.cameras[0].x).toBe(4.2)
-    expect(spaeter.cameras[0].y).toBe(10.8)
+    expect(spaeter.geraete[0].x).toBe(4.2)
+    expect(spaeter.geraete[0].y).toBe(10.8)
   })
 })

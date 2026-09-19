@@ -38,7 +38,6 @@ import {
   alsLeuchten,
   alsSignalGeraete,
   deriveBedarf,
-  geraeteAus,
   mergeSeedPatch,
   type SeedDomain,
   type SeedPatch,
@@ -47,11 +46,9 @@ import {
 import type {
   Cable,
   CableLayer,
-  Camera,
-  Fixture,
   SeedConflictRecord,
+  SuiteGeraet,
   SeedHandoffRecord,
-  SignalNode,
   SuiteProject,
 } from './project'
 
@@ -96,29 +93,19 @@ export function suiteToSeed(
     }
   }
 
-  // ── EINE Liste, drei Sichten (ADR-011) ───────────────────────────────────
+  // ── EINE Liste, drei Sichten (ADR-011, Stufe 2) ──────────────────────────
   //
-  // Bis 2026-09-19 standen hier drei `map`s nebeneinander, und dasselbe Blech
-  // stand in zweien davon: die Kamera `cam2` und ihr Knoten `n_cam2` waren
-  // zwei Datensaetze. Genau die zweite Wahrheit, gegen die ADR-001
-  // geschrieben ist — nur eine Ebene hoeher als dort gemessen.
+  // Hier stand bis 2026-09-19 ein Zusammenlegen: drei Listen der Shell wurden
+  // ueber die erklaerte Zuordnung (`represents`) zu einer gerechnet, und
+  // `altIds` trug die alten Ids durch die Uebergangszeit. Beides ist weg —
+  // die Shell FUEHRT jetzt eine Liste, also gibt es nichts mehr zu rechnen.
   //
-  // Zusammengelegt wird ueber die ERKLAERTE Entsprechung (`represents`) und
-  // nur ueber sie. Wo niemand sie erklaert hat, bleiben es zwei Geraete; das
-  // ist die richtige Antwort und kein Mangel.
-  const geraete = geraeteAus(
-    project.nodes.map((n) => ({
-      id: n.id,
-      name: n.name,
-      subtitle: n.sub,
-      nx: n.nx,
-      ny: n.ny,
-      ...(n.kategorie ? { kategorie: n.kategorie } : {}),
-      ...(n.model ? { model: n.model } : {}),
-      ...(n.represents ? { represents: n.represents } : {}),
-    })),
-    project.cameras,
-    project.fixtures,
+  // `group` und `venue` bleiben aussen vor: das sind Shell-Begriffe
+  // (Bodennaehe vs. Regie, steht im Raum), die kein Planer kennt. Sie duerfen
+  // sie deshalb weder setzen noch verlieren — beim Rueckweg werden sie
+  // erhalten.
+  const geraete = project.geraete.map(
+    ({ group, venue, ...rest }) => (void group, void venue, rest),
   )
   const cameras = alsKameras(geraete)
   const fixtures = alsLeuchten(geraete)
@@ -150,40 +137,19 @@ export function suiteToSeed(
     })),
     // Der Bedarf wird bei JEDEM Senden neu gerechnet und nie im Projekt
     // gefuehrt (ADR-001: eine gespeicherte Ableitung ist eine zweite
-    // Wahrheit). Die Knoten, die fuer eine Kamera oder Leuchte stehen, gehen
-    // dabei heraus — sonst fordert das Lager zwei Geraete an, wo eines steht.
-    bedarf: deriveBedarf({ cameras, fixtures, devices }, vertreteneKnoten(project.nodes)),
-    // Die Deckung kommt vom Lager und wird deshalb GEFUEHRT: sie ist keine
-    // Ableitung aus dem Plan, sondern die Antwort einer anderen App. Fehlt
-    // sie, hat noch niemand nachgesehen — nicht „nichts vorhanden".
+    // Wahrheit).
+    //
+    // OHNE Ausnahmeliste: sie zaehlte frueher die Knoten heraus, die fuer
+    // eine Kamera standen, damit das Lager nicht zwei Geraete anforderte, wo
+    // eines steht. Mit einer Liste gibt es diese Doppelung nicht mehr — das
+    // Problem ist nicht geloest, sondern verschwunden.
+    bedarf: deriveBedarf({ cameras, fixtures, devices }, new Set()),
     deckung: project.deckung ?? [],
-    // Dasselbe fuer die Anschlusspunkte des Hauses: eine Auskunft des
-    // Gebaeude-Werkzeugs, keine Ableitung aus dem Plan.
     anschluesse: project.anschluesse ?? [],
-    // Wer welches geteilte Feld haelt, faehrt mit: ohne diesen Teil koennte
-    // `mergeSeedPatch` keinen Halter erkennen und wuerde jede Setzung
-    // durchlassen — die Regel waere gebaut und unwirksam.
     holds: project.seedHolds,
   }
 }
 
-/**
- * Die Knoten-Ids, die fuer ein Objekt eines anderen Gewerks stehen (B-18).
- *
- * Sie stehen hier und nicht in `@avplan/ui`, weil `represents` ein Feld des
- * SHELL-Modells ist: die Aufloesung ueber die Gewerks-Grenze gehoert in die
- * Shell, der Planer kennt nur seinen eigenen Id-Raum.
- */
-function vertreteneKnoten(nodes: readonly SignalNode[]): Set<string> {
-  const out = new Set<string>()
-  for (const n of nodes) if (n.represents) out.add(n.id)
-  return out
-}
-
-/**
- * Der Fingerabdruck des Teils, den die Planer sehen. Aendert er sich, ist ein
- * neuer Seed faellig; aendert sich nur Crew/Budget/Board, nicht.
- */
 export function seedSignature(project: SuiteProject | null): string {
   return JSON.stringify(suiteToSeed(project, 0))
 }
@@ -242,101 +208,38 @@ export function applyPatchToSuite(
       : { project, conflicts: [] }
   }
 
-  // Zurueck ins Shell-Modell. Gearbeitet wird auf dem GEMERGTEN Seed und nicht
-  // auf dem Patch: was die Regel abgelehnt hat, steht dort gar nicht erst
-  // drin, und diese Funktion muss die Regel nicht ein zweites Mal kennen.
-  const alteKameras = new Map(project.cameras.map((c) => [c.id, c]))
-  const cameras: Camera[] = seed.cameras.map((c) => {
-    const alt = alteKameras.get(c.id)
-    return {
-      id: c.id,
-      name: c.name,
-      model: c.model ?? alt?.model ?? '',
-      lens: c.lens ?? alt?.lens ?? '',
-      focalMm: c.focalMm ?? alt?.focalMm ?? 0,
-      hfovDeg: c.hfovDeg ?? alt?.hfovDeg ?? 0,
-      // KEIN `?? 0`: eine Kamera ohne Position ist nicht in der Ecke der
-      // Halle, sondern noch nicht platziert. Bis 2026-09-19 stand hier die
-      // Null, und die Vorschau zeichnete sie als Tatsache.
-      ...(c.x ?? alt?.x) !== undefined ? { x: c.x ?? alt?.x } : {},
-      ...(c.y ?? alt?.y) !== undefined ? { y: c.y ?? alt?.y } : {},
-      // `linked` kennt der Seed nicht — bei bekannten Kameras erhalten,
-      // bei neuen ist „noch nicht verkabelt" die wahre Aussage.
-      linked: alt?.linked ?? false,
-    }
-  })
-
-  const alteLeuchten = new Map(project.fixtures.map((f) => [f.id, f]))
-  const fixtures: Fixture[] = seed.fixtures.map((f) => {
-    const alt = alteLeuchten.get(f.id)
-    return {
-      id: f.id,
-      name: f.name,
-      model: f.model ?? alt?.model ?? '',
-      purpose: f.purpose ?? alt?.purpose ?? '',
-      dimmerPct: f.dimmerPct ?? alt?.dimmerPct ?? 0,
-      dmxChannel: f.dmxChannel ?? alt?.dmxChannel ?? 0,
-      x: f.x ?? alt?.x ?? 0,
-      y: f.y ?? alt?.y ?? 0,
-      // Die Haenge-Hoehe bleibt WEG, wenn niemand sie kennt — und wird nicht
-      // auf 0 gesetzt wie die Felder darueber. Bei den anderen ist die 0 ein
-      // brauchbarer Anfangswert (kein Dimmer, kein Kanal); bei einer Hoehe
-      // waere sie die Behauptung „haengt am Boden", und die Stueckliste
-      // rechnete daraufhin die Kabel zu kurz.
-      ...(f.rigHeightM ?? alt?.rigHeightM) !== undefined
-        ? { rigHeightM: f.rigHeightM ?? alt?.rigHeightM }
-        : {},
-    }
-  })
-
-  // ── Der Signalplan sieht jetzt ALLE Geraete, aendern darf er nur SEINE ──
+  // ── Zurueck ins Shell-Modell ─────────────────────────────────────────────
   //
-  // Seit ADR-011 traegt die Sicht `devices` auch die Kameras und Leuchten:
-  // genau das war der Auftrag („alle Kameras aus Multicam planner sind auch
-  // in Cable planner"). Auf dem Rueckweg kommen sie mit zurueck — und wuerden
-  // hier zu KNOTEN, weil diese Abbildung `seed.devices` auf `project.nodes`
-  // legt. Beim naechsten Senden stuenden Kamera und Knoten wieder als zwei
-  // Datensaetze da, ohne erklaerte Verbindung: die zweite Wahrheit, die das
-  // ADR gerade abgeschafft hat, nach einem Rundlauf zurueck.
+  // Gearbeitet wird auf dem GEMERGTEN Seed und nicht auf dem Patch: was die
+  // Eigentumsregel abgelehnt hat, steht dort gar nicht erst drin, und diese
+  // Funktion muss die Regel nicht ein zweites Mal kennen.
   //
-  // Das ist keine Sonderregel, sondern die Eigentumsregel an der Stelle, an
-  // der sie ohnehin gilt: der Signal-Planer darf `cameras` und `fixtures`
-  // nicht schreiben (`mergeSeedPatch`). Eine Kamera, die als Geraet
-  // zurueckkommt, ist deshalb nicht seine — sie wird gelesen und nicht
-  // uebernommen.
-  const fremdeIds = new Set([
-    ...project.cameras.map((c) => c.id),
-    ...project.fixtures.map((f) => f.id),
-  ])
-  const alteKnoten = new Map(project.nodes.map((n) => [n.id, n]))
-  const nodes: SignalNode[] = seed.devices.filter((d) => !fremdeIds.has(d.id)).map((d) => {
-    const alt = alteKnoten.get(d.id)
+  // Seit ADR-011 Stufe 2 ist das eine Zeile je Feldgruppe statt dreier
+  // Ruecklisten. Was hier frueher stand und WEG ist:
+  //
+  //   * drei `map`s auf `cameras`/`fixtures`/`nodes`, jede mit ihrer eigenen
+  //     Erhalten-Kette;
+  //   * die Sonderregel, die aus der Signal-Meldung die Kameras und Leuchten
+  //     heraushielt, damit sie nicht als Knoten zurueckkamen und beim
+  //     naechsten Senden doppelt dastanden;
+  //   * `represents`, das dabei erhalten werden musste.
+  //
+  // DIE REGEL, DIE BLEIBT: der Seed setzt, was er NENNT. Was er nicht nennt,
+  // behaelt das vorhandene Geraet — `group` und `venue` sind Shell-Begriffe,
+  // die kein Planer kennt, und ein Planer darf sie deshalb nicht verlieren.
+  const alte = new Map(project.geraete.map((g) => [g.id, g]))
+  const geraete: SuiteGeraet[] = seed.geraete.map((g) => {
+    const alt = alte.get(g.id)
     return {
-      id: d.id,
-      name: d.name,
-      sub: d.subtitle ?? alt?.sub ?? '',
-      // `group`/`venue` sind Shell-Begriffe (Bodennaehe vs. Regie,
-      // steht im Raum). Der Cable-Planer kennt sie nicht und darf sie
-      // deshalb weder setzen noch verlieren.
+      ...g,
       group: alt?.group ?? 'floor',
       venue: alt?.venue ?? true,
-      nx: d.nx ?? alt?.nx ?? 0.5,
-      ny: d.ny ?? alt?.ny ?? 0.5,
-      // `represents` ging hier bis 2026-09-18 VERLOREN. Der Seed traegt es
-      // nicht (die Aufloesung ueber die Gewerks-Grenze gehoert in die Shell,
-      // B-18), und diese Rueckabbildung baute den Knoten Feld fuer Feld neu
-      // auf — also fiel es bei jeder Meldung des Signal-Planers heraus.
-      //
-      // Die Folge war still und genau die aus B-18: die vier Cross-Link-
-      // Knoepfe sprangen danach nur noch ins Modul, ohne Auswahl, und der
-      // Bedarf zaehlte den Knoten und seine Kamera doppelt. Dasselbe
-      // Erhalten-statt-Neubauen gilt hier wie fuer `group` und `venue`.
-      ...(alt?.represents ? { represents: alt.represents } : {}),
-      // Die Typaussage kommt aus dem Seed, wenn der Planer sie trifft, und
-      // bleibt sonst stehen. Sie geht NICHT verloren, wenn ein Planer sie
-      // einmal nicht mitschickt — dieselbe Regel wie oben.
-      ...((d.kategorie ?? alt?.kategorie) ? { kategorie: d.kategorie ?? alt?.kategorie } : {}),
-      ...((d.model ?? alt?.model) ? { model: d.model ?? alt?.model } : {}),
+      // Die Feldgruppen zusammenfuehren statt ersetzen: eine Meldung des
+      // Kameraplans nennt `kamera` und schweigt zu `licht`. Wer sie ersetzte,
+      // loeschte die DMX-Adresse einer Leuchte, sobald jemand im Kameraplan
+      // etwas anfasste.
+      ...(alt?.kamera || g.kamera ? { kamera: { ...alt?.kamera, ...g.kamera } } : {}),
+      ...(alt?.licht || g.licht ? { licht: { ...alt?.licht, ...g.licht } } : {}),
     }
   })
 
@@ -356,9 +259,7 @@ export function applyPatchToSuite(
 
   const next: SuiteProject = {
     ...project,
-    cameras,
-    fixtures,
-    nodes,
+    geraete,
     cables,
     // Der Raum. `venue.name` gehoert der Shell (SEED_VENUE_OWNER) und kommt
     // deshalb hier gar nicht veraendert an — der Fallback ist trotzdem der
@@ -403,14 +304,18 @@ export function applyPatchToSuite(
   // Kein Wunder — die Rueckabbildung normalisiert (`?? ''`, `?? 0`), und zwei
   // Kameras hatten ein Feld, das im Seed gar nicht vorkommt. Gezaehlt gehoert,
   // was der Seed traegt: nur das faehrt zu den anderen Planern.
-  const a = zaehle(vorher.cameras, seed.cameras)
-  const b = zaehle(vorher.fixtures, seed.fixtures)
-  const c = zaehle(vorher.devices, seed.devices)
+  //
+  // UND SEIT ADR-011 STUFE 2 UEBER `geraete` STATT UEBER DIE DREI SICHTEN:
+  // eine Kamera stand in `cameras` UND in `devices`, also zaehlte jede
+  // Aenderung an ihr zweimal. „2 geaendert" bei einer geaenderten Kamera ist
+  // keine Kleinigkeit — der Streifen ist die einzige Zahl, die der Nutzer
+  // sieht, bevor er „Uebernehmen" drueckt.
+  const a = zaehle(vorher.geraete, seed.geraete)
   const d = zaehle(vorher.cables, seed.cables)
   const summe = {
-    neu: a.neu + b.neu + c.neu + d.neu,
-    geaendert: a.geaendert + b.geaendert + c.geaendert + d.geaendert,
-    entfernt: a.entfernt + b.entfernt + c.entfernt + d.entfernt,
+    neu: a.neu + d.neu,
+    geaendert: a.geaendert + d.geaendert,
+    entfernt: a.entfernt + d.entfernt,
   }
   const handoff: SeedHandoffRecord | undefined =
     summe.neu + summe.geaendert + summe.entfernt > 0
