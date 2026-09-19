@@ -126,6 +126,16 @@ jobs:
       # Einstiegsseite aus verlinkt -- auch nicht IMPLEMENTATION_STATUS und
       # IMPLEMENTATION_BACKLOG. Ein Dokument, das nur findet, wer den Ordner
       # durchblaettert, ist praktisch nicht vorhanden.
+      # ADR-002 gibt dem Geraetetyp-Katalog das Datenblatt als ALLEINIGES
+      # Eigentum. Gemessen 2026-09-19 hatte das Feld drei Eigentuemer: 377
+      # Kameramodelle im multicam-planner, 23 im cable-planner, 9 gemeinsam.
+      # `@avplan/device-catalog` fuehrt seither die Identitaet, und die
+      # Kameratypen darin werden aus der Kameraliste ERZEUGT. Wer dort eine
+      # Kamera ergaenzt und das Erzeugen vergisst, wird hier rot -- nicht
+      # erst, wenn jemand sie im Cable-Planer sucht.
+      - name: Der Geraetetyp-Katalog stammt noch aus seiner Quelle
+        run: npm run katalog:parity
+
       - name: Dokumentation ist auffindbar
         run: npm run docs:reachable
       # Die Kopfzeile eines Backlog-Eintrags sagt dasselbe wie sein Rumpf.

@@ -47,6 +47,14 @@ Cable-Planer keine Identität.** Das Feld, dem ADR-002 genau einen Eigentümer z
 Die Vertagung war also nie eine Vertagung, sondern eine Beschreibung eines Zustands, der schon
 gegen ADR-002 stand.
 
+**Seit 2026-09-19 in Arbeit:** `@avplan/device-catalog` führt die Identität eines Modells (Id,
+Hersteller, Modell, Kategorie, Datenblatt) für alle Planer. Die fachlichen Fakten bleiben bei dem
+Planer, der sie versteht — ein Paket, das Ports führte, zöge den halben Kabelgraph mit und wäre
+der Cable-Planer mit anderem Namen. Die 377 Kameratypen werden aus der Kameraliste **erzeugt**
+(`npm run katalog:erzeugen`), und `katalog:parity` ist als CI-Gate die Zusicherung, dass sie es
+bleiben. Offen: die Katalog-Einträge des Cable-Planers und des Licht-Planers anschließen, und die
+Planer auf den gemeinsamen Katalog umstellen.
+
 ### B · ADR-001 galt im Planer und nicht dazwischen
 
 ADR-001, erster Absatz: *„Jedes reale Ding bekommt genau einen Datensatz […], nie eine zweite
@@ -97,8 +105,9 @@ Sicht zurückschreibt. Kein gelebter Widerspruch, eine fehlende Fußnote mit Fol
 
 ## Was daraus folgt
 
-1. **A ist der teuerste Befund** und der, den der Eigentümer als Doppelarbeit erlebt: ein
-   gemeinsamer Gerätetyp-Katalog für alle Planer.
+1. **A ist der teuerste Befund** und der, den der Eigentümer als Doppelarbeit erlebt. Das Paket
+   steht (`@avplan/device-catalog`), die Kameratypen sind drin; das Anschließen der übrigen
+   Kataloge und der Planer läuft.
 2. **B** ist in Arbeit (ADR-011, Stufen 2–4).
 3. **E** ist billig: `ci:complete` in die übrigen Repos.
 4. **C** und **F** sind Textarbeit an den ADRs, nach dem Muster von **D**.
