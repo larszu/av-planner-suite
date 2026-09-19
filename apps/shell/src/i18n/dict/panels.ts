@@ -58,6 +58,7 @@ export const panels: Record<string, string> = {
 
   // Cameras
   'panels.field.xy': 'X / Y',
+  'panels.value.notPlaced': 'not placed yet',
   'panels.field.rigHeight': 'Rig height',
   'panels.group.positionView': 'Position & view',
   'panels.field.focalLength': 'Focal length',

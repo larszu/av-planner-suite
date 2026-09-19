@@ -114,6 +114,27 @@ export interface SeedDevice {
   /** Lage im Raum (Meter), falls das Geraet im Venue steht. */
   x?: number
   y?: number
+  /**
+   * Zu welchem ANDEREN Gewerk dieses Geraet ausserdem gehoert.
+   *
+   * Eine Kamera, die im Signalplan angelegt wird, ist dort ein Geraet mit
+   * Anschluessen — und zugleich das Blech, das der Kameraplan als Kamera
+   * fuehrt. Ohne diese Aussage kann die Shell die beiden nicht verbinden:
+   * `devices` und `cameras` sind getrennte Listen mit getrennten Eigentuemern
+   * (`mergeSeedPatch`), und der Cable-Planer darf `cameras` nicht schreiben.
+   *
+   * DEKLARIERT, NICHT GERATEN (ADR-002). Der fuehrende Planer setzt das Feld
+   * aus seinem KATALOG — beim Cable-Planer aus `deviceTypeId` ueber die
+   * Kategorie des Datenblatt-Templates. Aus dem Namen abgeleitet waere es
+   * dieselbe Falle wie `seedFromEquipment` damals: „Kamera 1" ist ein
+   * Instanzname und keine Typaussage.
+   *
+   * Fehlt das Feld, hat NIEMAND etwas gesagt. Das ist nicht „gehoert zu
+   * keinem anderen Gewerk" — ein von Hand angelegtes Geraet ohne
+   * Katalog-Zuordnung hat schlicht keine Typaussage, und die Shell schlaegt
+   * dafuer nichts vor, statt zu raten.
+   */
+  gewerk?: 'camera'
 }
 
 export interface SeedCable {

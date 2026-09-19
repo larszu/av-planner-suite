@@ -200,7 +200,14 @@ export function PropertiesPanel({
         <Header eyebrow={modEyebrow} title={`${cam.name} — ${cam.model}`} sub={`${cam.lens}`} accent={accent} />
         <div className="av-scroll flex-1 overflow-auto">
           <Group title={t('panels.group.positionView', 'Position & Blick')}>
-            <Field label={t('panels.field.xy', 'X / Y')}>{cam.x.toFixed(1)} / {cam.y.toFixed(1)} m</Field>
+            {/* „Noch nicht platziert" und nicht „0,0 / 0,0 m": eine Kamera, die
+                aus dem Signalplan uebernommen wurde, hat noch keine Stelle in
+                der Halle. Die Null waere die Ecke — als Tatsache. */}
+            <Field label={t('panels.field.xy', 'X / Y')}>
+              {cam.x !== undefined && cam.y !== undefined
+                ? `${cam.x.toFixed(1)} / ${cam.y.toFixed(1)} m`
+                : t('panels.value.notPlaced', 'noch nicht platziert')}
+            </Field>
             <Field label={t('panels.field.focalLength', 'Brennweite')}>{cam.focalMm} mm</Field>
             <Field label="H-FOV">{cam.hfovDeg.toFixed(1)}°</Field>
           </Group>

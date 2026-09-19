@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { SUITE_SEED_KIND, SUITE_SEED_VERSION, type SuiteSeed } from '@avplan/ui/embed'
 import { SEED_BELEG, cableToSeedPatch, katalogTemplate, seedToCable } from '../src/renderer/lib/shellSeed'
+import { listDeviceTypes } from '../src/renderer/lib/deviceTypeRegistry'
+import type { EquipmentItem } from '../src/renderer/types/equipment'
 
 // ───────────────────────────────────────────────────────────────────────────
 // SUITE-OVERLAY-TEST: der Projekt-Seed der Shell im Cable-Planer.
@@ -193,6 +195,51 @@ describe('shellSeed — Rueckweg', () => {
     expect(zurueck.cables[0].lengthM).toBe(45)
     // Zurueck geht die aussagekraeftigere Angabe: der Standard, nicht der Stecker.
     expect(zurueck.cables[0].type).toBe('SDI-12G')
+  })
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DIE TYPAUSSAGE KOMMT AUS DEM KATALOG, NIE AUS DEM NAMEN.
+  //
+  // Sie ist der einzige Weg, auf dem die Shell erfaehrt, dass ein Geraet im
+  // Signalplan zugleich eine Kamera des Kameraplans ist — `mergeSeedPatch`
+  // laesst diesen Planer `cameras` nicht schreiben, und das soll so bleiben.
+  // Aus dem Namen abgeleitet waere es dieselbe Falle wie
+  // `seedFromEquipment` damals (ADR-002): „Kamera 1" ist ein Instanzname.
+  // ─────────────────────────────────────────────────────────────────────────
+  it('meldet die Gewerks-Aussage und das Modell aus dem Katalog', () => {
+    const kamera = listDeviceTypes().find((d) => d.category === 'Cameras')
+    expect(kamera, 'Katalog ohne Kamera-Eintrag').toBeDefined()
+
+    const { equipment } = seedToCable(
+      seed({ devices: [{ id: 'g1', name: kamera!.name, nx: 0.1, ny: 0.2 }] }),
+    )
+    expect(equipment[0].deviceTypeId, 'Katalog-Treffer erwartet').toBe(kamera!.id)
+
+    const [gemeldet] = cableToSeedPatch({ equipment }).devices
+    expect(gemeldet.gewerk).toBe('camera')
+    // Das MODELL aus dem Datenblatt, nicht der Instanzname auf dem Canvas.
+    expect(gemeldet.model).toBe(kamera!.name)
+  })
+
+  it('schweigt, wo der Katalog nichts sagt', () => {
+    // Ein von Hand angelegtes Geraet: kein `deviceTypeId`, also keine
+    // Typaussage. Der Name waere hier verfuehrerisch genug — und genau
+    // deshalb steht er nicht in der Rechnung.
+    const vonHand = {
+      id: 'h1',
+      name: 'Kamera 1',
+      category: 'Other',
+      inputs: [],
+      outputs: [],
+      x: 100,
+      y: 100,
+    } as unknown as EquipmentItem
+    const [gemeldet] = cableToSeedPatch({ equipment: [vonHand] }).devices
+    expect(gemeldet.gewerk).toBeUndefined()
+    expect(gemeldet.model).toBeUndefined()
+    // Der Name faehrt weiter mit — er ist die Beschriftung, nur eben keine
+    // Typaussage.
+    expect(gemeldet.name).toBe('Kamera 1')
   })
 })
 

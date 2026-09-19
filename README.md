@@ -166,6 +166,24 @@ embedded.
 # If a planner isn't running, the shell shows a fallback instead of a dead frame.
 ```
 
+### One camera, two trades
+
+The project itself travels as a `suite-seed`, and each list in it belongs to exactly one
+planner: the cabling planner owns `devices` and `cables`, the camera planner owns `cameras`,
+the lighting planner owns `fixtures`. That ownership is what keeps two planners from
+overwriting each other — so a camera created in the **cabling** planner is a signal node
+there, not a camera in the camera plan.
+
+The bridge across that line belongs to the shell. The owning planner declares from its
+**catalogue** that a device is also a camera (`SeedDevice.gewerk`, resolved via the data-sheet
+template — never guessed from the name), and the shell then offers to create it in the camera
+plan. It offers rather than does: a camera that only serves as a signal source has no business
+in the shot plan. Accepting creates the camera **and** records the correspondence
+(`SignalNode.represents`), so the bill of materials counts one device and not two.
+
+No position is invented in the process. A node's `nx`/`ny` are diagram coordinates, not metres
+in the hall; the new camera therefore has none until the camera planner places it.
+
 ---
 
 ## 📦 Desktop Installers &amp; Releases

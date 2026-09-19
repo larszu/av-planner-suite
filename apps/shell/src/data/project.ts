@@ -188,9 +188,24 @@ export interface Camera {
   lens: string
   focalMm: number
   hfovDeg: number
-  /** Position im Plan (Meter). */
-  x: number
-  y: number
+  /**
+   * Position im Plan (Meter) — OPTIONAL, weil sie fehlen kann.
+   *
+   * Eine Kamera, die aus dem Signalplan uebernommen wurde, hat noch keine.
+   * Dort stehen Diagramm-Koordinaten (`SignalNode.nx/ny`, 0..1 auf der
+   * Zeichenflaeche), und die in Meter umzurechnen hiesse, eine Stelle in der
+   * Halle zu behaupten, die niemand vermessen hat.
+   *
+   * Bis 2026-09-19 waren beide Pflichtfelder, und der Rueckweg setzte fuer
+   * eine Kamera ohne Angabe `0` ein — also die Ecke der Halle, und zwar als
+   * Tatsache. „Nicht angegeben" ist nicht „bei null" (dieselbe Regel wie im
+   * Gebaeude-Werkzeug); die Vorschau zeichnet eine solche Kamera deshalb
+   * nicht, und die Eigenschaften-Leiste sagt, dass sie noch nicht platziert
+   * ist. Der Kameraplan gibt ihr beim Platzieren seine eigene Startstelle und
+   * meldet sie zurueck.
+   */
+  x?: number
+  y?: number
   linked: boolean
 }
 
@@ -242,6 +257,29 @@ export interface SignalNode {
    * Auswahl zu erfinden.
    */
   represents?: { kind: 'camera' | 'fixture'; id: string }
+  /**
+   * Zu welchem anderen Gewerk dieses Geraet laut dem fuehrenden Planer
+   * ausserdem gehoert (`SeedDevice.gewerk`).
+   *
+   * Der Unterschied zu `represents` ist der ganze Punkt: `gewerk` sagt „das
+   * ist eine Kamera", `represents` sagt „und zwar GENAU DIESE hier". Das
+   * erste ist eine Typaussage des Katalogs, das zweite eine Zuordnung, die
+   * jemand getroffen hat. Aus dem ersten folgt das zweite nicht von selbst —
+   * dazwischen steht die Uebergabe, die der Nutzer bestaetigt
+   * (`kameraUebergabe.ts`).
+   */
+  gewerk?: 'camera'
+  /**
+   * Das Katalog-MODELL hinter diesem Knoten, falls der fuehrende Planer es
+   * genannt hat — nicht `sub`.
+   *
+   * `sub` ist die zweite Zeile am Knoten („3x SDI Out"), also eine
+   * Beschreibung. Das Modell ist eine Typaussage, und nur sie taugt zum
+   * Aufloesen drueben: der Kameraplan sucht seinen Katalog-Eintrag danach und
+   * laesst eine Kamera aus, deren Modell er nicht eindeutig trifft. Mit „3x
+   * SDI Out" oder „Kamera 1" fiele jede Uebernahme durch.
+   */
+  model?: string
 }
 
 export interface Cable {
@@ -283,6 +321,18 @@ export interface SuiteProject {
   seedConflicts?: SeedConflictRecord[]
   /** Angebotene Uebergaben an die anderen Planer (Nutzer-Auftrag 2026-09-12). */
   seedHandoffs?: SeedHandoffRecord[]
+  /**
+   * Knoten-Ids, deren Kamera-Uebergabe der Nutzer ABGELEHNT hat.
+   *
+   * Ohne diese Liste kaeme derselbe Vorschlag nach jeder Meldung des
+   * Signal-Planers wieder — und ein Streifen, der nach dem dritten „nein"
+   * unveraendert dasteht, wird weggeklickt statt gelesen. Die Ablehnung ist
+   * eine Aussage und wird deshalb gefuehrt, nicht vergessen.
+   *
+   * Sie haelt am KNOTEN und nicht am Namen: wer das Geraet umbenennt, hat es
+   * nicht neu entschieden.
+   */
+  kameraUebergabeAbgelehnt?: string[]
   /**
    * Was der Bestand vom Bedarf des Plans deckt — gemeldet vom Lager-Modul.
    *

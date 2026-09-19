@@ -121,6 +121,11 @@ export function suiteToSeed(
     subtitle: n.sub,
     nx: n.nx,
     ny: n.ny,
+    // Faehrt mit, obwohl die Shell die Aussage nicht selbst trifft: sonst
+    // verlaere sie ein Planer, der den Seed neu aufbaut, beim naechsten
+    // Melden wieder — derselbe stille Verlust, den `represents` hatte.
+    ...(n.gewerk ? { gewerk: n.gewerk } : {}),
+    ...(n.model ? { model: n.model } : {}),
   }))
 
   return {
@@ -253,8 +258,11 @@ export function applyPatchToSuite(
       lens: c.lens ?? alt?.lens ?? '',
       focalMm: c.focalMm ?? alt?.focalMm ?? 0,
       hfovDeg: c.hfovDeg ?? alt?.hfovDeg ?? 0,
-      x: c.x ?? alt?.x ?? 0,
-      y: c.y ?? alt?.y ?? 0,
+      // KEIN `?? 0`: eine Kamera ohne Position ist nicht in der Ecke der
+      // Halle, sondern noch nicht platziert. Bis 2026-09-19 stand hier die
+      // Null, und die Vorschau zeichnete sie als Tatsache.
+      ...(c.x ?? alt?.x) !== undefined ? { x: c.x ?? alt?.x } : {},
+      ...(c.y ?? alt?.y) !== undefined ? { y: c.y ?? alt?.y } : {},
       // `linked` kennt der Seed nicht — bei bekannten Kameras erhalten,
       // bei neuen ist „noch nicht verkabelt" die wahre Aussage.
       linked: alt?.linked ?? false,
@@ -308,6 +316,11 @@ export function applyPatchToSuite(
       // Bedarf zaehlte den Knoten und seine Kamera doppelt. Dasselbe
       // Erhalten-statt-Neubauen gilt hier wie fuer `group` und `venue`.
       ...(alt?.represents ? { represents: alt.represents } : {}),
+      // Die Typaussage kommt aus dem Seed, wenn der Planer sie trifft, und
+      // bleibt sonst stehen. Sie geht NICHT verloren, wenn ein Planer sie
+      // einmal nicht mitschickt — dieselbe Regel wie oben.
+      ...((d.gewerk ?? alt?.gewerk) ? { gewerk: d.gewerk ?? alt?.gewerk } : {}),
+      ...((d.model ?? alt?.model) ? { model: d.model ?? alt?.model } : {}),
     }
   })
 

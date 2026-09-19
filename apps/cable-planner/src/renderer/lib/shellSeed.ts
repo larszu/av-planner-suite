@@ -308,6 +308,31 @@ export function seedToCable(seed: SuiteSeed, vorhandene: EquipmentItem[] = []): 
   return { equipment, cables, ausgelassen }
 }
 
+/**
+ * Die Kategorien des Katalogs, deren Geraete zugleich Kameras des
+ * Kameraplans sind.
+ *
+ * Eine LISTE und kein Vergleich auf „enthaelt Kamera": die Kategorie kommt
+ * aus dem Datenblatt-Template, und sie soll genau dann zaehlen, wenn sie
+ * wirklich eine Kamera bezeichnet. `Video Converter` enthaelt „Video",
+ * `Microphones` enthaelt nichts davon — und ein Vergleich auf Teiltexte
+ * waere wieder das Raten aus Zeichenketten, gegen das ADR-002 steht.
+ */
+const KAMERA_KATEGORIEN = new Set(['Cameras'])
+
+/**
+ * Ist dieses Geraet laut KATALOG eine Kamera?
+ *
+ * `undefined` heisst „keine Aussage" und ist ausdruecklich nicht `false`:
+ * ein von Hand angelegtes oder importiertes Geraet traegt keine
+ * `deviceTypeId`, also gibt es zu seinem Typ nichts zu sagen. Die Shell
+ * schlaegt dafuer nichts vor, statt aus „Kamera 1" eine Kamera zu machen.
+ */
+const gewerkAus = (e: EquipmentItem): 'camera' | undefined => {
+  const kategorie = resolveDeviceType(e.deviceTypeId)?.template.category
+  return kategorie && KAMERA_KATEGORIEN.has(kategorie) ? 'camera' : undefined
+}
+
 /** Rueckweg: das native Modell als Seed-Domaene „signal". */
 export function cableToSeedPatch(project: {
   equipment?: EquipmentItem[]
@@ -315,13 +340,23 @@ export function cableToSeedPatch(project: {
 }): { devices: SeedDevice[]; cables: SeedCable[] } {
   const equipment = project.equipment ?? []
   return {
-    devices: equipment.map((e) => ({
-      id: e.id,
-      name: e.name,
-      ...(e.subtitle ? { subtitle: e.subtitle } : {}),
-      nx: Math.min(1, Math.max(0, e.x / CANVAS_W)),
-      ny: Math.min(1, Math.max(0, e.y / CANVAS_H)),
-    })),
+    devices: equipment.map((e) => {
+      // Das MODELL, nicht der Instanzname. `e.name` ist „Kamera 1"; was fuer
+      // ein Geraet dahintersteht, sagt allein das Template hinter der
+      // `deviceTypeId` (ADR-002). Der Kameraplan loest sein Katalog-Modell
+      // daraus auf — mit dem Instanznamen koennte er es nicht.
+      const modell = resolveDeviceType(e.deviceTypeId)?.template.name
+      const gewerk = gewerkAus(e)
+      return {
+        id: e.id,
+        name: e.name,
+        ...(e.subtitle ? { subtitle: e.subtitle } : {}),
+        ...(modell ? { model: modell } : {}),
+        ...(gewerk ? { gewerk } : {}),
+        nx: Math.min(1, Math.max(0, e.x / CANVAS_W)),
+        ny: Math.min(1, Math.max(0, e.y / CANVAS_H)),
+      }
+    }),
     cables: (project.cables ?? []).map((c) => ({
       id: c.id,
       label: c.name,

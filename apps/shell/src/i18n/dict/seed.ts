@@ -25,6 +25,16 @@ export const seed: Record<string, string> = {
   'seed.handoff.removed': '{n} removed',
   'seed.handoff.toast': 'Handed over to the other planners',
 
+  // ── Die Kamera aus dem Signalplan, die im Kameraplan fehlt
+  //    (Nutzer-Auftrag 2026-09-19) ──
+  'seed.kamera.region': 'Cameras from the signal plan that are missing in the camera plan',
+  'seed.kamera.line': '{name} ({modell}) is in the signal plan but not yet in the camera plan — create it there?',
+  'seed.kamera.lineOhneModell':
+    '{name} is in the signal plan but not yet in the camera plan — without a model the camera plan will not be able to match it.',
+  'seed.kamera.accept': 'Create in camera plan',
+  'seed.kamera.dismiss': 'Signal plan only',
+  'seed.kamera.toast': '{name} created in the camera plan',
+
   'seed.writer.shell': 'the suite',
   'seed.writer.cameras': 'the camera planner',
   'seed.writer.fixtures': 'the lighting planner',

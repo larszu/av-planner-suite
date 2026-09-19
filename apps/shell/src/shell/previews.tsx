@@ -245,6 +245,11 @@ function CameraMark({
   onSelect: (id: string) => void
   showFov: boolean
 }) {
+  // Eine Kamera ohne Position wird NICHT gezeichnet. Sie an den Nullpunkt zu
+  // setzen hiesse, sie in die Ecke der Halle zu stellen — und ein Punkt auf
+  // dem Plan sieht aus wie eine Angabe, egal wie er entstanden ist. Die
+  // Eigenschaften-Leiste nennt sie stattdessen „noch nicht platziert".
+  if (cam.x === undefined || cam.y === undefined) return null
   const cx = mx(cam.x)
   const cy = my(cam.y)
   const ang = Math.atan2(my(stageCy) - cy, mx(stageCx) - cx)

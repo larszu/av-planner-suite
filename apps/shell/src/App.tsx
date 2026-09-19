@@ -55,6 +55,8 @@ import { LibraryPanel } from './shell/LibraryPanel'
 import { PropertiesPanel } from './shell/PropertiesPanel'
 import { TabDeck } from './shell/TabDeck'
 import type { HeaderDraft } from './shell/dashboardEditors'
+import { KameraUebergabeBar } from './shell/KameraUebergabeBar'
+import { kameraVorschlaege, lehneKameraAb, uebernimmKamera } from './data/kameraUebergabe'
 import { SeedConflictBar } from './shell/SeedConflictBar'
 import { SeedHandoffBar } from './shell/SeedHandoffBar'
 import { StatusBar } from './shell/StatusBar'
@@ -195,6 +197,18 @@ export function App() {
    * planner").
    */
   const [seedOrigin, setSeedOrigin] = useState<SeedDomain | undefined>(undefined)
+  /**
+   * Kameras aus dem Signalplan, die im Kameraplan noch fehlen.
+   *
+   * Gerechnet und nicht gefuehrt: der Vorschlag ist eine ABLEITUNG aus
+   * Knoten, Kameras und Ablehnungen. Ihn als Liste am Projekt zu halten waere
+   * eine zweite Wahrheit (ADR-001) — sie liefe beim naechsten Undo gegen den
+   * Stand, aus dem sie entstanden ist.
+   */
+  const kameraVorschlaegeOffen = useMemo(
+    () => (project ? kameraVorschlaege(project) : []),
+    [project],
+  )
   // Seed = die Teilmenge des Projekts, die einen Planer etwas angeht.
   const plannerSeed = useMemo(
     () => suiteToSeed(project, seedRevision, seedOrigin),
@@ -248,6 +262,54 @@ export function App() {
     bumpSeed()
     pushToast(tt('seed.handoff.toast', 'An die anderen Planer übergeben'), { tone: 'ok' })
   }, [bumpSeed, pushToast, tt])
+
+  /**
+   * Die Kamera aus dem Signalplan im Kameraplan anlegen (Nutzer-Auftrag
+   * 2026-09-19).
+   *
+   * MIT Historien-Eintrag, anders als `applySeedPatch`: die Entscheidung
+   * faellt HIER in der Shell und nicht im Planer, hat dort also kein eigenes
+   * Undo. Wer sich vertippt hat, nimmt sie mit dem Undo der Shell zurueck.
+   *
+   * Die Revision zaehlt hoch, sonst kaeme die neue Kamera im Kameraplan nicht
+   * an (`connectShellSeed` uebernimmt nur eine NEUERE Revision). Die Herkunft
+   * bleibt leer: die Aenderung kommt aus der Shell, also sollen sie ALLE
+   * Planer bekommen — auch der Signal-Planer, an dessen Knoten jetzt die
+   * Zuordnung haengt.
+   */
+  const uebernimmKameraVorschlag = useCallback((nodeId: string) => {
+    let name = ''
+    setHistory((h) => {
+      if (!h.present) return h
+      const next = uebernimmKamera(h.present, nodeId)
+      if (next === h.present) return h
+      name = h.present.nodes.find((n) => n.id === nodeId)?.name ?? ''
+      return { past: [...h.past, h.present], present: next, future: [] }
+    })
+    setSeedOrigin(undefined)
+    bumpSeed()
+    if (name) {
+      pushToast(
+        format(tt('seed.kamera.toast', '{name} im Kameraplan angelegt'), { name }),
+        { tone: 'ok' },
+      )
+    }
+  }, [bumpSeed, pushToast, tt])
+
+  /**
+   * Den Vorschlag ablehnen: das Geraet bleibt ein reiner Signalknoten.
+   *
+   * OHNE Revisions-Sprung — es aendert sich nichts, was ein Planer sehen
+   * muesste. Nur die Frage geht weg, und sie kommt nicht wieder: die
+   * Ablehnung steht am Projekt und nicht im Fensterzustand.
+   */
+  const lehneKameraVorschlagAb = useCallback((nodeId: string) => {
+    setHistory((h) => {
+      if (!h.present) return h
+      const next = lehneKameraAb(h.present, nodeId)
+      return next === h.present ? h : { past: [...h.past, h.present], present: next, future: [] }
+    })
+  }, [])
 
   /**
    * Eine Uebergabe ablehnen: der Stand bleibt im Suite-Projekt stehen, die
@@ -964,6 +1026,11 @@ export function App() {
         )}
       </div>
 
+      <KameraUebergabeBar
+        vorschlaege={kameraVorschlaegeOffen}
+        onUebernehmen={uebernimmKameraVorschlag}
+        onAblehnen={lehneKameraVorschlagAb}
+      />
       <SeedHandoffBar
         handoffs={project?.seedHandoffs ?? []}
         onAccept={acceptSeedHandoff}

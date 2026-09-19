@@ -2181,6 +2181,84 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
   wird aufaddiert statt der Dauer des letzten Punktes.
 * **Aufwand:** ~~groß~~ erledigt
 
+### B-79 · Die Kamera aus dem Signalplan kam im Kameraplan nie an
+
+* **Status:** erledigt am 2026-09-19.
+
+* **Die Meldung.** Nutzer, 2026-09-19: „Wenn ich im ab planner suite den Cable
+  planner geöffnet habe und dort eine Kamera anlege muss diese auch im
+  Multicam planner angelegt und gezeigt werden."
+
+* **Der Befund, nachgemessen und nicht vermutet.** `mergeSeedPatch` teilt die
+  Domänen-Listen je genau einem Eigentümer zu: der Cable-Planer schreibt
+  `devices` und `cables`, der MultiCam-Planer `cameras`. Wer im eingebetteten
+  Cable-Planer eine Kamera anlegte, erzeugte deshalb einen **Signalknoten** —
+  und `apps/multicam-planner/src/utils/shellSeedBridge.ts` liest
+  ausschließlich `seed.cameras`. Die Kamera kam drüben nie an, und zwar still.
+
+  Die Gegenrichtung ebenso: `suiteToSeed` bildet `devices` allein aus
+  `project.nodes` ab, Kameras werden nicht mit hineinprojiziert.
+
+  `SignalNode.represents` (B-18) wäre die Brücke — aber sie wurde im ganzen
+  Baum **nur in den Demo-Daten** gesetzt (`cam1`, `cam2`). Es gab keinen Weg,
+  auf dem sie beim Anlegen entstanden wäre. Die vier Cross-Link-Knöpfe
+  funktionierten damit nur für diese zwei Beispiel-Kameras.
+
+* **Was NICHT die Reparatur war.** Die Eigentumsregel für „aber Kameras schon"
+  aufzuweichen. Sie ist der Grund, dass zwei Planer sich nicht gegenseitig
+  überschreiben; eine Ausnahme wäre genau die Sorte Sonderfall, die später
+  niemand mehr erklären kann. Die Gewerks-Grenze gehört der **Shell** (B-18) —
+  also entscheidet sie, und die Planer bleiben bei ihrem eigenen Id-Raum.
+
+* **Gebaut, in fünf Teilen:**
+
+  1. **Ein Kanal für die Aussage.** `SeedDevice.gewerk?: 'camera'`, **erklärt**
+     vom führenden Planer aus seinem **Katalog** (`deviceTypeId` → Kategorie
+     des Datenblatt-Templates), nie aus dem Namen. Fehlt das Feld, hat niemand
+     etwas gesagt — das ist nicht „keine Kamera". Dazu fährt endlich `model`
+     mit, das der Rückweg bisher wegließ: der Kameraplan löst seinen
+     Katalog-Eintrag daraus auf, und mit „Kamera 1" fiele jede Übernahme
+     durch (ADR-002).
+  2. **Die Shell entscheidet.** `SignalNode.gewerk` und `.model` werden über
+     den Rückweg **erhalten** — dieselbe Stelle, an der `represents` bis zum
+     2026-09-18 verlorenging.
+  3. **Übergabe statt stiller Übernahme.** `data/kameraUebergabe.ts` (rein) +
+     `shell/KameraUebergabeBar.tsx`. Im Signalplan steht auch die Kamera, die
+     nur als **Quelle** gebraucht wird und im Bildplan nichts zu suchen hat;
+     ungefragt zu übernehmen wäre „letzter gewinnt". Dieselben zwei Knöpfe wie
+     beim Konflikt-Streifen, und die Ablehnung wird am Projekt gemerkt
+     (`kameraUebergabeAbgelehnt`) — ein Streifen, der nach dem dritten „nein"
+     unverändert dasteht, wird weggeklickt statt gelesen.
+  4. **Keine erfundene Position.** `SignalNode.nx/ny` sind Diagramm-Koordinaten
+     zwischen 0 und 1. Mal Hallenbreite gerechnet ergäben sie Meter, die
+     aussähen wie eine Vermessung. Die übernommene Kamera bekommt deshalb
+     keine — `Camera.x/y` sind jetzt **optional**. Nebenbefund, mitgefixt: der
+     Rückweg setzte für eine Kamera ohne Angabe `0`, also die Ecke der Halle,
+     und die Vorschau zeichnete sie dort als Tatsache. Sie wird jetzt nicht
+     gezeichnet, und die Eigenschaften-Leiste sagt „noch nicht platziert".
+     Der Kameraplan hat für diesen Fall längst eine ausdrücklich als
+     „Anfangswert einer Platzierung" markierte Startstelle.
+  5. **Übernehmen heißt beides:** Kamera anlegen **und** `represents` setzen.
+     Nur das erste wäre die Doppelzählung im Bedarf, die `deriveBedarf` eigens
+     vermeidet.
+
+* **Guards.** `apps/shell/test/kameraUebergabe.test.ts` (7),
+  `apps/shell/test/gewerksAussage.test.ts` (4 — die Aussage überlebt den
+  Rundlauf, die Position wird nicht erfunden), und zwei Fälle in
+  `apps/cable-planner/tests/shellSeed.test.ts`: die Aussage kommt aus dem
+  Katalog, und wo der Katalog nichts sagt, schweigt der Planer — auch wenn das
+  Gerät „Kamera 1" heißt.
+
+* **Was offen bleibt.** Der Kameraplan lässt eine Kamera aus, deren Modell er
+  nicht **eindeutig** in seinem eigenen Katalog trifft; die beiden Kataloge
+  sind verschiedene Listen. Der Streifen nennt deshalb das Modell mit und sagt
+  es ausdrücklich, wenn keines dasteht — aber ein Modell, das drüben fehlt,
+  fällt weiter nur in der Konsole auf. Das ist der nächste Schritt und ein
+  eigener: die `ausgelassen`-Meldung der drei Planer gehört sichtbar gemacht,
+  nicht nur diese eine.
+
+---
+
 ### B-78 · Zwei Module in der Leiste ohne einen einzigen Datenweg
 
 * **Status:** **ERLEDIGT 2026-09-18** — beide Brücken gebaut, `seed:check` hält
