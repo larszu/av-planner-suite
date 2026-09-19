@@ -14,7 +14,7 @@ import { RUNTIMES, type RuntimeId } from './modules/runtimes'
 import { loadAddresses, runtimeUrl, saveAddresses, type RuntimeAddresses } from './shell/runtimeHosts'
 import { useRuntimeHealth } from './shell/runtimeHealth'
 import { PROJECT, type SeedConflictRecord, type SeedHandoffRecord, type ShowDetails, type SuiteProject } from './data/project'
-import { applyPatchToSuite, suiteToSeed } from './data/seed'
+import { applyPatchToSuite, suiteToSeed, uebergabeAbschluss } from './data/seed'
 import { acceptProposal, type SeedDomain, type SeedPatch } from '@avplan/ui/embed'
 import {
   downloadProject,
@@ -197,6 +197,27 @@ export function App() {
    * planner").
    */
   const [seedOrigin, setSeedOrigin] = useState<SeedDomain | undefined>(undefined)
+
+  /**
+   * Noch auszuliefernde Uebergaben, eine je meldender Domaene.
+   *
+   * Sie steht hier als SCHLANGE und nicht als Schleife im Knopf, weil eine
+   * Uebergabe ein Rendern kostet: der Seed entsteht aus `seedOrigin` und
+   * `seedRevision`, und React fasst mehrere Aenderungen desselben Durchlaufs
+   * zusammen. Drei `setSeedOrigin` hintereinander ergaeben also EINEN Seed mit
+   * der zuletzt gesetzten Herkunft — und damit genau den Hall, gegen den
+   * `origin` geschrieben ist.
+   *
+   * Der Effekt nimmt deshalb einen Eintrag je Durchlauf. Jeder bekommt seine
+   * eigene Revision und seine eigene Herkunft, wie beim Klicken nacheinander.
+   */
+  const [handoffQueue, setHandoffQueue] = useState<SeedDomain[]>([])
+  useEffect(() => {
+    if (handoffQueue.length === 0) return
+    setSeedOrigin(handoffQueue[0])
+    bumpSeed()
+    setHandoffQueue((q) => q.slice(1))
+  }, [handoffQueue, bumpSeed])
   // Seed = die Teilmenge des Projekts, die einen Planer etwas angeht.
   const plannerSeed = useMemo(
     () => suiteToSeed(project, seedRevision, seedOrigin),
@@ -240,16 +261,31 @@ export function App() {
    * Hall und laesst ihn liegen — er hat den Stand ja, und seither vielleicht
    * weitergearbeitet.
    */
-  const acceptSeedHandoff = useCallback((record: SeedHandoffRecord) => {
+  const acceptSeedHandoff = useCallback((records: SeedHandoffRecord[]) => {
+    if (records.length === 0) return
+    const ids = records.map((r) => r.id)
     setHistory((h) => {
       if (!h.present) return h
-      const rest = (h.present.seedHandoffs ?? []).filter((x) => x.id !== record.id)
-      return { ...h, present: { ...h.present, seedHandoffs: rest } }
+      const alle = h.present.seedHandoffs ?? []
+      const { rest } = uebergabeAbschluss(alle, ids)
+      if (rest.length === alle.length) return h
+      return { past: [...h.past, h.present], present: { ...h.present, seedHandoffs: rest }, future: [] }
     })
-    setSeedOrigin(record.domain)
-    bumpSeed()
-    pushToast(tt('seed.handoff.toast', 'An die anderen Planer übergeben'), { tone: 'ok' })
-  }, [bumpSeed, pushToast, tt])
+    // EINE UEBERGABE JE MELDENDER DOMAENE, nacheinander — nicht eine fuer
+    // alle. Die Herkunft ist EIN Planer (`origin`), und daran erkennt der
+    // Melder seinen eigenen Hall. Wer drei Meldungen aus drei Planern mit
+    // EINER Herkunft hinausschoebe, naehme zwei Meldern genau diesen Schutz:
+    // sie bekaemen ihren eigenen Stand zurueck und ueberschrieben damit, was
+    // sie seither gearbeitet haben. Der Sammelknopf tut deshalb genau das,
+    // was das Klicken nacheinander taete.
+    setHandoffQueue((q) => [...q, ...uebergabeAbschluss(records, ids).domaenen])
+    pushToast(
+      records.length === 1
+        ? tt('seed.handoff.toast', 'An die anderen Planer übergeben')
+        : format(tt('seed.handoff.toastMany', '{n} Meldungen übergeben'), { n: records.length }),
+      { tone: 'ok', actionLabel: tt('config.action.undo', 'Rückgängig'), onAction: undo },
+    )
+  }, [pushToast, tt, undo])
 
   /**
    * Eine Uebergabe ablehnen: der Stand bleibt im Suite-Projekt stehen, die
@@ -259,14 +295,22 @@ export function App() {
    * nicht weitergereicht. Wer sie spaeter doch weitergeben will, aendert im
    * Planer etwas und bekommt das Angebot erneut.
    */
-  const dismissSeedHandoff = useCallback((id: string) => {
+  const dismissSeedHandoff = useCallback((ids: string[]) => {
+    if (ids.length === 0) return
     setHistory((h) => {
       if (!h.present) return h
-      const rest = (h.present.seedHandoffs ?? []).filter((x) => x.id !== id)
-      if (rest.length === (h.present.seedHandoffs ?? []).length) return h
-      return { ...h, present: { ...h.present, seedHandoffs: rest } }
+      const alle = h.present.seedHandoffs ?? []
+      const { rest } = uebergabeAbschluss(alle, ids)
+      if (rest.length === alle.length) return h
+      return { past: [...h.past, h.present], present: { ...h.present, seedHandoffs: rest }, future: [] }
     })
-  }, [])
+    pushToast(
+      ids.length === 1
+        ? tt('seed.handoff.keptToast', 'Nur hier behalten')
+        : format(tt('seed.handoff.keptToastMany', '{n} Meldungen nur hier behalten'), { n: ids.length }),
+      { actionLabel: tt('config.action.undo', 'Rückgängig'), onAction: undo },
+    )
+  }, [pushToast, tt, undo])
 
   /**
    * Einen Befund aufloesen: der Vorschlag zieht ein, und bei einem geteilten

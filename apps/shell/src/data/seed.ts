@@ -316,3 +316,43 @@ export function applyPatchToSuite(
     handoff,
   }
 }
+
+/**
+ * Was ein Knopf im Uebergabe-Streifen tut — als reine Rechnung.
+ *
+ * ─── WARUM DAS HIER STEHT UND NICHT IN `App.tsx` ────────────────────────
+ *
+ * Weil es sonst niemand messen kann. Der Nachbartest (`seedWeitergabe`)
+ * schreibt selbst, was ihm fehlt: „Das steckt in `App.tsx` an einem
+ * `useCallback` und ist ohne gerendertes Fenster nicht erreichbar." Mit den
+ * Sammelknoepfen (Nutzer-Meldung 2026-09-20) kommt genau dort die Regel
+ * dazu, an der es schiefgehen kann — eine Uebergabe je MELDENDER Domaene —,
+ * und eine ungemessene Regel in einem Ereignis-Handler ist eine Notiz.
+ *
+ * ─── DIE REGEL ──────────────────────────────────────────────────────────
+ *
+ * Drei Meldungen aus zwei Planern ergeben ZWEI Uebergaben, nicht drei und
+ * nicht eine:
+ *
+ *   * nicht drei, weil zwei davon denselben Melder haben und der zweite
+ *     Durchgang nichts Neues traegt;
+ *   * nicht eine, weil der Seed genau EINE Herkunft traegt und der Melder
+ *     daran seinen eigenen Hall erkennt. Eine Sammel-Uebergabe mit einer
+ *     Herkunft naehme allen anderen Meldern diesen Schutz: sie bekaemen
+ *     ihren eigenen Stand zurueck und ueberschrieben damit, was sie seither
+ *     gearbeitet haben.
+ *
+ * Die Reihenfolge ist die der Meldungen. Sie ist fuer das Ergebnis egal —
+ * jede Uebergabe traegt denselben Inhalt —, aber eine stabile Reihenfolge
+ * laesst sich pruefen und eine zufaellige nicht.
+ */
+export function uebergabeAbschluss(
+  alle: readonly SeedHandoffRecord[],
+  ids: readonly string[],
+): { rest: SeedHandoffRecord[]; domaenen: SeedDomain[] } {
+  const gefragt = new Set(ids)
+  const betroffen = alle.filter((r) => gefragt.has(r.id))
+  const domaenen: SeedDomain[] = []
+  for (const r of betroffen) if (!domaenen.includes(r.domain)) domaenen.push(r.domain)
+  return { rest: alle.filter((r) => !gefragt.has(r.id)), domaenen }
+}
