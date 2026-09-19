@@ -73,6 +73,7 @@
     "actions:check": "node scripts/actions-node-runtime.mjs"
   },
   "dependencies": {
+    "@avplan/crew-core": "1.0.0",
     "@avplan/device-catalog": "*",
     "@avplan/dmx-core": "*",
     "@avplan/inventory-core": "*",

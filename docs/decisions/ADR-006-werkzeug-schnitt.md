@@ -129,6 +129,65 @@ die Antwort auf `proposed-by-name` — ein Mensch hat gesagt, dass Plan-Gerät u
 dasselbe meinen, und diese Aussage gehört an die Lager-Position, sonst wird sie beim nächsten
 Abgleich wieder geraten. Menge, Ort und Zustand bleiben Sache des Lagers.
 
+## Der Vertrag „Crew & Geld" — Schritt 1, ausgeschrieben (2026-09-19)
+
+Dieselbe Reihenfolge wie beim Lager: die Liste steht hier, *bevor* eine Datei umzieht. Sie ist
+gemessen — am Import-Querschnitt des Cable-Planers, nicht geschätzt.
+
+### Was der Plan „Crew & Geld" fragt
+
+| Frage | Der Vertrag | Wer fragt |
+| --- | --- | --- |
+| **Was kostet die Mannschaft?** | `labourCosts`, `labourFindings`, `entryCost`, `expenseTotals`, `formatHours`, `LABOUR_FINDING_LABEL` | `Analysis/CrewTab.tsx` |
+| **Was geht auf die Rechnung?** | `crewBilling`, `crewBillingTable`, `crewBillingCsv`, `crewBillingHandoff`, Typen `BillingPeriod`, `BillingRow`, `BillingExpenseRow`, `CrewBilling` | `Analysis/CrewTab.tsx` |
+| **Wann ist wer gebucht?** | `crewCalendar`, `bookingConflicts`, `CrewCalendarOptions` | `App.tsx` (ICS-Ausgabe) |
+| **Stimmt geplant gegen tatsächlich?** | `assessCosts`, `costComparisonTable`, `COST_FINDING_LABEL`, Typen `CostRow`, `CostTotals`, `CostFinding`, `AnchorState` | `Analysis/AnalysisDialog.tsx` |
+| **Was gehört beim Laden geheilt?** | `normaliseCrewPlan`, `normaliseCostPlan` | `store/projectStore.ts` |
+
+Dazu die Domäne selbst: `CrewPlan` mit `CrewRate`, `CrewPerson`, `TimeEntry`, `CrewExpense`,
+`Approval`, `RateBand`, `BookingState`, `DayKind` — und `CostPlan` mit `CostLine`, `CostAnchor`,
+`ActualSource`.
+
+### Warum der Schnitt hier sauber ist
+
+Gemessen am 2026-09-19: **`types/labour.ts` hat keinen einzigen Import.** `labourCost.ts`,
+`crewBilling.ts` und `crewCalendar.ts` hängen ausschliesslich daran. `types/costLines.ts`
+ebenfalls importfrei. Das ist genau die Lage, die Punkt 2 oben verlangt — die Domäne lässt sich in
+ein Paket schneiden, ohne dass etwas bricht, weil sie nie am Kabelgraph hing.
+
+Das ist kein Zufall, sondern die Aussage der Tabelle oben in einer Zahl: *Sätze, Stunden, Auslagen
+und Belege gehören der Firma, nicht dem Plan.* Code, der das lebt, hat keine Plan-Importe.
+
+### Die eine Stelle, die beide Seiten braucht
+
+**`costComparison.ts` ist der Grenzfall** und bleibt es. Es liest `project.equipment`,
+`project.deliveryDestinations` und `project.costPlan`: eine Kostenzeile ist über `CostAnchor` an
+ein Gerät oder eine Lieferung **dieses Plans** geheftet. Die Frage „stimmt geplant gegen
+tatsächlich" ist deshalb eine Frage des **Plans** an das Werkzeug, nicht umgekehrt — die Sätze und
+Belege kommen von drüben, die Verankerung bleibt hier.
+
+Nach Punkt 4 („Nichts wird zweimal gerechnet") ist damit auch entschieden, wer rechnet: der Plan
+holt die Zahlen über den Vertrag und leitet sie nicht ein zweites Mal ab.
+
+### Was ausdrücklich NICHT zu „Crew & Geld" gehört
+
+**`crewNetworkSheet.ts`** (242 Zeilen). Der Name sagt „Crew", der Inhalt ist der Kabelgraph: es
+liest `allDeviceInterfaces`, `buildAddressPlan`, `buildSwitchPortMaps`, `buildVenueNetworkRequest`
+und `mergeVenueAnswers`. Es beantwortet „welche Adressen und Ports braucht die Mannschaft vor
+Ort" — eine Frage an den **Plan**, kein Satz und keine Stunde.
+
+Wer es nach dem Namen einsortiert, holt danach den halben Netz-Teil aus einem fremden Repo. Es
+bleibt Kern, und zwar aus demselben Grund wie die Zeile „Netz & Adressen" oben.
+
+### Stand
+
+* **Schritt 1 (Vertrag)** — hier, 2026-09-19.
+* **Schritt 2 (Paket)** — `@avplan/crew-core`, gebaut 2026-09-19: die vier importfreien Module
+  liegen darin, der Cable-Planer bezieht sie von dort.
+* **Schritt 3 (Repo)** — offen. Erst wenn ein zweiter Bediener sie schreibt statt nur liest;
+  dieselbe Bedingung, unter der ADR-006 die Gerätekataloge vertagt hat — und die man, siehe
+  ADR-012, nachprüfen muss statt sie zu glauben.
+
 ### Was ausdrücklich NICHT zum Lager gehört
 
 Vier Module hätte man mit einem Blick auf den Namen hineinsortiert. Jedes wäre danach aus einem

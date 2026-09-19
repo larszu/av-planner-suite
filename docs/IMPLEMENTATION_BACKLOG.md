@@ -2181,6 +2181,56 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
   wird aufaddiert statt der Dauer des letzten Punktes.
 * **Aufwand:** ~~groß~~ erledigt
 
+### B-84 · „Crew & Geld" — das letzte Werkzeug aus ADR-006, und nirgends geführt
+
+* **Status:** Schritte 1 und 2 von 3 gebaut am 2026-09-19; Schritt 3 offen und hier benannt.
+
+* **Wieso der Eintrag überhaupt entsteht.** `docs/adr-stand.md` schloss mit dem Satz: „**Crew &
+  Geld** (ADR-006) steht weiter aus und ist bisher nirgends als offen geführt." Ein Vorhaben, das
+  nur in der Fußzeile eines Audits steht, ist keines — es fällt beim nächsten Aufräumen heraus.
+
+* **Schritt 1, der Vertrag** (ADR-006 verlangt ihn, *bevor* eine Datei umzieht). Ausgeschrieben in
+  ADR-006, Abschnitt „Der Vertrag ‚Crew & Geld'": fünf Fragen, die der Plan dem Werkzeug stellt,
+  je mit den Namen, die sie beantworten, und dem Aufrufer, der sie stellt. Gemessen am
+  Import-Querschnitt, nicht geschätzt.
+
+* **Schritt 2, das Paket.** `@avplan/crew-core`: `labour.ts`, `labourCost.ts`, `crewBilling.ts`,
+  `crewCalendar.ts`, `receipt.ts`. Der Cable-Planer bezieht sie von dort; die alten Pfade sind
+  Durchreicher, damit die 40+ Aufrufer nicht in einem Rutsch umgeschrieben werden mussten.
+
+  **Der Schnitt war sauber, und das ist eine Messung:** `types/labour.ts` hatte KEINEN einzigen
+  Import, die drei Rechenmodule hingen ausschließlich daran. Diese Domäne hat nie am Kabelgraph
+  gehangen — genau das sagt ADR-006 über sie.
+
+* **Was NICHT mitging, und warum.**
+  - **`csv.ts`** — 19 Nutzer quer durch den Planer, generische Infrastruktur wie `mergeDefined`
+    beim Lager. Das Paket erzeugt eine **Tabelle**; wer daraus eine Datei macht, entscheidet der
+    Aufrufer. `crewBillingCsv` bleibt deshalb im Planer.
+  - **`costComparison.ts`** — liest `project.equipment` und `project.deliveryDestinations`. Eine
+    Kostenzeile hängt über `CostAnchor` an einem Gerät **dieses Plans**; die Frage „geplant gegen
+    tatsächlich" ist eine Frage des Plans an das Werkzeug.
+  - **`crewNetworkSheet.ts`** — der Name sagt „Crew", der Inhalt ist der Kabelgraph (Adressplan,
+    Switch-Ports). Wer es nach dem Namen einsortiert, holt danach den halben Netz-Teil aus einem
+    fremden Repo.
+
+* **Zwei Wächter haben beim Umzug angeschlagen, und beide zu Recht.**
+  - `receiptStore.test.ts` hält die Renderer-Fassung des Belegs gegen die des Main-Prozesses
+    (main kennt `src/renderer/` nicht, der Typ steht zweimal da). Die Klammer zeigt jetzt auf das
+    Paket — dadurch wird sie genauer, nicht schwächer: sie hält die EINE Renderer-Fassung gegen
+    main statt eine von zweien.
+  - `pruefMeldungenGewickelt.test.ts` meldete „Bestandszahl über dem Ist": `lib/labourCost.ts`
+    trug sieben gewickelte Meldungen und ist jetzt ein Durchreicher. Der Test deckt deshalb die
+    Pakete mit ab — sonst hätte der Umzug eine Zusicherung abgeräumt, ohne dass es jemand merkt.
+
+* **Schritt 3, das eigene Repo: offen.** Bedingung wie bei den Gerätekatalogen: erst, wenn ein
+  zweiter Bediener die Domäne **schreibt** statt nur liest. Diese Bedingung ist nachzuprüfen und
+  nicht zu glauben — bei den Katalogen stimmte sie jahrelang nicht (ADR-012, Befund A).
+
+* **Guards.** `packages/crew-core/test/grenze.test.ts` (3),
+  `packages/crew-core/scripts/plan-grenze-check.mjs` (hängt an `npm test` des Pakets).
+
+---
+
 ### B-83 · Ein selbst angelegtes Gerät verschwand — und eines von Hand kam nie an
 
 * **Status:** erledigt am 2026-09-19 (ADR-014).

@@ -146,4 +146,7 @@ Datei legt.
 4. **C** und **F** sind erledigt (2026-09-19), nach dem Muster von **D**: ADR-002 hat einen
    Abschnitt „Was ‚geraten' heisst — und was nicht" samt Probe, ADR-011 zitiert ADR-005 Regel 2
    und sagt dazu, dass Stufe 4 die Lage abgeräumt hat und die Fussnote trotzdem stehen bleibt.
-5. **Crew & Geld** (ADR-006) steht weiter aus und ist bisher nirgends als offen geführt.
+5. **Crew & Geld** (ADR-006): Schritte 1 und 2 gebaut am 2026-09-19 — der Vertrag steht in
+   ADR-006, das Paket `@avplan/crew-core` steht, der Cable-Planer bezieht die Domäne von dort.
+   Schritt 3 (eigenes Repo) ist offen und jetzt als **B-84** geführt statt nur hier. Ein Vorhaben,
+   das nur in der Fußzeile eines Audits steht, fällt beim nächsten Aufräumen heraus.
