@@ -11,11 +11,16 @@ import { KAMERA_TYPEN, fuehreZusammen, istAbgeleitet, ohneBeleg } from '../src/i
 describe('Kameratypen — Befund A, nachgerechnet', () => {
   it('die Kameraliste der Suite steht vollständig im Katalog', () => {
     expect(KAMERA_TYPEN).toHaveLength(377)
-    // Neun trugen eine gewachsene `deviceTypeId` — dieselbe, die im
-    // Cable-Katalog steht. Die übrigen 368 hatten dort keine Identität, und
-    // genau das war der Befund.
-    expect(KAMERA_TYPEN.filter((t) => !istAbgeleitet(t.id))).toHaveLength(9)
-    expect(KAMERA_TYPEN.filter((t) => istAbgeleitet(t.id))).toHaveLength(368)
+    // ZWÖLF tragen die Id des gleichnamigen Cable-Eintrags. Neun davon hat
+    // jemand von Hand gepflegt („gesetzt für Modelle, deren echte I/O im
+    // Cable-Planner-Katalog hinterlegt ist"), drei wurden dabei übersehen und
+    // fielen dem Wächter „kein Modell steht unter zwei Ids" auf — sie hätten
+    // sonst doppelt im Katalog gestanden, einmal mit Ports und einmal ohne.
+    //
+    // Die übrigen 365 haben im Cable-Planer keine Entsprechung. Das war der
+    // Befund: sie gab es dort gar nicht.
+    expect(KAMERA_TYPEN.filter((t) => !istAbgeleitet(t.id))).toHaveLength(12)
+    expect(KAMERA_TYPEN.filter((t) => istAbgeleitet(t.id))).toHaveLength(365)
   })
 
   it('und sie bringt ihre Datenblätter mit', () => {

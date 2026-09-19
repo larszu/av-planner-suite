@@ -25,13 +25,42 @@ const ZIEL = join(WURZEL, 'packages/device-catalog/src/kameraTypen.ts')
 const CABLE_LIB = join(WURZEL, 'apps/cable-planner/src/renderer/lib')
 const CABLE_ZIEL = join(WURZEL, 'packages/device-catalog/src/cableTypen.ts')
 
+// Das Plus bleibt: „Ninja V+" und „Ninja V" sind zwei Geraete. Begruendet in
+// packages/device-catalog/src/identitaet.ts — dieselbe Regel, zwei Stellen,
+// und `katalog:parity` haelt sie zusammen.
 const normalisiere = (t) =>
-  t.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ')
+  t.toLowerCase().replace(/[^a-z0-9+]+/g, ' ').trim().replace(/\s+/g, ' ')
 const abgeleiteteTypId = (h, m) =>
   `abgeleitet:${normalisiere(h).replace(/ /g, '-')}:${normalisiere(m).replace(/ /g, '-')}`
 
-/** Eine Zeile der Kameraliste -> ein Typ-Eintrag. */
-export function lies(quelltext) {
+/**
+ * Eine Zeile der Kameraliste -> ein Typ-Eintrag.
+ *
+ * `bekannt` ist die Liste der Cable-Eintraege: traegt einer davon denselben
+ * Namen, ist es DASSELBE Modell und bekommt DESSEN gewachsene Id.
+ *
+ * ─── WARUM DAS HIER STEHT UND NICHT IM MERGE ───────────────────────────────
+ *
+ * Die Kameraliste setzt `deviceTypeId` bereits von Hand — „gesetzt fuer
+ * Modelle, deren echte I/O im Cable-Planner-Katalog hinterlegt ist", steht
+ * dort woertlich. Neun sind so gepflegt. Drei weitere haben denselben Namen
+ * und wurden uebersehen: Blackmagic Studio Camera 4K Pro G2, URSA Mini Pro
+ * 12K, Sony PXW-Z280.
+ *
+ * Ohne diese Zeile bekaemen sie eine ABGELEITETE Id und stuenden damit
+ * ZWEIMAL im Katalog — einmal mit Ports, einmal ohne. Und weil
+ * `katalogTemplate` bei Mehrdeutigkeit bewusst NICHT raet, verloere ein
+ * Geraet dieses Modells beim naechsten Seed seine Anschluesse. Gemessen am
+ * 2026-09-19, bevor es jemand im Plan bemerkt haette.
+ *
+ * Abgeglichen wird der VOLLE Name („Blackmagic" + „Studio Camera 4K Pro G2"
+ * gegen „Blackmagic Studio Camera 4K Pro G2"), normalisiert. Das ist kein
+ * Raten aus einem Instanznamen (ADR-002), sondern der Abgleich zweier
+ * KATALOG-Zeilen, die dasselbe Modell benennen — und `katalog:parity` haelt
+ * das Ergebnis fest.
+ */
+export function lies(quelltext, bekannt = []) {
+  const jeName = new Map(bekannt.map((e) => [normalisiere(e.modell), e.id]))
   const treffer = [...quelltext.matchAll(
     /\{\s*id: '([^']+)'[^\n]*?manufacturer: '([^']+)', model: '([^']+)'/g,
   )]
@@ -39,10 +68,13 @@ export function lies(quelltext) {
     const zeile = m[0]
     const gewachsen = /deviceTypeId: '([^']+)'/.exec(zeile)?.[1]
     const url = /manufacturerUrl: '([^']+)'/.exec(zeile)?.[1]
+    const gleichnamig = jeName.get(normalisiere(`${m[2]} ${m[3]}`))
     return {
       // Die GEWACHSENE Id gewinnt immer: sie steht in Projektdateien und
-      // Lagerpositionen. Nur wo keine ist, wird eine abgeleitet.
-      id: gewachsen ?? abgeleiteteTypId(m[2], m[3]),
+      // Lagerpositionen. Dann die Id des gleichnamigen Cable-Eintrags — es
+      // ist dasselbe Modell, und zwei Ids dafuer waeren zwei Geraete. Erst
+      // danach wird eine abgeleitet.
+      id: gewachsen ?? gleichnamig ?? abgeleiteteTypId(m[2], m[3]),
       hersteller: m[2],
       modell: m[3],
       kategorie: 'Cameras',
@@ -168,8 +200,8 @@ function cableEintraege() {
   return dateien.flatMap((f) => liesCable(readFileSync(join(CABLE_LIB, f), 'utf8')))
 }
 
-const eintraege = lies(readFileSync(QUELLE, 'utf8'))
 const cable = cableEintraege()
+const eintraege = lies(readFileSync(QUELLE, 'utf8'), cable)
 if (eintraege.length < 300) {
   console.error(`katalog:erzeugen: nur ${eintraege.length} Kameras erkannt — die Quelle hat sich geaendert.`)
   process.exit(1)

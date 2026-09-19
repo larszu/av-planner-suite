@@ -10,6 +10,7 @@
 // Namens-Heuristik bleibt nur Fallback fuer Geraete OHNE deviceTypeId
 // (manuell angelegt, Rentman/GraphML-Import ohne Katalog-Zuordnung).
 // ───────────────────────────────────────────────────────────────────────────
+import { typenAusser } from '@avplan/device-catalog'
 import type { EquipmentTemplate } from '../types/equipment'
 import type { RecordingCapability } from './recording'
 import { CAMERA_CATALOG } from './cameraCatalog'
@@ -149,6 +150,17 @@ export interface DeviceTypeChoice {
   /** Modellname aus dem Datenblatt-Template. */
   name: string
   category?: string
+  /**
+   * Dieser Typ kommt aus dem gemeinsamen Katalog der Suite und hat HIER kein
+   * Datenblatt-Template — also keine Ports, Masse oder Leistungsaufnahme.
+   *
+   * Eine AUSSAGE und kein Mangel: das Modell gibt es, seine Anschluesse kennt
+   * dieser Planer nicht. Wer ein solches Geraet anlegt, bekommt es mit
+   * `portsUnknown` — das ist der Mechanismus, den dieses Repo dafuer hat, und
+   * er ist besser als erfundene Ports (Pruefung 18 fordert das Datenblatt
+   * dann weiter ein).
+   */
+  ohneDatenblatt?: boolean
 }
 
 /**
@@ -162,13 +174,32 @@ export interface DeviceTypeChoice {
  */
 export const listDeviceTypes = (): DeviceTypeChoice[] => {
   registry ??= buildRegistry()
-  return [...registry.entries()]
-    .map(([id, info]) => ({
-      id,
-      name: info.template.name,
-      ...(info.template.category ? { category: info.template.category } : {}),
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+  const eigene: DeviceTypeChoice[] = [...registry.entries()].map(([id, info]) => ({
+    id,
+    name: info.template.name,
+    ...(info.template.category ? { category: info.template.category } : {}),
+  }))
+
+  // ── Der gemeinsame Katalog der Suite (ADR-002, Befund A) ────────────────
+  //
+  // Bis 2026-09-19 kannte dieser Planer 23 Kameramodelle, waehrend die Suite
+  // 377 fuehrte — 368 davon hatten hier ueberhaupt keine Identitaet. Wer eine
+  // im MultiCam-Planer gezeichnete Kamera hier wiederfinden wollte, legte sie
+  // ein zweites Mal von Hand an. Genau die Doppelarbeit, gegen die das
+  // Werkzeug gebaut ist.
+  //
+  // `typenAusser('cable')` und nicht der ganze Katalog: die eigenen 467
+  // stehen schon oben, mit Ports und Massen, die das Paket bewusst nicht
+  // fuehrt. Die IDENTITAET kommt trotzdem von dort — hier steht nur, wer
+  // fragt.
+  const fremde: DeviceTypeChoice[] = typenAusser('cable').map((t) => ({
+    id: t.id,
+    name: t.hersteller ? `${t.hersteller} ${t.modell}` : t.modell,
+    category: t.kategorie,
+    ohneDatenblatt: true,
+  }))
+
+  return [...eigene, ...fremde].sort((a, b) => a.name.localeCompare(b.name, 'de'))
 }
 
 export const resolveDeviceType = (deviceTypeId: string | undefined): DeviceTypeInfo | null => {

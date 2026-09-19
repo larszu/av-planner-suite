@@ -237,10 +237,34 @@ describe('listDeviceTypes (ADR-002)', () => {
     expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'de')))
   })
 
-  it('jeder gelistete Eintrag ist auch auflösbar', () => {
+  it('jeder Eintrag MIT Datenblatt ist auch auflösbar', () => {
     // Sonst böte die Auswahl Typen an, die danach ins Leere zeigen.
-    for (const c of listDeviceTypes()) {
+    for (const c of listDeviceTypes().filter((x) => !x.ohneDatenblatt)) {
       expect(resolveDeviceType(c.id)?.template.name).toBe(c.name)
+    }
+  })
+
+  it('und ein Eintrag OHNE Datenblatt löst bewusst NICHT auf', () => {
+    // ─── DIE ZUSICHERUNG HAT SICH AM 2026-09-19 GEÄNDERT ──────────────────
+    //
+    // Bis dahin galt: jeder gelistete Typ ist auflösbar. Seit dem gemeinsamen
+    // Katalog der Suite (ADR-002, Befund A) stehen hier auch Modelle, die
+    // ein ANDERER Planer führt — 365 Kameramodelle, die es hier vorher gar
+    // nicht gab. Sie haben in diesem Planer kein Datenblatt-Template, also
+    // keine Ports.
+    //
+    // Das ist der Punkt, an dem dieses Repo sonst falsch würde: ein Modell zu
+    // KENNEN heisst nicht, seine Anschlüsse zu kennen. `resolveDeviceType`
+    // gibt für einen solchen Typ deshalb `null` zurück, und der Aufrufer legt
+    // das Gerät mit `portsUnknown` an — sichtbar unvollständig statt
+    // plausibel erfunden. Prüfung 18 fordert das Datenblatt dann weiter ein.
+    //
+    // „Zeigt ins Leere" wäre es nur ohne den Marker. Mit ihm ist es eine
+    // Auskunft, und die Auswahlliste benennt sie auch so.
+    const ohne = listDeviceTypes().filter((x) => x.ohneDatenblatt)
+    expect(ohne.length).toBeGreaterThan(300)
+    for (const c of ohne) {
+      expect(resolveDeviceType(c.id)).toBeNull()
     }
   })
 })

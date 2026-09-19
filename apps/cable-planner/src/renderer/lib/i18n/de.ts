@@ -2088,6 +2088,7 @@ export const de: Dict = {
   'eq.field.deviceTypeFilter': 'Katalog durchsuchen…',
   'eq.field.deviceTypeNone':
     'Kein Katalog-Typ — Lager-Deckung und Stückliste können dieses Gerät nur über den Namen erraten.',
+  'eq.field.deviceTypeNoSheetHere': '{name} · {category} — Modell bekannt, Anschlüsse nicht',
   'eq.field.deviceTypeScope':
     'setzt nur die Identität; Ports, Maße und Leistung bleiben unverändert.',
   'eq.field.deviceTypeUnset': '— keiner —',

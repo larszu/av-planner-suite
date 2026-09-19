@@ -11,6 +11,7 @@ import {
   alleTypen,
   istAbgeleitet,
   katalog,
+  normalisiere,
   mehrfachGefuehrt,
   ohneBeleg,
   typFuer,
@@ -26,11 +27,13 @@ describe('Der Katalog der Suite', () => {
     expect(alleTypen()).toHaveLength(CABLE_TYPEN.length + KAMERA_TYPEN.length - gemeinsam.length)
   })
 
-  it('und die 9 gemeinsamen sind genau die mit gewachsener Id', () => {
-    // Das war Befund A in einer Zahl: von 377 Kameramodellen der Suite hatten
-    // NEUN im Cable-Planer eine Identität. Die übrigen 368 gab es dort nicht.
+  it('und die 12 gemeinsamen sind genau die mit gewachsener Id', () => {
+    // Befund A in einer Zahl: von 377 Kameramodellen der Suite haben ZWÖLF im
+    // Cable-Planer eine Identität — neun von Hand gepflegt, drei vom Wächter
+    // „kein Modell steht unter zwei Ids" nachgezogen. Die übrigen 365 gab es
+    // dort nicht.
     const gemeinsam = mehrfachGefuehrt(alleTypen())
-    expect(gemeinsam).toHaveLength(9)
+    expect(gemeinsam).toHaveLength(12)
     for (const t of gemeinsam) {
       expect(t.quellen).toEqual(['cable', 'multicam'])
       expect(istAbgeleitet(t.id)).toBe(false)
@@ -45,18 +48,18 @@ describe('Der Katalog der Suite', () => {
 
   it('löst zwei Schreibweisen auf und meldet, was eine Entscheidung braucht', () => {
     const befunde = katalog().befunde
-    // Am 2026-09-19 sind es NEUN, und jeder ist echt. Zwölf weitere waren es
+    // Am 2026-09-19 sind es ELF, und jeder ist echt. Zwölf weitere waren es
     // vorher und waren keine: „Sony PMW-F5" in einem Feld gegen
     // `manufacturer: 'Sony'` + `model: 'PMW-F5'` ist dieselbe Angabe in zwei
     // Auflösungen, und ADR-005 Regel 2 entscheidet sie ohne Befund — die
     // höhere gewinnt. Ein Befundhaufen aus Nicht-Befunden ist die Sorte
     // Meldung, die nach dem dritten Mal niemand mehr liest.
-    expect(befunde).toHaveLength(9)
+    expect(befunde).toHaveLength(11)
 
-    // Fünfmal nennen die Kataloge verschiedene Herstellerseiten für dasselbe
+    // Siebenmal nennen die Kataloge verschiedene Herstellerseiten für dasselbe
     // Gerät (US gegen Europa/Asien). Das ist keine Schreibweise, das ist die
     // Frage, welche Seite gilt — und die beantwortet ein Mensch.
-    expect(befunde.filter((b) => b.feld === 'datenblattUrl')).toHaveLength(5)
+    expect(befunde.filter((b) => b.feld === 'datenblattUrl')).toHaveLength(7)
 
     // Viermal heisst dasselbe Modell wirklich verschieden („Canon EOS C70"
     // gegen „C70", „PXW-FS7 Mk II" gegen „PXW-FS7 II"). Kein reines
@@ -87,6 +90,31 @@ describe('Der Katalog der Suite', () => {
     expect(ohne.length).toBe(50)
     // 45 aus dem Cable-Planer (467 − 422) und 5 aus der Kameraliste.
     expect(ohne.filter((t) => t.quellen.includes('cable'))).toHaveLength(45)
+  })
+
+  it('kein Modell steht unter zwei Ids', () => {
+    // GEFUNDEN AM 2026-09-19, bevor es jemand im Plan bemerkt hätte. Drei
+    // Modelle standen doppelt: Blackmagic Studio Camera 4K Pro G2, URSA Mini
+    // Pro 12K, Sony PXW-Z280. Die Kameraliste pflegt `deviceTypeId` von Hand
+    // („gesetzt für Modelle, deren echte I/O im Cable-Planner-Katalog
+    // hinterlegt ist") — bei neun ist das geschehen, diese drei wurden
+    // übersehen, und der Erzeuger leitete ihnen eine eigene Id ab.
+    //
+    // Die Folge wäre still gewesen: `katalogTemplate` raten bei
+    // Mehrdeutigkeit bewusst NICHT, also hätte ein Gerät dieses Modells beim
+    // nächsten Seed seine Anschlüsse verloren.
+    // DIESELBE Normalisierung wie die Id-Vergabe, nicht eine nachgebaute:
+    // eine eigene hier war der Grund, warum dieser Wächter „Atomos Ninja V+"
+    // und „Atomos Ninja V" für dasselbe Gerät hielt. Ein Wächter, der anders
+    // rechnet als das, was er bewacht, misst etwas anderes.
+    const norm = normalisiere
+    const jeName = new Map<string, string[]>()
+    for (const t of alleTypen()) {
+      const k = norm(t.hersteller ? `${t.hersteller} ${t.modell}` : t.modell)
+      jeName.set(k, [...(jeName.get(k) ?? []), t.id])
+    }
+    const doppelt = [...jeName.entries()].filter(([, ids]) => ids.length > 1)
+    expect(doppelt, `Modelle unter mehreren Ids: ${JSON.stringify(doppelt)}`).toEqual([])
   })
 
   it('eine unbekannte Id ist eine Auskunft, kein nächstbester Treffer', () => {

@@ -208,7 +208,10 @@ describe('shellSeed — Rueckweg', () => {
   // Nutzer.
   // ─────────────────────────────────────────────────────────────────────────
   it('meldet die Kategorie und das Modell aus dem Katalog', () => {
-    const kamera = listDeviceTypes().find((d) => d.category === 'Cameras')
+    // Eine Kamera MIT Datenblatt-Template: seit dem gemeinsamen Katalog
+    // stehen auch Modelle in der Liste, die nur ein anderer Planer fuehrt —
+    // die haben hier keine Ports und koennen deshalb nicht aufgeloest werden.
+    const kamera = listDeviceTypes().find((d) => d.category === 'Cameras' && !d.ohneDatenblatt)
     expect(kamera, 'Katalog ohne Kamera-Eintrag').toBeDefined()
 
     const { equipment } = seedToCable(

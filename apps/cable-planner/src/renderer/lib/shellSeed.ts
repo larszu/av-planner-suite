@@ -112,8 +112,17 @@ export function katalogTemplate(device: Pick<SeedDevice, 'name' | 'model'>): Equ
       const name = normalisiere(typ.name)
       return name === kandidat || name.endsWith(` ${kandidat}`)
     })
-    if (treffer.length === 1) {
-      const info = resolveDeviceType(treffer[0].id)
+    // Seit der Katalog der ganzen Suite in dieser Liste steht, kann derselbe
+    // Name zweimal auftauchen: einmal als hiesiges Datenblatt-Template und
+    // einmal als Typ, den nur ein anderer Planer fuehrt. Das ist KEINE
+    // Mehrdeutigkeit — es ist dasselbe Modell, und eines der beiden kennt
+    // seine Anschluesse. Ohne diese Zeile fiele der Treffer unter die
+    // Rate-Sperre darunter, und ein Geraet verloere beim naechsten Seed
+    // seine Ports. Still.
+    const mitDatenblatt = treffer.filter((t) => !t.ohneDatenblatt)
+    const eindeutig = mitDatenblatt.length === 1 ? mitDatenblatt : treffer
+    if (eindeutig.length === 1) {
+      const info = resolveDeviceType(eindeutig[0].id)
       if (info) return info.template
     }
   }

@@ -50,3 +50,18 @@ export function typFuer(id: string | undefined): Geraetetyp | null {
 /** Die Typen einer Kategorie, in der Reihenfolge des Katalogs. */
 export const typenDerKategorie = (kategorie: string): Geraetetyp[] =>
   alleTypen().filter((t) => t.kategorie === kategorie)
+
+/**
+ * Der Katalog OHNE die Einträge, die eine Quelle schon selbst führt.
+ *
+ * Warum es das gibt: der Cable-Planer trägt seine 467 Einträge bereits in
+ * seinen eigenen Katalogdateien — mit Ports, Maßen und Leistung, die dieses
+ * Paket bewusst nicht führt. Ihm die ganze Liste zu geben hiesse, 80 KB
+ * Daten ein zweites Mal in sein Bündel zu legen, die dort schon liegen.
+ *
+ * Das ist kein Rückfall in „jeder hat seine Liste": die IDENTITÄT kommt
+ * weiterhin von hier, und welche Einträge eine Quelle beisteuert, weiss
+ * ebenfalls nur diese Stelle. Der Aufrufer sagt nur, wer er ist.
+ */
+export const typenAusser = (quelle: string): Geraetetyp[] =>
+  alleTypen().filter((t) => !t.quellen.includes(quelle))

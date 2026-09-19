@@ -26,11 +26,28 @@
 // REIN: keine Datei, kein Netz, keine Uhr, kein Zufall.
 // ───────────────────────────────────────────────────────────────────────────
 
-/** Vergleichsform: Kleinbuchstaben, ein Leerzeichen, nichts als a–z0–9. */
+/**
+ * Vergleichsform: Kleinbuchstaben, ein Leerzeichen, nichts als a–z0–9 — UND
+ * das Pluszeichen.
+ *
+ * ─── WARUM DAS PLUS BLEIBT ─────────────────────────────────────────────────
+ *
+ * Gefunden am 2026-09-19 vom Wächter „kein Modell steht unter zwei Ids":
+ * ohne diese Ausnahme wurden „Atomos Ninja V+" und „Atomos Ninja V" zu
+ * derselben Zeichenkette — und damit zu derselben abgeleiteten Id. Das sind
+ * ZWEI Geräte mit verschiedenen Anschlüssen, und sie unter einer Identität
+ * zu führen ist der teuerste Fehler, den eine Identität machen kann: die
+ * Stückliste bestellte das eine und der Plan zeigte das andere.
+ *
+ * Das Plus ist in Produktnamen bedeutungstragend (V+, Pro+, 4K+), Bindestrich
+ * und Punkt sind es nicht — „PXW-FS7" und „PXW FS7" meinen dasselbe. Deshalb
+ * genau diese eine Ausnahme und nicht „alle Sonderzeichen behalten": dann
+ * wären „PXW-FS7" und „PXW FS7" wieder zwei Modelle.
+ */
 export const normalisiere = (text: string): string =>
   text
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/[^a-z0-9+]+/g, ' ')
     .trim()
     .replace(/\s+/g, ' ')
 
