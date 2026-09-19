@@ -153,6 +153,25 @@ Signal-Meldung keine Geräte, deren Id einer Kamera oder Leuchte gehört. Das is
 Sonderregel, sondern die Eigentumsregel an der Stelle, an der sie ohnehin gilt: der
 Signal-Planer darf `cameras` nicht schreiben. Sie fällt mit Stufe 2.
 
+## ADR-005 Regel 2 gehört hierher zitiert (nachgetragen 2026-09-19)
+
+ADR-005 Regel 2 lautet: *„Eine Projektion darf den vollen Stand nicht überschreiben. Wo dieselbe
+Information in zwei Auflösungen in derselben Datei liegt, gewinnt die höhere."*
+
+Das ist die Regel, die die Stufen 1 bis 3 getragen hat, und sie stand hier nicht. Während dieser
+Zeit lagen `geraete` (die hohe Auflösung) und die drei Sichten `cameras`/`fixtures`/`devices` (die
+niedrige) **im selben Seed**. Im Sinn stimmte es überein — die Sichten wurden abgeleitet —, aber
+wer in jenen Tagen die Frage stellte, was gilt, wenn ein Planer eine Sicht zurückschreibt, fand
+die Antwort nicht in diesem Dokument. Ein ADR, dessen tragende Regel woanders steht, ist an der
+Stelle unvollständig, an der jemand sie braucht.
+
+**Mit Stufe 4 ist die Lage weg, nicht geregelt:** im Seed steht nur noch die hohe Auflösung, und
+die Sichten sind Filter, die niemand zurückschreiben kann. Die Fussnote bleibt trotzdem stehen —
+nicht für diesen Fall, sondern für den nächsten, der zwei Auflösungen in eine Datei legt. Das
+Muster ist häufiger, als es aussieht: ADR-013 legt mit `fachdaten` wieder etwas in dieselbe Datei,
+und dort ist die Regel eine andere (undurchsichtig, getragen, nie gelesen) — genau deshalb muss
+man beide nebeneinander lesen können.
+
 ## Was NICHT entschieden ist
 
 **Ob der Signal-Planer eine Kamera ändern darf.** Er sieht sie jetzt; ändern kann er an ihr

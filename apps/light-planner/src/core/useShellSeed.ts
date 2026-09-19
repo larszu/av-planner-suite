@@ -8,7 +8,7 @@
 // aufgebaut wird und trotzdem nie auf einen veralteten Stand antwortet.
 // ───────────────────────────────────────────────────────────────────────────
 import { useEffect, useRef } from 'react';
-import { imLichtplan, connectShellSeed } from '@avplan/ui/embed';
+import { imLichtplan, connectShellSeed, type SeedGeraet } from '@avplan/ui/embed';
 import { fixturesToSeedPatch, mitSeedBuehne, seedToFixtures, seedToVenue } from './shellSeed';
 import type { Fixture, PlacedFixture, Shape } from '../types';
 
@@ -39,7 +39,9 @@ export interface ShellSeedArgs {
    * Optional, damit der Aufrufer sie nicht fuehren MUSS; ohne sie verhaelt
    * sich der Hook wie vorher.
    */
-  setOhneModell?: (liste: { id: string; name: string; grund: string }[]) => void;
+  setOhneModell?: (
+    liste: { id: string; name: string; grund: string; geraet: SeedGeraet }[],
+  ) => void;
 }
 
 export function useShellSeed(args: ShellSeedArgs): void {
@@ -70,7 +72,7 @@ export function useShellSeed(args: ShellSeedArgs): void {
         if (imLichtplan(seed.geraete).length === 0 && a.fixtures.length > 0) return false;
         const { fixtures, ausgelassen } = seedToFixtures(seed, a.haengehoehe, a.eigene, a.fixtures);
         // SICHTBAR statt in der Konsole (ADR-014).
-        a.setOhneModell?.(ausgelassen.map(({ id, name, grund }) => ({ id, name, grund })));
+        a.setOhneModell?.(ausgelassen);
         a.setFixtures(fixtures);
         console.info(`[shellSeed] ${fixtures.length}/${imLichtplan(seed.geraete).length} Scheinwerfer übernommen`);
         return true;

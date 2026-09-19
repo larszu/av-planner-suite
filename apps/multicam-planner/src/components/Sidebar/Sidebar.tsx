@@ -2019,6 +2019,7 @@ export default function Sidebar() {
   const { t } = useTranslation();
   const {
     cameras, addCamera, venue, setVenue, showAllFov, toggleShowAllFov, clearAll, ohneModell,
+    geraetPlatzieren,
     pixelsPerMeter, setPixelsPerMeter,
     addStage, removeStage, updateStage,
     persons, addPerson, addStageObject, removePerson, updatePerson,
@@ -2751,11 +2752,34 @@ export default function Sidebar() {
               <p className="text-bc-dim text-[11px] mt-1">
                 {t('sidebar.noModel.why', 'These devices come from another planner. Give them a model to place them — without one there is no sensor, and without a sensor no field of view.')}
               </p>
-              <ul className="mt-2 space-y-1">
+              <ul className="mt-2 space-y-2">
                 {ohneModell.map((o) => (
                   <li key={o.id} className="text-[11px]">
-                    <span className="text-bc-text-bright">{o.name}</span>
-                    <span className="text-bc-dim"> — {o.grund}</span>
+                    <div>
+                      <span className="text-bc-text-bright">{o.name}</span>
+                      <span className="text-bc-dim"> — {o.grund}</span>
+                    </div>
+                    {/*
+                      Die Zuordnung ist ein AUSWAHLFELD und kein Vorschlag, den
+                      man bestaetigt: ein Vorschlag waere geraten, und genau das
+                      verbietet ADR-002. Wer das Geraet angelegt hat, weiss, was
+                      es ist — er waehlt es.
+                    */}
+                    <select
+                      className="mt-1 w-full bg-bc-bg border border-bc-border text-[11px] p-1"
+                      defaultValue=""
+                      aria-label={format(t('sidebar.noModel.assign', 'Assign a model to {name}'), { name: o.name })}
+                      onChange={(e) => {
+                        if (e.target.value) geraetPlatzieren(o.id, e.target.value);
+                      }}
+                    >
+                      <option value="">{t('sidebar.noModel.choose', 'Choose a model…')}</option>
+                      {CAMERAS.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.manufacturer} {c.model}
+                        </option>
+                      ))}
+                    </select>
                   </li>
                 ))}
               </ul>

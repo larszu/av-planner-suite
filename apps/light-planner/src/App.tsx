@@ -15,6 +15,8 @@ import ToolRail from './components/ToolRail';
 import SeitenPanel from './components/SeitenPanel';
 import Dock from './components/Dock';
 import StatusBar from './components/StatusBar';
+import type { SeedGeraet } from '@avplan/ui/embed';
+import { fixtureLibrary } from './core/fixtureLibrary';
 import CanvasActions from './components/CanvasActions';
 import PlanCanvas from './components/PlanCanvas';
 import PropertyPanel from './components/PropertyPanel';
@@ -50,7 +52,7 @@ import { useUiStore } from './store/uiStore';
 import { useProjectStore } from './store/projectStore';
 import { canParent, moveItem } from './core/runningOrder';
 import { erfassen, type Griff } from './core/actuals';
-import { useTranslation } from './i18n';
+import { useTranslation, format } from './i18n';
 import type * as pdfjsLib from 'pdfjs-dist';
 import './App.css';
 
@@ -117,7 +119,9 @@ const App: React.FC = () => {
    * (ADR-014). Nicht persistiert — die Liste wird bei jedem Seed neu
    * gerechnet und ist leer, sobald jedes Geraet ein Modell hat.
    */
-  const [ohneModell, setOhneModell] = useState<{ id: string; name: string; grund: string }[]>([]);
+  const [ohneModell, setOhneModell] = useState<
+    { id: string; name: string; grund: string; geraet: SeedGeraet }[]
+  >([]);
   const [shapes, setShapes] = useState<Shape[]>([]);
   const [persons, setPersons] = useState<Person[]>([]);
   const [foreignCameras, setForeignCameras] = useState<ForeignCamera[]>([]);
@@ -1289,6 +1293,53 @@ const App: React.FC = () => {
 
   const patchConflicts = React.useMemo(() => findPatchConflicts(fixtures), [fixtures]);
 
+  /**
+   * Einem Geraet aus `ohneModell` ein Leuchtenmodell geben und es platzieren
+   * (ADR-014).
+   *
+   * Es behaelt SEINE Id, seinen Namen und seine Lage — es ist dasselbe
+   * Geraet, das ein anderer Planer angelegt hat, und kein neuer Scheinwerfer.
+   * Eine neue Id waere ein zweiter Datensatz fuer dasselbe Blech, also genau
+   * die Doppelung, gegen die ADR-011 geschrieben ist.
+   *
+   * Der Rueckweg meldet die Zuordnung dann von selbst: `fixturesToSeedPatch`
+   * setzt `typId` aus dem gewaehlten Modell.
+   */
+  const geraetPlatzieren = useCallback((geraetId: string, fixtureId: string) => {
+    const offen = ohneModell.find((o) => o.id === geraetId);
+    const def = [...fixtureLibrary, ...customFixtures].find((f) => f.id === fixtureId);
+    if (!offen || !def) return;
+    const g = offen.geraet;
+    // Keine Lage? Dann dieselbe Vorgabe wie in `seedToFixtures`. Dieser Planer
+    // kennt keine Raumgroesse — er hat einen Grundriss, kein Rechteck —, und
+    // eine ausgedachte Mitte waere eine Zahl aus dem Nichts.
+    const x = g.x ?? 0;
+    const y = g.y ?? 0;
+    pushHistory();
+    setFixtures((prev) => [
+      ...prev,
+      {
+        id: g.id,
+        fixture: def,
+        x,
+        y,
+        mountingHeight: g.licht?.rigHeightM ?? defaultMountingHeight,
+        // Ein neues Ziel zeigt auf die eigene Stelle — dieselbe Vorgabe wie
+        // beim Platzieren von Hand. Ein erfundenes Ziel waere eine
+        // Ausrichtungs-Aussage, die niemand getroffen hat.
+        aimX: x,
+        aimY: y,
+        bodyRotation: 0,
+        dimming: g.licht?.dimmerPct ?? 100,
+        unitNumber: g.name,
+        ...(g.licht?.dmxChannel !== undefined ? { channel: g.licht.dmxChannel } : {}),
+        ...(g.licht?.universe !== undefined ? { universe: g.licht.universe } : {}),
+        ...(g.licht?.purpose ? { purpose: g.licht.purpose } : {}),
+      },
+    ]);
+    setOhneModell((prev) => prev.filter((o) => o.id !== geraetId));
+  }, [ohneModell, customFixtures, defaultMountingHeight, pushHistory]);
+
   // ── Copy / paste / duplicate / nudge ──
   const round1 = (v: number) => Math.round(v * 10) / 10;
   const cloneFixtures = useCallback((src: PlacedFixture[]): PlacedFixture[] =>
@@ -1970,9 +2021,29 @@ const App: React.FC = () => {
             </p>
             <ul style={{ fontSize: 11, margin: '6px 0 0', paddingLeft: 14 }}>
               {ohneModell.map((o) => (
-                <li key={o.id}>
+                <li key={o.id} style={{ marginBottom: 6 }}>
                   <strong>{o.name}</strong>
                   <span style={{ opacity: 0.75 }}> — {o.grund}</span>
+                  {/*
+                    Ein AUSWAHLFELD und kein Vorschlag, den man bestaetigt: ein
+                    Vorschlag waere geraten, und genau das verbietet ADR-002.
+                    Wer das Geraet angelegt hat, weiss, was es ist.
+                  */}
+                  <select
+                    style={{ display: 'block', width: '100%', marginTop: 3, fontSize: 11 }}
+                    defaultValue=""
+                    aria-label={format(t('nomodel.assign', 'Assign a model to {name}'), { name: o.name })}
+                    onChange={(e) => {
+                      if (e.target.value) geraetPlatzieren(o.id, e.target.value);
+                    }}
+                  >
+                    <option value="">{t('nomodel.choose', 'Choose a model…')}</option>
+                    {[...fixtureLibrary, ...customFixtures].map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.manufacturer} {f.name}
+                      </option>
+                    ))}
+                  </select>
                 </li>
               ))}
             </ul>

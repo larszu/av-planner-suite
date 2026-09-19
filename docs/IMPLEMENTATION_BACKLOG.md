@@ -2213,8 +2213,15 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
   Modell, das der Katalog nicht eindeutig kennt. Vorher stand für beides derselbe Satz da — mit
   dem Instanznamen als vermeintlichem Modell.
 
+* **Nachgetragen am selben Tag: der Zuordnen-Weg.** Zeigen allein reicht nicht. Die Liste hat je
+  Eintrag ein Auswahlfeld; die Zuordnung platziert DAS GERAET (seine Id, sein Name, seine Lage)
+  statt eine neue Kamera anzulegen — eine neue Id waere ein zweiter Datensatz fuer dasselbe Blech.
+  Der Rueckweg meldet `typId` dann von selbst, und das Geraet ist in jedem Planer eines mit
+  Modell.
+
 * **Guards.** `apps/multicam-planner/src/__tests__/eigenesGeraet.test.ts` (4),
-  `apps/shell/test/eigenesGeraetDurchgereicht.test.ts` (4).
+  `apps/shell/test/eigenesGeraetDurchgereicht.test.ts` (4),
+  `apps/multicam-planner/src/__tests__/modellZuordnen.test.ts` (4).
 
 ---
 

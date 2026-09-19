@@ -1,6 +1,19 @@
 import { create } from 'zustand';
+import type { SeedGeraet } from '@avplan/ui/embed';
 import type { VenueCamera, Venue, ViewTab, EditMode, ReferencePerson, BackgroundPlan, Stage, ProjectFile, VenueTemplate, StageObjectType, Lens, Wall, Camera, Shot, Shotlist, RigTake, PtzPreset } from '../types';
 import { presetFromCamera, nextPresetNumber } from '../utils/ptzPresets';
+
+/**
+ * Ein Geraet aus dem geteilten Projekt, das hier noch kein Modell hat
+ * (ADR-014). Das GERAET faehrt mit, nicht nur sein Name: ohne seine Lage und
+ * seine Id liesse es sich nicht platzieren, ohne eine NEUE anzulegen.
+ */
+export interface OhneModell {
+  id: string;
+  name: string;
+  grund: string;
+  geraet: SeedGeraet;
+}
 import { CAMERAS, CAMERA_COLORS } from '../data/cameras';
 import { LENSES, pickInitialMountAndLens } from '../data/lenses';
 import { TEMPLATES } from '../data/templates';
@@ -152,8 +165,24 @@ interface AppState {
    * ein Modell zugeordnet ist, ist das Geraet eine richtige Kamera und
    * verschwindet hier.
    */
-  ohneModell: { id: string; name: string; grund: string }[];
-  setOhneModell: (liste: { id: string; name: string; grund: string }[]) => void;
+  ohneModell: OhneModell[];
+  setOhneModell: (liste: OhneModell[]) => void;
+  /**
+   * Einem Geraet aus `ohneModell` ein Kameramodell geben und es platzieren
+   * (ADR-014).
+   *
+   * Es behaelt SEINE Id, seinen Namen und seine Lage — es ist dasselbe
+   * Geraet, das ein anderer Planer angelegt hat, und keine neue Kamera.
+   * Genau deshalb reicht `addCamera` hier nicht: das vergibt eine neue Id,
+   * und danach stuenden zwei Datensaetze fuer dasselbe Blech im Projekt —
+   * die Doppelung, gegen die ADR-011 geschrieben ist, und der Bedarf zaehlte
+   * zwei Kameras statt einer.
+   *
+   * Der Rueckweg meldet die Zuordnung dann von selbst: `camerasToSeedPatch`
+   * setzt `typId` aus dem gewaehlten Modell, und damit ist das Geraet in
+   * JEDEM Planer eines mit Modell.
+   */
+  geraetPlatzieren: (geraetId: string, cameraId: string) => void;
   favoriteCameraIds: string[];
   favoriteLensIds: string[];
   selectedCameraId: string | null;
@@ -441,6 +470,47 @@ const defaultVenue: Venue = {
 };
 
 export const useStore = create<AppState>((set, get) => ({
+  geraetPlatzieren: (geraetId, cameraId) => {
+    set((s) => {
+      const offen = s.ohneModell.find((o) => o.id === geraetId);
+      const camDef =
+        CAMERAS.find((c) => c.id === cameraId) ?? s.customCameras.find((c) => c.id === cameraId);
+      if (!offen || !camDef) return s;
+
+      const allLenses = [...LENSES, ...s.customLenses];
+      const pick = pickInitialMountAndLens(camDef.mount, camDef.adaptedMounts, s.customLenses);
+      const lensDef = pick.lens ?? allLenses[0];
+      if (!lensDef) return s;
+
+      const g = offen.geraet;
+      const neu: VenueCamera = {
+        // SEINE Id, nicht eine neue: es ist dasselbe Geraet.
+        id: g.id,
+        label: g.name,
+        cameraId: camDef.id,
+        lensId: lensDef.id,
+        // Seine Lage, wenn er eine hat. Sonst dieselbe Vorgabe wie beim
+        // Anlegen von Hand — und nicht die Ecke der Halle.
+        x: g.x ?? s.venue.widthM / 2,
+        y: g.y ?? s.venue.heightM * 0.75,
+        z: 1.5,
+        pan: -90,
+        tilt: 0,
+        focalLength: g.kamera?.focalMm ?? lensDef.focalLengthMin,
+        aperture: lensDef.maxApertureWide,
+        focusDistance: s.venue.heightM * 0.5,
+        color: CAMERA_COLORS[s.cameras.length % CAMERA_COLORS.length],
+        extenderActive: 1,
+        activeMount: pick.mount,
+        mountType: 'tripod',
+      };
+      return {
+        ...s,
+        cameras: [...s.cameras, neu],
+        ohneModell: s.ohneModell.filter((o) => o.id !== geraetId),
+      };
+    });
+  },
   ohneModell: [],
   setOhneModell: (liste) => set({ ohneModell: liste }),
   venue: defaultVenue,
