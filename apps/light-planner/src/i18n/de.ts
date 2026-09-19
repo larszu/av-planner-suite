@@ -592,6 +592,8 @@ export const de: Record<string, string> = {
   'panel.column.collapse': 'Spalte einklappen',
   'panel.column.expand': 'Spalte ausklappen',
   'panel.properties': 'Eigenschaften',
+  'nomodel.head': 'Im Projekt, hier ohne Modell',
+  'nomodel.why': 'Diese Geräte kommen aus einem anderen Planer. Gib ihnen ein Modell aus der Bibliothek, dann lassen sie sich platzieren — ohne Modell gibt es keine Photometrie und ohne die keine Rechnung.',
   'panel.tools': 'Werkzeuge',
   'panel.floor.calibrate': 'Maßstab kalibrieren',
   'panel.floor.height': 'Höhe',

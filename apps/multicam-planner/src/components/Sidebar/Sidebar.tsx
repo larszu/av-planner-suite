@@ -2018,7 +2018,7 @@ function CameraCard({
 export default function Sidebar() {
   const { t } = useTranslation();
   const {
-    cameras, addCamera, venue, setVenue, showAllFov, toggleShowAllFov, clearAll,
+    cameras, addCamera, venue, setVenue, showAllFov, toggleShowAllFov, clearAll, ohneModell,
     pixelsPerMeter, setPixelsPerMeter,
     addStage, removeStage, updateStage,
     persons, addPerson, addStageObject, removePerson, updatePerson,
@@ -2726,8 +2726,40 @@ export default function Sidebar() {
             />
           ))}
 
-          {cameras.length === 0 && (
+          {cameras.length === 0 && ohneModell.length === 0 && (
             <p className="text-bc-dim text-xs text-center mt-8">{t('sidebar.noCameras', 'No cameras yet. Add one with "Add" or load a template.')}</p>
+          )}
+
+          {/*
+            GERAETE AUS DEM PROJEKT, DIE HIER NOCH KEIN MODELL HABEN (ADR-014).
+
+            Sie sind kein Fehler: jemand hat sie in einem anderen Planer
+            angelegt und der Kategorie „Cameras" zugeordnet. Bis 2026-09-19
+            schrieb die Bruecke dafuer eine Zeile in die Konsole, und hier
+            stand nichts — das Geraet war fuer diesen Planer einfach nicht da.
+
+            Was hier NICHT passiert: ein Modell raten. Ohne Sensorbreite gibt
+            es keinen Bildwinkel, und eine gerechnete Zahl saehe voellig
+            richtig aus (ADR-002). Es steht da, es sagt was fehlt, und wer es
+            weiss, traegt es ein.
+          */}
+          {ohneModell.length > 0 && (
+            <div className="mt-4 border border-bc-border p-3">
+              <p className="text-bc-text-bright text-xs font-semibold">
+                {t('sidebar.noModel.head', 'In the project, without a model here')}
+              </p>
+              <p className="text-bc-dim text-[11px] mt-1">
+                {t('sidebar.noModel.why', 'These devices come from another planner. Give them a model to place them — without one there is no sensor, and without a sensor no field of view.')}
+              </p>
+              <ul className="mt-2 space-y-1">
+                {ohneModell.map((o) => (
+                  <li key={o.id} className="text-[11px]">
+                    <span className="text-bc-text-bright">{o.name}</span>
+                    <span className="text-bc-dim"> — {o.grund}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
       </div>

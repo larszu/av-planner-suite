@@ -31,9 +31,11 @@ export function initShellSeed(): () => void {
         // erneute Seed ein Zuruecksetzen.
         s.cameras,
       );
-      for (const a of ausgelassen) {
-        console.warn(`[shellSeed] Kamera „${a.name}" nicht platziert — ${a.grund}`);
-      }
+      // SICHTBAR statt in der Konsole (ADR-014). Ein Geraet, das jemand im
+      // Signalplan angelegt hat, ist hier kein Fehler — es fehlt ihm nur ein
+      // Modell, das dieser Planer kennt. Der Nutzer sieht es jetzt und kann
+      // es geben.
+      s.setOhneModell(ausgelassen.map(({ id, name, grund }) => ({ id, name, grund })));
       s.setVenue(venue);
       useStore.setState({ cameras });
       console.info(`[shellSeed] ${cameras.length}/${imKameraplan(seed.geraete).length} Kameras übernommen`);
@@ -44,7 +46,13 @@ export function initShellSeed(): () => void {
       // Kameras UND Raum in derselben Meldung. Der Raum gehoert keiner App
       // allein; was die Shell damit macht, entscheidet dort die Konfliktregel
       // (E-21) und nicht dieser Planer.
-      return { ...camerasToSeedPatch(s.cameras), ...venueToSeedPatch(s.venue) };
+      // Die eigenen Modelle MITGEBEN (ADR-014): ohne sie meldet der Rueckweg
+      // eine selbst angelegte Kamera ohne `model` — sie stand danach modellos
+      // im geteilten Projekt und fiel beim naechsten Seed heraus.
+      return {
+        ...camerasToSeedPatch(s.cameras, [...LENSES, ...s.customLenses], s.customCameras),
+        ...venueToSeedPatch(s.venue),
+      };
     },
   });
 

@@ -2181,6 +2181,85 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
   wird aufaddiert statt der Dauer des letzten Punktes.
 * **Aufwand:** ~~groß~~ erledigt
 
+### B-83 · Ein selbst angelegtes Gerät verschwand — und eines von Hand kam nie an
+
+* **Status:** erledigt am 2026-09-19 (ADR-014).
+
+* **Die Meldung.** Eigentümer, 2026-09-19: „Ich muss aber auch selber Geräte anlegen können und
+  dann in anderen Planern öffnen können."
+
+* **Befund 1 — das eigene Modell verschwand.** Der MultiCam-Planer hat `customCameras` und
+  `customLenses`; der Rückweg suchte aber nur im festen Katalog (`CAMERAS.find`). Die Meldung ging
+  deshalb OHNE `model` hinaus, das Gerät stand modellos im geteilten Projekt, und beim nächsten
+  Seed fiel es als „im Katalog nicht eindeutig" heraus. Wer sich eine Kamera selbst anlegte,
+  verlor sie beim nächsten Projektwechsel — der Normalfall, kein Seiteneffekt.
+
+* **Befund 2 — das Gerät von Hand kam nie an.** Ein im Signalplan angelegtes Gerät mit der
+  Kategorie „Cameras" erreicht den Seed korrekt und wurde vom Kameraplan VERWORFEN. Der Grund
+  stand in der Konsole; in der Oberfläche stand nichts. Aus Sicht des Nutzers war sein Gerät
+  einfach nicht da.
+
+* **Gebaut.** Ein selbst angelegtes Modell fährt als `eigenesModell`/`eigenesObjektiv` im Fach mit
+  (dieselbe Regel wie beim selbst angelegten Scheinwerfer, ADR-013); ein Modell AUS dem Katalog
+  nicht. `ausgelassen` trägt jetzt das Gerät statt nur einen Grund, beide Planer führen die Liste
+  im Zustand und zeigen sie.
+
+* **Was NICHT gebaut wurde.** Ein Platzhalter auf dem Plan. Ohne Sensorbreite gibt es keinen
+  Bildwinkel, ohne Photometrie keine Lichtrechnung, und eine gerechnete Zahl sähe völlig richtig
+  aus (ADR-002). Dieselbe Form wie `portsUnknown` im Cable-Planer: das Gerät ist da, sein
+  unbekannter Teil ist markiert.
+
+* **Nebenbefund, mitgefixt.** Der Grund unterscheidet jetzt „kein Modell angegeben" von einem
+  Modell, das der Katalog nicht eindeutig kennt. Vorher stand für beides derselbe Satz da — mit
+  dem Instanznamen als vermeintlichem Modell.
+
+* **Guards.** `apps/multicam-planner/src/__tests__/eigenesGeraet.test.ts` (4),
+  `apps/shell/test/eigenesGeraetDurchgereicht.test.ts` (4).
+
+---
+
+### B-82 · Die Fachdaten überlebten den Weg von Planer zu Planer nicht
+
+* **Status:** erledigt am 2026-09-19 (ADR-013).
+
+* **Die Meldung.** Eigentümer, 2026-09-19, auf den Satz „die Fachdaten bleiben bei dem Planer, der
+  sie versteht": „Sie müssen aber in allen Planern bleiben. Damit ich sie von a nach b nach c und
+  wieder nach a kopieren kann und nichts verloren geht."
+
+  Der Einwand trifft. „Gehört dem Planer, der sie versteht" ist eine Aussage über ZUSTÄNDIGKEIT;
+  sie darf nicht zu einer über VERFÜGBARKEIT werden.
+
+* **Der Befund, gemessen.** Eine im Kameraplan ausgerichtete Kamera (Schwenk 15°, Neigung −8°,
+  Höhe 2,4 m, Blende 5.6, Fokus 12 m, Farbe) kam aus `camerasToSeedPatch` mit drei Feldern zurück:
+  Objektiv, Brennweite, Bildwinkel. Der Rest fiel heraus. Dasselbe im Lichtplan (Ausrichtung,
+  Körperdrehung, Zoom, Folien, Torblenden) und im Signalplan — dort die ANSCHLÜSSE, der Rack-Einbau
+  und die Fremdschlüssel aus Rentman/NetBox.
+
+  Warum es niemandem auffiel: jeder Planer hält seinen eigenen Stand daneben und legt ihn beim
+  nächsten Seed wieder darüber. In einer Sitzung sieht alles richtig aus. Über die DATEI war es
+  weg — also genau auf dem Weg aus der Meldung.
+
+* **Gebaut.** `SeedGeraet.fachdaten`: ein Fach je Gewerk. Jeder schreibt seines vollständig,
+  niemand liest ein fremdes, niemand verliert eines. `mergeSeedPatch` ersetzt das Fach des Melders
+  und trägt alle übrigen; „nichts gesagt" ist keine Löschung.
+
+* **Die Regel dagegen.** Was das Protokoll führt, gehört NICHT ins Fach — je Planer eine
+  Ausschlussliste (`GETEILT`), und je ein Test prüft sie. Der Fall, bei dem man es übersieht: im
+  Signalplan sind `x`/`y` Bildpunkte, das Protokoll trägt `nx`/`ny` (0..1).
+
+* **Die eine Ausnahme.** Ein selbst angelegter Scheinwerfer steht in keinem Katalog; sein Modell
+  fährt genau dann im Fach mit, wenn der Katalog ihn nicht kennt. Sonst käme er nach dem Umweg als
+  „Modell nicht eindeutig" zurück — also gar nicht.
+
+* **Guards.** `packages/ui/test/fachdaten.test.ts` (5),
+  `apps/shell/test/rundlaufDreiPlaner.test.ts` (2 — der Satz des Eigentümers als Lauf, über die
+  Shell UND über die Datei), `apps/multicam-planner/src/__tests__/fachdatenRundlauf.test.ts` (4),
+  `apps/light-planner/tests/fachdatenRundlauf.test.ts` (4),
+  `apps/cable-planner/tests/fachdatenRundlauf.test.ts` (4). Gegenprobe gefahren: nimmt man einer
+  Brücke ihr Fach weg, steht die Kamera wieder auf −90°.
+
+---
+
 ### B-81 · Vier Listen für denselben Gerätetyp — der Namensvergleich als Lagerschlüssel
 
 * **Status:** erledigt am 2026-09-19 (ADR-012).

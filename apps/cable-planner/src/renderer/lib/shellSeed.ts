@@ -37,6 +37,7 @@ import type { ConnectorType, EquipmentItem, EquipmentTemplate, Port } from '../t
 import type { Cable, CableType } from '../types/cable'
 import type { SignalStandard } from '../types/cableSpec'
 import { listDeviceTypes, resolveDeviceType } from './deviceTypeRegistry'
+import { fachAus, fachVon, GEWERK, type SignalFach } from './fachdaten'
 
 /** Belegtext fuer alles, was aus dem Seed statt aus einem Datenblatt stammt. */
 export const SEED_BELEG = 'dem Suite-Projekt der Shell — nicht aus einem Datenblatt'
@@ -223,6 +224,28 @@ export function seedToCable(seed: SuiteSeed, vorhandene: EquipmentItem[] = []): 
       return
     }
 
+    // DAS EIGENE FACH (ADR-013). Es traegt, was dieser Planer beim letzten
+    // Mal an diesem Geraet stehen hatte: Anschluesse, Rack-Einbau,
+    // Panel-Bilder, Fremdschluessel. Es steht VOR dem Katalog, und das ist
+    // der Punkt — ein Port, den jemand umbenannt oder zusaetzlich angelegt
+    // hat, ist eine Aussage ueber DIESES Geraet, das Datenblatt eine ueber
+    // seinen TYP. Die Aussage ueber das einzelne Geraet ist die neuere.
+    const fach = fachVon(d)
+    if (fach?.inputs && fach.outputs) {
+      geraete.set(d.id, {
+        offen: fach.portsUnknown === true,
+        item: {
+          ...(fach as SignalFach),
+          ...basis,
+          // Die Kategorie fuehrt das PROTOKOLL und nicht das Fach — sie steht
+          // deshalb nicht darin und kommt von hier. Ohne Angabe „Other": das
+          // ist die Auskunft „nicht zugeordnet" und keine Behauptung.
+          category: d.kategorie ?? 'Other',
+        },
+      })
+      return
+    }
+
     const tmpl = katalogTemplate(d)
     if (tmpl) {
       geraete.set(d.id, {
@@ -404,6 +427,11 @@ export function cableToSeedPatch(project: {
         // „Sony FX9" gegen „Sony PXW-FX9" halten.
         ...(e.deviceTypeId ? { typId: e.deviceTypeId } : {}),
         ...(kategorie ? { kategorie } : {}),
+        // DAS FACH DIESES PLANERS (ADR-013): Anschluesse, Rack-Einbau,
+        // Panel-Bilder, Fremdschluessel aus Rentman/NetBox/GraphML. Niemand
+        // sonst liest es; es wird getragen, damit ein umbenannter Port einen
+        // Umweg ueber zwei andere Planer und die Datei ueberlebt.
+        fachdaten: { [GEWERK]: fachAus(e) },
         nx: Math.min(1, Math.max(0, e.x / CANVAS_W)),
         ny: Math.min(1, Math.max(0, e.y / CANVAS_H)),
       }

@@ -161,6 +161,45 @@ export interface SeedGeraet {
    */
   typId?: string
   /**
+   * DIE FACHDATEN JE GEWERK — unveraendert mitgefuehrt (ADR-013).
+   *
+   * ─── WOGEGEN DAS GESCHRIEBEN IST ───────────────────────────────────────
+   *
+   * Eigentuemer, 2026-09-19: „Sie muessen aber in allen Planern bleiben.
+   * Damit ich sie von a nach b nach c und wieder nach a kopieren kann und
+   * nichts verloren geht."
+   *
+   * Gemessen am selben Tag: eine im Kameraplan ausgerichtete Kamera
+   * (Schwenk 15°, Neigung -8°, Hoehe 2,4 m, Blende 5.6, Fokus 12 m, Farbe)
+   * kam aus `camerasToSeedPatch` mit GENAU DREI Feldern zurueck — Objektiv,
+   * Brennweite, Bildwinkel. Alles andere fiel heraus. Im Betrieb fiel es
+   * nicht auf, weil der Planer seinen eigenen Zustand danebenhaelt und ihn
+   * beim naechsten Seed wieder darueberlegt. Ueber die DATEI — Projekt in
+   * Planer A speichern, in B oeffnen, in C bearbeiten, in A wieder
+   * aufmachen — war es weg.
+   *
+   * ─── WAS DIESES FELD IST UND WAS NICHT ─────────────────────────────────
+   *
+   * Ein Fach je Gewerk (`'cameras'`, `'fixtures'`, `'signal'`, …), und der
+   * Inhalt ist fuer alle ausser dem Eigentuemer UNDURCHSICHTIG. Niemand
+   * liest ein fremdes Fach, niemand rechnet damit, niemand raeumt es auf —
+   * es wird GETRAGEN. Genau die Zusage, die ADR-005 eine Ebene hoeher fuer
+   * ganze Domaenen-Slots gibt (`avForeign`, `unknownDomains`); hier gilt sie
+   * je Geraet.
+   *
+   * Es ist NICHT die zweite Wahrheit fuer das, was das Protokoll schon
+   * fuehrt. Was in `kamera`, `licht`, `model`, `typId` oder `x`/`y` steht,
+   * gehoert nicht zusaetzlich ins Fach — sonst widersprechen sich zwei
+   * Stellen, und niemand weiss welche gilt. `tests/fachdaten.test.ts` haelt
+   * das fest.
+   *
+   * Es ist auch kein Ersatz fuer die gemeinsamen Gruppen: was ein ANDERER
+   * Planer verstehen soll (die Brennweite fuer die Stueckliste, die
+   * DMX-Adresse fuer den Patch), gehoert nach `kamera`/`licht` und nicht
+   * hierher. Das Fach ist fuer das, was nur sein Eigentuemer versteht.
+   */
+  fachdaten?: Readonly<Record<string, Readonly<Record<string, unknown>>>>
+  /**
    * Zweite Zeile am Knoten („3x SDI Out"). Beschreibung, keine Port-Angabe.
    *
    * HEISST `sub` UND NICHT `subtitle`, und das ist kein Geschmack: die Shell

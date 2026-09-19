@@ -229,6 +229,16 @@ export interface SuiteGeraet {
    * Katalog — dann bleibt `model` die einzige Angabe.
    */
   typId?: string
+  /**
+   * Die Fachdaten je Gewerk — unveraendert mitgefuehrt (ADR-013).
+   *
+   * Die Shell LIEST hier nichts. Sie traegt, was die Planer an ihren eigenen
+   * Faechern schreiben, damit ein Projekt von einem Planer zum naechsten und
+   * wieder zurueck laufen kann, ohne dass die Arbeit dazwischen verschwindet.
+   * Ohne diese Zeile faellt das Feld beim Speichern aus dem Typ — und dann
+   * genau bei dem Weg heraus, fuer den es gebaut ist.
+   */
+  fachdaten?: Readonly<Record<string, Readonly<Record<string, unknown>>>>
   /** Zweite Zeile am Knoten im Signalfluss („3x SDI Out"). Beschreibung. */
   sub?: string
   /** Shell-Begriff: steht es bodennah oder in der Regie? */
