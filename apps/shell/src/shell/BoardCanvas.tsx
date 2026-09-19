@@ -197,6 +197,36 @@ export function BoardCanvas({
   // JSON.stringify je Aenderung auf einem Baum, der in eine Projektdatei
   // passt — das faellt gegen die 500-ms-Sammelfrist nicht ins Gewicht.
   const zuletztGeschrieben = useRef<string>(JSON.stringify(seed))
+
+  // ─── UND DER WEG ZURUECK ────────────────────────────────────────────────
+  //
+  // Der Streifen oben gab das Board an die Shell; hier kommt es wieder an.
+  // Ohne diesen Effekt war das Board die einzige Flaeche der Suite, auf der
+  // STRG+Z NICHTS TAT: die Komponente liest `seed` nur beim ersten Rendern
+  // (`useState(() => …)`), und ihr `key` haengt am Projektnamen. Ein Undo
+  // drehte also das Projekt zurueck, waehrend die Flaeche ihren alten Stand
+  // weiter anzeigte — und die naechste Kartenbewegung schrieb ihn zurueck.
+  // Das Undo war damit nicht nur wirkungslos, es wurde rueckgaengig gemacht.
+  //
+  // Der Vergleich gegen das ZULETZT GESCHRIEBENE ist die ganze Kunst daran:
+  //
+  //   * Kommt herein, was wir selbst geschrieben haben, ist es der eigene
+  //     Hall — nichts tun, sonst zuckt die Flaeche bei jedem Tastendruck.
+  //   * Sind lokale Aenderungen noch in der Sammelfrist, steht drueben noch
+  //     der alte Stand, und der ist gleich dem zuletzt Geschriebenen: auch
+  //     dann nichts tun, sonst frisst ein fremdes Ereignis die halbe Zeile,
+  //     die gerade getippt wird.
+  //   * Erst was sich von beidem unterscheidet, ist eine Aenderung von
+  //     aussen — Undo, Redo, geladenes Projekt — und die zieht ein.
+  useEffect(() => {
+    const kommt = JSON.stringify(seed)
+    if (kommt === zuletztGeschrieben.current) return
+    zuletztGeschrieben.current = kommt
+    setRoot(cloneBoard(seed))
+    setSelection([])
+    setEditingId(null)
+  }, [seed])
+
   useEffect(() => {
     if (!onChange) return
     const jetzt = JSON.stringify(root)
