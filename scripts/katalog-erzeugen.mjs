@@ -22,6 +22,8 @@ import { fileURLToPath } from 'node:url'
 const WURZEL = join(dirname(fileURLToPath(import.meta.url)), '..')
 const QUELLE = join(WURZEL, 'apps/multicam-planner/src/data/cameras.ts')
 const ZIEL = join(WURZEL, 'packages/device-catalog/src/kameraTypen.ts')
+const OBJEKTIV_QUELLE = join(WURZEL, 'apps/multicam-planner/src/data/lenses.ts')
+const OBJEKTIV_ZIEL = join(WURZEL, 'packages/device-catalog/src/objektivTypen.ts')
 const CABLE_LIB = join(WURZEL, 'apps/cable-planner/src/renderer/lib')
 const CABLE_ZIEL = join(WURZEL, 'packages/device-catalog/src/cableTypen.ts')
 const LICHT_QUELLE = join(WURZEL, 'apps/light-planner/src/core/fixtureLibrary.ts')
@@ -81,14 +83,25 @@ export function lies(quelltext, bekannt = []) {
       modell: m[3],
       kategorie: 'Cameras',
       ...(url ? { datenblattUrl: url } : {}),
+      // Die Id, unter der die Kameraliste dieses Modell fuehrt. Ohne sie
+      // koennte der MultiCam-Planer seinen eigenen Eintrag nur ueber den
+      // NAMEN im Katalog wiederfinden (ADR-012).
+      quellRef: m[1],
     }
   })
 }
+
+// `quellRef` nur, wo die Quelle das Modell ANDERS nennt als der Katalog. Wo
+// beide dieselbe Id tragen (der Cable-Planer: seine `deviceTypeId` IST die
+// Katalog-Id), waere das Feld eine Abschrift — 467 Zeichenketten, die nichts
+// sagen, und eine zweite Stelle, an der dieselbe Angabe steht.
+const refTeil = (e) => (e.quellRef && e.quellRef !== e.id ? `, quellRef: ${JSON.stringify(e.quellRef)}` : '')
 
 const zeileVon = (e) =>
   `  { id: ${JSON.stringify(e.id)}, hersteller: ${JSON.stringify(e.hersteller)}, ` +
   `modell: ${JSON.stringify(e.modell)}, kategorie: 'Cameras'` +
   (e.datenblattUrl ? `, datenblattUrl: ${JSON.stringify(e.datenblattUrl)}` : '') +
+  refTeil(e) +
   ` },`
 
 export function baue(eintraege) {
@@ -162,6 +175,7 @@ export function liesCable(quelltext) {
       modell: kopf[1],
       kategorie,
       ...(url ? { datenblattUrl: url } : {}),
+      quellRef: id,
     })
   }
   return eintraege
@@ -171,6 +185,7 @@ const zeileCable = (e) =>
   `  { id: ${JSON.stringify(e.id)}, modell: ${JSON.stringify(e.modell)}, ` +
   `kategorie: ${JSON.stringify(e.kategorie)}` +
   (e.datenblattUrl ? `, datenblattUrl: ${JSON.stringify(e.datenblattUrl)}` : '') +
+  refTeil(e) +
   ` },`
 
 export function baueCable(eintraege) {
@@ -212,6 +227,73 @@ ${eintraege.map(zeileCable).join('\n')}
  * Links ein; wer sie versteckt, macht aus einem bekannten Loch ein
  * unbekanntes.
  */
+/**
+ * Eine Zeile der Objektivliste -> ein Typ-Eintrag.
+ *
+ * ─── WARUM OBJEKTIVE IN DEN KATALOG GEHOEREN (ADR-012, 2026-09-19) ─────────
+ *
+ * `data/lenses.ts` fuehrt 835 Objektive — die groesste Liste der Suite und
+ * die letzte, die niemand ausser dem Kameraplan kannte. Ein Objektiv ist
+ * Geraet wie jedes andere: es hat einen Hersteller, ein Modell, ein
+ * Datenblatt, ein Case und einen Mietpreis. Das Lager fuehrt es, der
+ * Kostenplan rechnet damit, die Stueckliste druckt es.
+ *
+ * Es ist deshalb nicht der Sonderfall, als der es aussah, sondern genau der
+ * Fall, den der Eigentuemer meinte: „Ausnahmslos alles soll sich die gleiche
+ * Basis teilen."
+ *
+ * Was NICHT mitwandert: Brennweiten, Blende, Bildkreis, Squeeze. Die rechnet
+ * der Kameraplan (ADR-002, Eigentumstabelle).
+ */
+export function liesObjektive(quelltext, bekannt = []) {
+  const jeName = new Map(bekannt.map((e) => [normalisiere(e.modell), e.id]))
+  const treffer = [...quelltext.matchAll(
+    /\{\s*id: '([^']+)'[^\n]*?manufacturer: '([^']+)', model: '([^']+)'/g,
+  )]
+  return treffer.map((m) => {
+    const zeile = m[0]
+    const gewachsen = /deviceTypeId: '([^']+)'/.exec(zeile)?.[1]
+    const url = /manufacturerUrl: '([^']+)'/.exec(zeile)?.[1]
+    const gleichnamig = jeName.get(normalisiere(`${m[2]} ${m[3]}`))
+    return {
+      id: gewachsen ?? gleichnamig ?? abgeleiteteTypId(m[2], m[3]),
+      hersteller: m[2],
+      modell: m[3],
+      kategorie: 'Lenses',
+      ...(url ? { datenblattUrl: url } : {}),
+      quellRef: m[1],
+    }
+  })
+}
+
+const zeileObjektiv = (e) =>
+  `  { id: ${JSON.stringify(e.id)}, hersteller: ${JSON.stringify(e.hersteller)}, ` +
+  `modell: ${JSON.stringify(e.modell)}, kategorie: 'Lenses'` +
+  (e.datenblattUrl ? `, datenblattUrl: ${JSON.stringify(e.datenblattUrl)}` : '') +
+  refTeil(e) +
+  ` },`
+
+export function baueObjektive(eintraege) {
+  return `// ───────────────────────────────────────────────────────────────────────────
+// ERZEUGT von scripts/katalog-erzeugen.mjs aus
+// apps/multicam-planner/src/data/lenses.ts — NICHT von Hand aendern.
+//
+// Nur die IDENTITAET: Id, Hersteller, Modell, Kategorie, Datenblatt.
+// Brennweiten, Blende, Bildkreis und Squeeze bleiben im MultiCam-Planer — die
+// versteht sonst niemand.
+//
+// \`npm run katalog:parity\` besteht darauf, dass diese Datei noch aus jener
+// stammt.
+// ───────────────────────────────────────────────────────────────────────────
+import type { TypEingabe } from './typ'
+
+/** ${eintraege.length} Objektivmodelle. */
+export const OBJEKTIV_TYPEN: readonly TypEingabe[] = [
+${eintraege.map(zeileObjektiv).join('\n')}
+]
+`
+}
+
 export function liesLicht(quelltext, bekannt = []) {
   const jeName = new Map(bekannt.map((e) => [normalisiere(e.modell), e.id]))
   const treffer = [...quelltext.matchAll(
@@ -224,13 +306,14 @@ export function liesLicht(quelltext, bekannt = []) {
       hersteller: m[3],
       modell: m[2],
       kategorie: 'Lights',
+      quellRef: m[1],
     }
   })
 }
 
 const zeileLicht = (e) =>
   `  { id: ${JSON.stringify(e.id)}, hersteller: ${JSON.stringify(e.hersteller)}, ` +
-  `modell: ${JSON.stringify(e.modell)}, kategorie: 'Lights' },`
+  `modell: ${JSON.stringify(e.modell)}, kategorie: 'Lights'` + refTeil(e) + ` },`
 
 export function baueLicht(eintraege) {
   return `// ───────────────────────────────────────────────────────────────────────────
@@ -263,6 +346,7 @@ function cableEintraege() {
 
 const cable = cableEintraege()
 const eintraege = lies(readFileSync(QUELLE, 'utf8'), cable)
+const objektive = liesObjektive(readFileSync(OBJEKTIV_QUELLE, 'utf8'), cable)
 const licht = liesLicht(readFileSync(LICHT_QUELLE, 'utf8'), cable)
 if (eintraege.length < 300) {
   console.error(`katalog:erzeugen: nur ${eintraege.length} Kameras erkannt — die Quelle hat sich geaendert.`)
@@ -273,6 +357,11 @@ if (cable.length < 400) {
   process.exit(1)
 }
 
+if (objektive.length < 700) {
+  console.error(`katalog:erzeugen: nur ${objektive.length} Objektive erkannt — die Quelle hat sich geaendert.`)
+  process.exit(1)
+}
+
 if (licht.length < 60) {
   console.error(`katalog:erzeugen: nur ${licht.length} Leuchten erkannt — die Quelle hat sich geaendert.`)
   process.exit(1)
@@ -280,6 +369,7 @@ if (licht.length < 60) {
 
 const inhalt = baue(eintraege)
 const inhaltCable = baueCable(cable)
+const inhaltObjektive = baueObjektive(objektive)
 const inhaltLicht = baueLicht(licht)
 
 if (process.argv.includes('--pruefen')) {
@@ -292,6 +382,10 @@ if (process.argv.includes('--pruefen')) {
     console.error('katalog:parity: cableTypen.ts stammt nicht mehr aus den Katalogen des Cable-Planers.')
     rot = true
   }
+  if (readFileSync(OBJEKTIV_ZIEL, 'utf8') !== inhaltObjektive) {
+    console.error('katalog:parity: objektivTypen.ts stammt nicht mehr aus der Objektivliste des MultiCam-Planers.')
+    rot = true
+  }
   if (readFileSync(LICHT_ZIEL, 'utf8') !== inhaltLicht) {
     console.error('katalog:parity: lichtTypen.ts stammt nicht mehr aus der Fixture-Bibliothek.')
     rot = true
@@ -300,10 +394,11 @@ if (process.argv.includes('--pruefen')) {
     console.error('  Erzeugen mit: npm run katalog:erzeugen')
     process.exit(1)
   }
-  console.log(`katalog:parity ok — ${cable.length} Cable-, ${eintraege.length} Kamera-, ${licht.length} Licht-Typen, alle erzeugt.`)
+  console.log(`katalog:parity ok — ${cable.length} Cable-, ${eintraege.length} Kamera-, ${objektive.length} Objektiv-, ${licht.length} Licht-Typen, alle erzeugt.`)
 } else {
   writeFileSync(ZIEL, inhalt)
   writeFileSync(CABLE_ZIEL, inhaltCable)
+  writeFileSync(OBJEKTIV_ZIEL, inhaltObjektive)
   writeFileSync(LICHT_ZIEL, inhaltLicht)
-  console.log(`katalog:erzeugen ok — ${cable.length} Cable-, ${eintraege.length} Kamera-, ${licht.length} Licht-Typen.`)
+  console.log(`katalog:erzeugen ok — ${cable.length} Cable-, ${eintraege.length} Kamera-, ${objektive.length} Objektiv-, ${licht.length} Licht-Typen.`)
 }

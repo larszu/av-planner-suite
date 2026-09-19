@@ -109,8 +109,11 @@ Das ist die Form, in der ein Widerspruch hier behoben gehört: nicht durch still
 
 ADR-007 baut auf „eine Quelle, drei Fassungen, ein Test dazwischen". Der Test ist da. Was fehlt,
 ist die Zusicherung, dass er **gefahren** wird: `ci:complete` — der Wächter, der prüft, dass jeder
-`*:check` auch in einem CI-Schritt steht — existiert nur in `light-planner` und in der Suite.
-In `multicam-planner` ist `slider:check` grün, greift aber in keinem CI-Schritt.
+`*:check` auch in einem CI-Schritt steht — existierte nur in `light-planner` und in der Suite.
+In `multicam-planner` war `slider:check` grün und griff in keinem CI-Schritt.
+
+**Behoben am 2026-09-19:** der Wächter steht jetzt in allen sechs Repos, und `slider:check` ist
+ein eigener Schritt. Er hat damit als Erstes den Fall gemeldet, für den er gebaut wurde.
 
 Das ist der Satz aus dem Repo selbst, gegen das Repo gewendet: *„Ein Guard, den niemand fährt, ist
 keine Zusicherung, sondern eine Notiz."*
@@ -132,10 +135,13 @@ Datei legt.
 
 ## Was daraus folgt
 
-1. **A ist der teuerste Befund** und der, den der Eigentümer als Doppelarbeit erlebt. Das Paket
-   steht (`@avplan/device-catalog`), die Kameratypen sind drin; das Anschließen der übrigen
-   Kataloge und der Planer läuft.
+1. **A ist erledigt** (2026-09-19, ADR-012). Das Paket steht, alle vier Listen sind darin — 467
+   Cable-Einträge, 377 Kameras, 835 Objektive, 84 Leuchten, zusammen 1751 Typen —, und die
+   Planer LESEN es: `SeedGeraet.typId` trägt die Identität durch den Seed, `Geraetetyp.refs` die
+   Rückrichtung. Der Namensvergleich steht nur noch unter der Id, für Geräte aus keinem Katalog.
 2. **B** ist erledigt (ADR-011, alle vier Stufen gebaut am 2026-09-19).
-3. **E** ist billig: `ci:complete` in die übrigen Repos.
+3. **E** ist erledigt (2026-09-19): `ci:complete` steht jetzt auch in cable-, multicam-,
+   inventory- und facility-planner. Im `multicam-planner` hat er sofort geliefert, wofür er
+   gebaut ist — `slider:check` stand seit sieben Tagen in package.json und lief bei keinem Merge.
 4. **C** und **F** sind Textarbeit an den ADRs, nach dem Muster von **D**.
 5. **Crew & Geld** (ADR-006) steht weiter aus und ist bisher nirgends als offen geführt.

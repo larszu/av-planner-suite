@@ -75,13 +75,23 @@ export function fuehreZusammen(quellen: readonly TypQuelle[]): KatalogErgebnis {
 
   for (const { name, eintraege } of quellen) {
     for (const e of eintraege) {
+      // `quellRef` gehoert nicht in den Typ, sondern in die Tabelle `refs`:
+      // im Eintrag waere es die Id EINER Quelle an einem Typ, den mehrere
+      // fuehren — also wieder die Lage, gegen die dieses Paket geschrieben ist.
+      const { quellRef, ...felder } = e
+      const ref = quellRef ? { [name]: quellRef } : {}
+
       const bisher = jeId.get(e.id)
       if (!bisher) {
-        jeId.set(e.id, { ...e, quellen: [name] })
+        jeId.set(e.id, { ...felder, quellen: [name], ...(quellRef ? { refs: ref } : {}) })
         continue
       }
 
-      let zusammen: Geraetetyp = { ...bisher, quellen: [...bisher.quellen, name] }
+      let zusammen: Geraetetyp = {
+        ...bisher,
+        quellen: [...bisher.quellen, name],
+        ...(quellRef ? { refs: { ...bisher.refs, ...ref } } : {}),
+      }
 
       // ADR-005 Regel 2: die höhere Auflösung gewinnt, bevor Feld für Feld
       // verglichen wird. Danach stimmen `hersteller` und `modell` überein,
@@ -92,7 +102,7 @@ export function fuehreZusammen(quellen: readonly TypQuelle[]): KatalogErgebnis {
       }
 
       for (const feld of FELDER) {
-        const neu = e[feld]
+        const neu = felder[feld]
         const alt = zusammen[feld]
         if (neu === undefined || neu === '') continue
         if (alt === undefined || alt === '') {
@@ -119,6 +129,32 @@ export function fuehreZusammen(quellen: readonly TypQuelle[]): KatalogErgebnis {
 /** Ein Eintrag je Id — und wo zwei Quellen dieselbe Id tragen, sagt es die Liste. */
 export const mehrfachGefuehrt = (typen: readonly Geraetetyp[]): Geraetetyp[] =>
   typen.filter((t) => t.quellen.length > 1)
+
+/**
+ * Der Typ, den eine QUELLE unter dieser Id fuehrt — oder `null`.
+ *
+ * Die Rueckrichtung zu `refs`: ein Planer haelt seinen eigenen Eintrag
+ * (`sony-hdc-3500`) und fragt, welcher Katalog-Typ das ist. Ohne sie bliebe
+ * nur der Namensvergleich, und den verbietet ADR-002 aus dem Grund, den die
+ * Kameraliste vorfuehrt: „FX9" und „PXW-FX9" sind dasselbe Geraet und nicht
+ * derselbe Name.
+ */
+export const typFuerQuelle = (
+  typen: readonly Geraetetyp[],
+  quelle: string,
+  ref: string | undefined,
+): Geraetetyp | null => {
+  if (!ref) return null
+  const ueberRef = typen.find((t) => t.refs?.[quelle] === ref)
+  if (ueberRef) return ueberRef
+  // Wo die Quelle DIESELBE Id fuehrt wie der Katalog, traegt der Eintrag kein
+  // `refs` — das Feld waere dort eine Abschrift. Der Cable-Planer ist dieser
+  // Fall: seine `deviceTypeId` IST die Katalog-Id. Gefragt wird trotzdem
+  // nach `quellen`, nicht nur nach der Id: sonst antwortete der Katalog dem
+  // Licht-Planer mit einem Typ, den nur der Cable-Planer fuehrt, und die
+  // Antwort hiesse „deine Bibliothek kennt das", was nicht stimmt.
+  return typen.find((t) => t.id === ref && t.quellen.includes(quelle)) ?? null
+}
 
 /** Einträge ohne Datenblatt. Eine AUSSAGE, kein Schweigen (vgl. catalogueEvidence). */
 export const ohneBeleg = (typen: readonly Geraetetyp[]): Geraetetyp[] =>

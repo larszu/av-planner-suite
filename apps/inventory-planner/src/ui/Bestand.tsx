@@ -38,6 +38,7 @@ import { useInventoryStore } from '../domain/store/inventoryStore'
 import { nodePathLabel } from '../domain/lib/storageTree'
 import { ownershipLabel } from '../domain/lib/ownership'
 import type { InventoryOwnership } from '../domain/types/inventory'
+import { typFuerEingabe, typLabel, typVorschlaege } from '../lib/typKatalog'
 
 const EIGENTUM: InventoryOwnership[] = ['owned', 'rented', 'subhire']
 
@@ -63,11 +64,31 @@ export function Bestand() {
     )
   }, [items, suche])
 
+  /**
+   * Die Typen der Suite als Vorschlagsliste. Leer, solange keiner angemeldet
+   * ist (Standalone-Betrieb) — dann verhaelt sich das Feld wie bisher.
+   */
+  const vorschlaege = useMemo(() => typVorschlaege(), [])
+
   const anlegen = () => {
     const name = modell.trim()
     if (!name) return
     const zahl = Number(menge)
-    addItem({ model: name, quantity: Number.isFinite(zahl) && zahl > 0 ? zahl : 1 })
+    // TRIFFT DIE EINGABE EINEN KATALOG-TYP, wird seine Identität festgeschrieben
+    // (ADR-012). Ohne sie faellt die Deckung gegen den Plan auf den
+    // Namensvergleich zurueck — und der entscheidet ueber eine Bestellung.
+    //
+    // Nur bei EINDEUTIGEM Treffer, und nur auf den vollen Namen: geraten wird
+    // nichts. Was der Katalog sagt, zieht dann mit ein (Hersteller,
+    // Kategorie); was er nicht sagt, bleibt leer.
+    const typ = typFuerEingabe(name)
+    addItem({
+      model: typ ? typ.modell : name,
+      ...(typ ? { deviceTypeId: typ.id } : {}),
+      ...(typ?.hersteller ? { manufacturer: typ.hersteller } : {}),
+      ...(typ ? { category: typ.kategorie } : {}),
+      quantity: Number.isFinite(zahl) && zahl > 0 ? zahl : 1,
+    })
     setModell('')
     setMenge('1')
   }
@@ -105,11 +126,26 @@ export function Bestand() {
         >
           <label className="feld">
             {t('stock.newModel.aria', 'Model designation')}
+            {/*
+              Eine VORSCHLAGSLISTE und kein Auswahlfeld: das Lager enthaelt
+              mehr, als jeder Katalog kennt (Gaffa, Adapter, Eigenbauten), und
+              ein Pflichtfeld zwaenge dazu, dafuer einen Typ zu erfinden. Wer
+              einen Vorschlag nimmt, bekommt die geteilte Identitaet; wer
+              etwas anderes tippt, legt es wie bisher an.
+            */}
             <input
               value={modell}
               onChange={(e) => setModell(e.target.value)}
               placeholder={t('stock.newModel', 'New model')}
+              list={vorschlaege.length > 0 ? 'lager-typen' : undefined}
             />
+            {vorschlaege.length > 0 && (
+              <datalist id="lager-typen">
+                {vorschlaege.map((v) => (
+                  <option key={v.id} value={typLabel(v)} />
+                ))}
+              </datalist>
+            )}
           </label>
           <label className="feld schmal">
             {t('stock.col.qty', 'Qty')}

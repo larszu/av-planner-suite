@@ -220,6 +220,15 @@ export interface SuiteGeraet {
   kategorie?: string
   /** Das Katalog-MODELL („Sony FX9"), nicht der Instanzname („Kamera 1"). */
   model?: string
+  /**
+   * Die Katalog-Identitaet des Modells (ADR-012, `@avplan/device-catalog`).
+   *
+   * Sie ist die Basis, die alle Planer teilen: der Kameraplan, der Lichtplan
+   * und das Lager holen sich ueber sie IHREN Eintrag, statt `model` gegen die
+   * eigene Liste zu vergleichen. Fehlt sie, stammt das Geraet aus keinem
+   * Katalog — dann bleibt `model` die einzige Angabe.
+   */
+  typId?: string
   /** Zweite Zeile am Knoten im Signalfluss („3x SDI Out"). Beschreibung. */
   sub?: string
   /** Shell-Begriff: steht es bodennah oder in der Regie? */

@@ -378,6 +378,10 @@ function nurEigenes(alt: SeedGeraet, neu: SeedGeraet, domain: SeedDomain): SeedG
       // setzen, wenn er sie nennt, aber nicht leeren.
       ...(neu.name ? { name: neu.name } : {}),
       ...(neu.model !== undefined ? { model: neu.model } : {}),
+      // Die Katalog-Identitaet wie `model`: setzen darf sie, wer sie nennt —
+      // der Kameraplan kennt den Typ seiner Kamera oft genauer als der
+      // Signalplan —, leeren darf sie niemand nebenbei (ADR-012).
+      ...(neu.typId !== undefined ? { typId: neu.typId } : {}),
       ...(neu.x !== undefined ? { x: neu.x } : {}),
       ...(neu.y !== undefined ? { y: neu.y } : {}),
       // Die leere Gruppe waere eine AUSSAGE: `kamera: {}` heisst „steht im
@@ -392,6 +396,10 @@ function nurEigenes(alt: SeedGeraet, neu: SeedGeraet, domain: SeedDomain): SeedG
       ...alt,
       ...(neu.name ? { name: neu.name } : {}),
       ...(neu.model !== undefined ? { model: neu.model } : {}),
+      // Die Katalog-Identitaet wie `model`: setzen darf sie, wer sie nennt —
+      // der Kameraplan kennt den Typ seiner Kamera oft genauer als der
+      // Signalplan —, leeren darf sie niemand nebenbei (ADR-012).
+      ...(neu.typId !== undefined ? { typId: neu.typId } : {}),
       ...(neu.x !== undefined ? { x: neu.x } : {}),
       ...(neu.y !== undefined ? { y: neu.y } : {}),
       // Siehe oben: die leere Gruppe ist die Zuordnung zum Lichtplan.

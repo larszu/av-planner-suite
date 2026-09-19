@@ -141,6 +141,26 @@ export interface SeedGeraet {
   /** Das Katalog-MODELL („Sony FX9"), nicht der Instanzname („Kamera 1"). */
   model?: string
   /**
+   * Die KATALOG-IDENTITAET des Modells (`@avplan/device-catalog`) — ADR-012.
+   *
+   * WARUM DAS FELD NOETIG WAR, obwohl `model` daneben steht. ADR-011 hat aus
+   * drei Geraetelisten eine gemacht; das Geraet hat seither eine Id. Sein TYP
+   * hatte weiter keine: `model` ist freier Text, und jeder Planer loeste ihn
+   * gegen seine eigene Liste auf — der Kameraplan gegen `data/cameras.ts`,
+   * der Lichtplan gegen `fixtureLibrary`, das Lager gegen den
+   * kleingeschriebenen Modellnamen. Vier Listen, vier Aufloesungen, und
+   * „Sony FX9" gegen „Sony PXW-FX9" entschied, ob eine Kamera drueben ankam.
+   *
+   * Genau das verbietet ADR-002: die Zuordnung Instanz -> Typ ist eine
+   * Tatsache und kein Namensvergleich. Mit `typId` steht sie im Geraet, und
+   * jeder Planer holt sich ueber `typFuerQuelle` SEINEN Eintrag dazu.
+   *
+   * Optional, und das Fehlen ist eine Aussage: dieses Geraet stammt aus
+   * keinem Katalog. Dann bleibt `model` die einzige Angabe — geraten wird
+   * nichts.
+   */
+  typId?: string
+  /**
    * Zweite Zeile am Knoten („3x SDI Out"). Beschreibung, keine Port-Angabe.
    *
    * HEISST `sub` UND NICHT `subtitle`, und das ist kein Geschmack: die Shell

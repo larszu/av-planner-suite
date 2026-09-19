@@ -17,16 +17,22 @@ import {
   ohneBeleg,
   typFuer,
   typenDerKategorie,
+  OBJEKTIV_TYPEN,
 } from '../src/index'
 
 describe('Der Katalog der Suite', () => {
   it('führt jedes Modell genau einmal', () => {
     const ids = alleTypen().map((t) => t.id)
     expect(new Set(ids).size).toBe(ids.length)
-    // 467 aus dem Cable-Planer + 377 Kameras + 84 Leuchten − die gemeinsamen.
+    // 467 aus dem Cable-Planer + 377 Kameras + 835 Objektive + 84 Leuchten
+    // − die gemeinsamen.
     const gemeinsam = mehrfachGefuehrt(alleTypen())
     expect(alleTypen()).toHaveLength(
-      CABLE_TYPEN.length + KAMERA_TYPEN.length + LICHT_TYPEN.length - gemeinsam.length,
+      CABLE_TYPEN.length +
+        KAMERA_TYPEN.length +
+        OBJEKTIV_TYPEN.length +
+        LICHT_TYPEN.length -
+        gemeinsam.length,
     )
   })
 
@@ -90,7 +96,10 @@ describe('Der Katalog der Suite', () => {
 
   it('„kein Datenblatt" ist eine Aussage und wird gezählt', () => {
     const ohne = ohneBeleg(alleTypen())
-    expect(ohne.length).toBe(134)
+    // 134 waren es, bevor die 835 Objektive dazukamen; 37 von ihnen führen
+    // keinen Herstellerlink.
+    expect(ohne.length).toBe(171)
+    expect(ohne.filter((t) => t.kategorie === 'Lenses')).toHaveLength(37)
     // 45 aus dem Cable-Planer (467 − 422) und 5 aus der Kameraliste.
     expect(ohne.filter((t) => t.quellen.includes('cable'))).toHaveLength(45)
 

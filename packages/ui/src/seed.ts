@@ -392,6 +392,7 @@ export function deriveBedarf(
     id: string,
     name: string,
     model: string | undefined,
+    typId: string | undefined,
     category?: string,
   ) => {
     const modell = model?.trim()
@@ -406,10 +407,32 @@ export function deriveBedarf(
       })
       return
     }
-    const key = modell.toLowerCase()
+    // DER SCHLUESSEL IST DIE KATALOG-IDENTITAET, wo es eine gibt (ADR-012).
+    //
+    // Bis 2026-09-19 stand hier ausschliesslich `modell.toLowerCase()`, und
+    // damit entschied die SCHREIBWEISE ueber die Lagerposition: „Sony FX9"
+    // aus dem Kameraplan und „Sony PXW-FX9" aus dem Katalog des
+    // Cable-Planers waren zwei Zeilen fuer dieselbe Kamera — das Haus haette
+    // zwei bestellt. Derselbe Namensvergleich, den ADR-002 verbietet, nur
+    // eine Ebene weiter hinten.
+    //
+    // Der Modellname bleibt der Rueckfall: ein von Hand angelegtes Geraet hat
+    // keine Katalog-Id, und zwei gleich benannte sind dann immer noch
+    // dasselbe Modell. Was NICHT passiert, ist Raten in die andere Richtung —
+    // eine Id wird nie aus einem Namen gemacht.
+    const key = typId ?? modell.toLowerCase()
     const vorhanden = zeilen.get(key)
     if (vorhanden) vorhanden.quantity += 1
-    else zeilen.set(key, { key, label: modell, category, quantity: 1, fromDomain })
+    else {
+      zeilen.set(key, {
+        key,
+        ...(typId ? { deviceTypeId: typId } : {}),
+        label: modell,
+        category,
+        quantity: 1,
+        fromDomain,
+      })
+    }
   }
 
   // ── UEBER DIE EINE LISTE (ADR-011, Stufe 4) ──────────────────────────────
@@ -430,7 +453,7 @@ export function deriveBedarf(
         ? 'fixtures'
         : 'signal'
     const category = domain === 'cameras' ? 'camera' : domain === 'fixtures' ? 'fixture' : undefined
-    aufnehmen(domain, g.id, g.name, g.model, category)
+    aufnehmen(domain, g.id, g.name, g.model, g.typId, category)
   }
 
   return [...zeilen.values(), ...offen]

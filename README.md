@@ -98,7 +98,7 @@ exchange format with the MultiCam Planner. **React · three.js · Electron.**
 | **@avplan/ui** | Design system: theme tokens (Dark/Light + per-module accents), accessible primitives (Button, Modal, Menu, Badge, Tabs, Kbd), `ModuleRail`, `CommandPalette`, theme-aware imperative dialogs, and the `embed` bridge (postMessage theme/settings/history sync for embedded planners). |
 | **@avplan/inventory-core** | Shared inventory domain model + the portable `avplan-inventory` wire format (`serializeInventory`/`parseInventory`/`resolveInventoryCode`). The wire contract is frozen by a test — deliberate format changes require bumping `INVENTORY_FORMAT_VERSION`. |
 | **@avplan/onboarding-core** | Suite-wide onboarding: `WelcomeDialog` + `TourDialog` + `createOnboardingState` (seen-flags with injectable storage and legacy-key migration) + de/en strings. All apps render the same dialog look. |
-| **@avplan/device-catalog** | **One** device-type catalogue for every planner (ADR-002, ADR-011): the identity of a model — id, manufacturer, model, category, data sheet. 916 types, merged from the cabling planner's 19 catalogues (467), the camera list (377) and the lighting fixture library (84). The trade-specific facts stay with the planner that understands them; a package that carried ports would drag half the cable graph with it. Merging **reports** disagreements instead of silently picking, and `katalog:parity` keeps the generated types tied to their source. |
+| **@avplan/device-catalog** | **One** device-type catalogue for every planner (ADR-002, ADR-011, ADR-012): the identity of a model — id, manufacturer, model, category, data sheet. 1751 types, merged from the cabling planner's 19 catalogues (467), the camera list (377), the lens list (835) and the lighting fixture library (84). Each entry also carries `refs`: what each source calls that type in its own list, so a planner finds *its* entry from a shared id without comparing names. The trade-specific facts stay with the planner that understands them; a package that carried ports would drag half the cable graph with it. Merging **reports** disagreements instead of silently picking, and `katalog:parity` keeps the generated types tied to their source. |
 | **@avplan/lexware-core** | Neutral billing model (`BillingDoc`) mapped to Lexware Office (lexoffice) **quotation/invoice** payloads — net/gross/§19 tax, discounts, totals — plus a REST client with injectable `fetch` and line-item derivation from inventory and budget. |
 
 ---
@@ -185,6 +185,22 @@ is not “nowhere”.
 Seeing a device is not the same as writing to it. Ownership moves from *per list* to *per field
 group*: focal length belongs to the camera plan, the DMX address to the lighting plan, the ports
 to the signal plan. Nothing a planner does not own can be overwritten by it.
+
+### One type, one identity
+
+The device knows its **type**: `typId` carries the catalogue identity (ADR-012) through the seed,
+and every planner resolves *its own* entry from it — the camera plan its sensor and mount, the
+lighting plan its photometrics, the signal plan its ports, the warehouse its stock position. The
+name comparison stays underneath, for kit that came from no catalogue; it is the weaker answer, so
+it comes second rather than instead.
+
+Before that, four lists answered the same question in four ways, and “Sony FX9” against
+“Sony PXW-FX9” decided whether a camera arrived in the camera plan — and whether the house ordered
+one body or two.
+
+What is *not* shared: the trade facts. Sensor and mount belong to the camera plan, photometrics to
+the lighting plan, ports to the signal plan. Pick a type another planner owns and you get it along
+with the statement that those facts are missing, instead of the model being hidden from you.
 
 A camera created in the cabling planner therefore *is* a camera in the camera plan — nothing to
 confirm, nothing to link, and the bill of materials counts one device because there is one. Project

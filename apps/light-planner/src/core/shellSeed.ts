@@ -35,6 +35,7 @@
 // ───────────────────────────────────────────────────────────────────────────
 import { imLichtplan, type SeedGeraet, type SuiteSeed } from '@avplan/ui/embed';
 import { fixtureLibrary } from './fixtureLibrary';
+import { fixtureFuerTyp, typIdFuer } from './typRegister';
 import type { Fixture, PlacedFixture, Shape } from '../types';
 
 const normalisiere = (s: string): string =>
@@ -50,11 +51,21 @@ const passt = (katalog: string, kandidat: string): boolean => {
   return k === kandidat || k.endsWith(` ${kandidat}`) || k.endsWith(`-${kandidat}`);
 };
 
-/** Genau ein Treffer oder null; mehrdeutig zaehlt als kein Treffer. */
+/**
+ * Genau ein Treffer oder null; mehrdeutig zaehlt als kein Treffer.
+ *
+ * ZUERST DIE KATALOG-IDENTITAET (ADR-012). Traegt das Geraet eine `typId`,
+ * ist die Zuordnung eine Tatsache — dieselbe, die der Cable-Planer und das
+ * Lager benutzen. Der Namensvergleich darunter bleibt fuer Geraete ohne
+ * Katalog-Herkunft; er ist die schlechtere Auskunft und steht deshalb hinten.
+ */
 export function katalogFixture(
-  seed: Pick<SeedGeraet, 'model' | 'name'>,
+  seed: Pick<SeedGeraet, 'model' | 'name' | 'typId'>,
   eigene: Fixture[] = [],
 ): Fixture | null {
+  const ueberId = fixtureFuerTyp(seed.typId, eigene);
+  if (ueberId) return ueberId;
+
   const alle = [...fixtureLibrary, ...eigene];
   const kandidaten = [seed.model, seed.name]
     .filter((s): s is string => !!s && s.trim().length > 0)
@@ -161,6 +172,10 @@ export function fixturesToSeedPatch(fixtures: PlacedFixture[]): { geraete: SeedG
       name: p.unitNumber || p.fixture.name,
       kategorie: 'Licht',
       model: `${p.fixture.manufacturer} ${p.fixture.name}`.trim(),
+      // Die Katalog-Identitaet faehrt mit (ADR-012): ueber sie findet der
+      // Cable-Planer das Geraet und das Lager seine Position, ohne den
+      // Modellnamen zu vergleichen.
+      ...(() => { const t = typIdFuer(p.fixture); return t ? { typId: t } : {}; })(),
       x: p.x,
       y: p.y,
       licht: {

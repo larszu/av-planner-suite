@@ -89,6 +89,7 @@
     }
   },
   "dependencies": {
+    "@avplan/device-catalog": "1.0.0",
     "@avplan/inventory-core": "*",
     "@avplan/onboarding-core": "*",
     "@avplan/ui": "*",

@@ -2181,6 +2181,46 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
   wird aufaddiert statt der Dauer des letzten Punktes.
 * **Aufwand:** ~~groß~~ erledigt
 
+### B-81 · Vier Listen für denselben Gerätetyp — der Namensvergleich als Lagerschlüssel
+
+* **Status:** erledigt am 2026-09-19 (ADR-012).
+
+* **Die Meldung.** Eigentümer, 2026-09-19: „Inventory planner und der ganze Rest hat aber noch
+  eigene Listen. Ausnahmslos alles soll sich die gleiche Basis teilen!"
+
+* **Der Befund.** B-80 hat die GERÄTE vereinheitlicht. Der TYP eines Geräts stand danach immer
+  noch als freier Text in `model`, und jeder Planer löste ihn gegen seine eigene Liste auf: der
+  Signalplan über `deviceTypeId` (der einzige mit einer Identität), der Kameraplan über einen
+  Namensvergleich gegen 377 Kameras und 835 Objektive, der Lichtplan gegen 84 Leuchten, das Lager
+  gegen `model.toLowerCase()`.
+
+  Vier Auflösungen für dieselbe Frage. „Sony FX9" gegen „Sony PXW-FX9" entschied, ob eine Kamera
+  im Kameraplan ankam — und ob das Haus ein Blech bestellte oder zwei.
+
+* **Gebaut.** `SeedGeraet.typId` trägt die Katalog-Identität durch den Seed; `Geraetetyp.refs`
+  trägt die Rückrichtung (welche Quelle nennt diesen Typ wie); die drei Auflöser fragen die Id
+  vor dem Namen; `deriveBedarf` schlüsselt über die Id; die 835 Objektive stehen als Kategorie
+  `Lenses` im Katalog; das Lager bekommt ihn über einen Anschluss (`lib/typKatalog.ts`) und
+  schreibt beim Anlegen eines Artikels die Identität fest.
+
+* **Nebenbefund, mitgefixt.** Die Kategorie `Sync/Reference` gab es zweimal — eine dritte
+  Katalogdatei war beim Sprachwechsel (#822) übersehen worden und schrieb weiter `Sync/Referenz`.
+  Seit B-80 ordnet die Kategorie ein Gerät den PLÄNEN zu; zwei Schreibweisen sind zwei
+  Zuordnungen, und die eine trifft keine Regel.
+
+* **Geprüft, dass es keine gibt.** Der facility-planner führt keine Geräteliste und bekommt
+  keine: seine Aufzählungen sind Normbegriffe (`CEE 63`, `RCD Typ B`), kein Katalog. Steht in
+  ADR-012, weil „ausnahmslos alles" auch die Listen prüfen heisst, die danach unverändert
+  bleiben.
+
+* **Guards.** `packages/device-catalog/test/rueckref.test.ts` (5),
+  `packages/device-catalog/test/kategorien.test.ts` (2),
+  `packages/ui/test/bedarfTypId.test.ts` (4), `apps/shell/test/typBasis.test.ts` (4),
+  `apps/multicam-planner/src/__tests__/typIdentitaet.test.ts` (5),
+  `apps/inventory-planner/src/domain/__tests__/typKatalog.node.test.ts` (5).
+
+---
+
 ### B-80 · Drei Listen für dasselbe Blech — ADR-001 galt im Planer und nicht dazwischen
 
 * **Status:** erledigt am 2026-09-19 — alle vier Stufen gebaut (ADR-011).

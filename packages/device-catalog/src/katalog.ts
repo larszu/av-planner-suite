@@ -12,6 +12,7 @@
 // ───────────────────────────────────────────────────────────────────────────
 import { CABLE_TYPEN } from './cableTypen'
 import { KAMERA_TYPEN } from './kameraTypen'
+import { OBJEKTIV_TYPEN } from './objektivTypen'
 import { LICHT_TYPEN } from './lichtTypen'
 import { fuehreZusammen, type KatalogErgebnis } from './zusammenfuehren'
 import type { Geraetetyp } from './typ'
@@ -27,7 +28,7 @@ let gerechnet: KatalogErgebnis | null = null
 export function katalog(): KatalogErgebnis {
   gerechnet ??= fuehreZusammen([
     { name: 'cable', eintraege: CABLE_TYPEN },
-    { name: 'multicam', eintraege: KAMERA_TYPEN },
+    { name: 'multicam', eintraege: [...KAMERA_TYPEN, ...OBJEKTIV_TYPEN] },
     { name: 'light', eintraege: LICHT_TYPEN },
   ])
   return gerechnet
