@@ -35,7 +35,7 @@ export function initShellSeed(): () => void {
       // Signalplan angelegt hat, ist hier kein Fehler — es fehlt ihm nur ein
       // Modell, das dieser Planer kennt. Der Nutzer sieht es jetzt und kann
       // es geben.
-      s.setOhneModell(ausgelassen.map(({ id, name, grund }) => ({ id, name, grund })));
+      s.setOhneModell(ausgelassen);
       s.setVenue(venue);
       useStore.setState({ cameras });
       console.info(`[shellSeed] ${cameras.length}/${imKameraplan(seed.geraete).length} Kameras übernommen`);

@@ -143,5 +143,7 @@ Datei legt.
 3. **E** ist erledigt (2026-09-19): `ci:complete` steht jetzt auch in cable-, multicam-,
    inventory- und facility-planner. Im `multicam-planner` hat er sofort geliefert, wofür er
    gebaut ist — `slider:check` stand seit sieben Tagen in package.json und lief bei keinem Merge.
-4. **C** und **F** sind Textarbeit an den ADRs, nach dem Muster von **D**.
+4. **C** und **F** sind erledigt (2026-09-19), nach dem Muster von **D**: ADR-002 hat einen
+   Abschnitt „Was ‚geraten' heisst — und was nicht" samt Probe, ADR-011 zitiert ADR-005 Regel 2
+   und sagt dazu, dass Stufe 4 die Lage abgeräumt hat und die Fussnote trotzdem stehen bleibt.
 5. **Crew & Geld** (ADR-006) steht weiter aus und ist bisher nirgends als offen geführt.

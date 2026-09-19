@@ -64,6 +64,25 @@ und ein Kegel, der aus erfundenen Zahlen entsteht, ist schlimmer als kein Kegel.
 sagt dazu schon länger das Richtige: ein Plan, dessen Zahlen auf fehlenden Angaben beruhen, ist
 **nicht beurteilbar** — und das ist etwas anderes als in Ordnung (`preflight.ts`).
 
+## Der letzte Schritt: dem Gerät ein Modell geben (nachgetragen 2026-09-19)
+
+Zeigen allein reicht nicht. Die Liste hat deshalb je Eintrag ein **Auswahlfeld**: Modell wählen,
+und das Gerät wird platziert.
+
+Ein Auswahlfeld und **kein Vorschlag, den man bestätigt** — ein Vorschlag wäre geraten, und genau
+das verbietet ADR-002. Wer das Gerät angelegt hat, weiß, was es ist.
+
+Platziert wird **das Gerät**, nicht eine neue Kamera: es behält seine Id, seinen Namen und seine
+Lage. Eine neue Id wäre ein zweiter Datensatz für dasselbe Blech — die Doppelung, gegen die
+ADR-011 geschrieben ist, und der Bedarf zählte danach zwei Geräte statt einem. Der Rückweg meldet
+die Zuordnung dann von selbst (`typId` aus dem gewählten Modell, ADR-012), und damit ist das Gerät
+in **jedem** Planer eines mit Modell.
+
+Wo das Gerät keine Lage hat, gilt die Vorgabe des jeweiligen Planers: im Kameraplan die Mitte des
+Raums — er kennt die Hallenmaße, und `0/0` wäre die Ecke, als Tatsache gezeichnet. Im Lichtplan
+dieselbe Stelle wie in `seedToFixtures`, denn der kennt keine Raumgröße (er hat einen Grundriss,
+kein Rechteck), und eine ausgedachte Mitte wäre eine Zahl aus dem Nichts.
+
 ## Gemessen
 
 * `apps/multicam-planner/src/__tests__/eigenesGeraet.test.ts` — ein selbst angelegtes Modell
@@ -73,3 +92,6 @@ sagt dazu schon länger das Richtige: ein Plan, dessen Zahlen auf fehlenden Anga
 * `apps/shell/test/eigenesGeraetDurchgereicht.test.ts` — ein von Hand im Signalplan angelegtes
   Gerät kommt mit seiner Kategorie an und wird von beiden Fachplanern **gemeldet** statt
   fallengelassen, mit Gerät und unterscheidbarem Grund.
+* `apps/multicam-planner/src/__tests__/modellZuordnen.test.ts` — die Zuordnung platziert **das
+  Gerät** (seine Id, sein Name, seine Lage), meldet `typId` zurück, tut nichts bei unbekannter Id
+  oder unbekanntem Modell, und erfindet keine Lage, wo das Gerät keine hat.

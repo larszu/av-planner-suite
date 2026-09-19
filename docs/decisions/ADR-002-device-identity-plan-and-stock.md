@@ -72,6 +72,34 @@ Der Namensvergleich bleibt deshalb erlaubt — aber nur als **Vorschlag, den ein
 bestätigt**, und die Bestätigung wird als `deviceTypeId` festgeschrieben. Danach ist sie eine
 Tatsache und muss nie wieder geraten werden.
 
+## Was „geraten" heisst — und was nicht (nachgetragen 2026-09-19)
+
+Dieser Abschnitt korrigiert keine Zeile oben; er zieht eine Grenze, die oben
+vorausgesetzt und nirgends ausgeschrieben ist. Ohne sie ist der nächste Leser
+gezwungen, sie selbst zu ziehen, und er zieht sie falsch — beide Male mit
+Berufung auf dieses ADR.
+
+**Verboten ist das Raten, nicht das Fragen.** Aus „Kamera 1" auf eine Kamera zu
+schliessen ist geraten: der Instanzname ist eine Beschriftung, die jemand
+vergeben hat, und keine Aussage über den Typ. Dass ein Mensch in einem Feld
+„Cameras" ausgewählt hat, ist **gesagt** — eine Angabe mit Urheber, so gut wie
+jede andere im Plan.
+
+Der Fall ist nicht theoretisch. ADR-011 lässt die Kategorie ein Gerät den
+Plänen zuordnen, und beim Bauen stand am 2026-09-19 kurz die Frage, ob das
+gegen dieses ADR verstösst. Tut es nicht — aber die Frage kostete Zeit und
+wäre beim nächsten Mal wieder gestellt worden.
+
+**Die Probe:** Woher kommt der Wert? Aus einem Katalog, einer Datei, einem
+Eingabefeld oder einer Bestätigung — dann ist er eine Angabe und darf gelten.
+Aus einem anderen Feld errechnet, dessen Zweck ein anderer ist — dann ist er
+geraten und darf nicht gelten, auch wenn er meistens stimmt.
+
+**Was das Feld NICHT tut:** ein Datenblatt ersetzen. Die Kategorie sagt, in
+welchem Plan ein Gerät steht; sie sagt nichts über Ports, Sensorbreite oder
+Lichtstrom. Die kommen weiter nur aus dem Katalog, und wo er schweigt, schweigt
+der Plan (`portsUnknown`, ADR-014).
+
 ## Was verworfen wurde
 
 - **Eine separate Zuordnungstabelle** (`deviceTypeId → inventoryItemId` neben beiden Seiten). Sie
