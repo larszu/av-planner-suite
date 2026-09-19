@@ -140,8 +140,17 @@ export interface SeedGeraet {
   kategorie?: string
   /** Das Katalog-MODELL („Sony FX9"), nicht der Instanzname („Kamera 1"). */
   model?: string
-  /** Zweite Zeile am Knoten („3x SDI Out"). Beschreibung, keine Port-Angabe. */
-  subtitle?: string
+  /**
+   * Zweite Zeile am Knoten („3x SDI Out"). Beschreibung, keine Port-Angabe.
+   *
+   * HEISST `sub` UND NICHT `subtitle`, und das ist kein Geschmack: die Shell
+   * fuehrt das Feld seit jeher so, und zwei Namen fuer dasselbe Feld waren am
+   * 2026-09-19 genau der Bruch, an dem der Untertitel auf dem Weg zum Planer
+   * verschwand — still, weil `undefined` nirgends auffaellt. Die Sicht
+   * `devices` uebersetzt es nach `subtitle`, weil das ALTE Protokoll so
+   * heisst; mit Stufe 4 faellt die Uebersetzung mit der Sicht weg.
+   */
+  sub?: string
   /**
    * Lage im Raum (Meter). GETEILT: Kameraplan, Lichtplan und Stueckliste
    * meinen dieselbe Stelle. Fehlt sie, ist das Geraet noch nicht platziert —
@@ -264,7 +273,7 @@ export function alsSignalGeraete(geraete: readonly SeedGeraet[]): SeedDevice[] {
     .map((g) => ({
       id: g.id,
       name: g.name,
-      ...wenn(g.subtitle, 'subtitle'),
+      ...wenn(g.sub, 'subtitle'),
       ...wenn(g.model, 'model'),
       ...wenn(g.nx, 'nx'),
       ...wenn(g.ny, 'ny'),
@@ -359,7 +368,7 @@ export function geraeteAus(
       // Aussage und keine Ableitung aus dem Namen.
       ...wenn(n.kategorie ?? (k ? 'Cameras' : l ? 'Lights' : undefined), 'kategorie'),
       ...wenn(n.model ?? k?.model ?? l?.model, 'model'),
-      ...wenn(n.subtitle, 'subtitle'),
+      ...wenn(n.subtitle, 'sub'),
       ...wenn(n.nx, 'nx'),
       ...wenn(n.ny, 'ny'),
       ...wenn(k?.x ?? l?.x, 'x'),

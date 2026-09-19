@@ -410,6 +410,21 @@ export interface SeedPatch {
    * Empfaenger und nicht die Reihenfolge des Eintreffens.
    */
   venue?: SeedVenue
+  /**
+   * Die Geraete, die dieser Planer fuehrt — die Meldung auf der EINEN Liste
+   * (ADR-011, Stufe 3).
+   *
+   * Sie loest `cameras`/`fixtures`/`devices` ab. Solange ein Planer noch auf
+   * seiner Sicht steht, meldet er wie bisher; `mergeSeedPatch` nimmt beides
+   * entgegen und rechnet es auf dieselbe Liste. Wer `geraete` schickt, sagt
+   * damit mehr als vorher moeglich war: eine Meldung kann die Kamera-Gruppe
+   * UND die Lage im Diagramm tragen, ohne dass zwei Listen dasselbe Geraet
+   * beschreiben.
+   *
+   * Was ein Planer schreiben DARF, entscheidet weiter seine Domaene — je
+   * Feldgruppe, nicht je Liste.
+   */
+  geraete?: SeedGeraet[]
   cameras?: SeedCamera[]
   fixtures?: SeedFixture[]
   devices?: SeedDevice[]

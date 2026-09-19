@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emptySeed, type SuiteSeed } from '@avplan/ui/embed';
+import { alsKameras, emptySeed, type SeedCamera, type SuiteSeed } from '@avplan/ui/embed';
 import { camerasToSeedPatch, katalogKamera, seedToCameras, seedToVenue, venueToSeedPatch } from '../utils/shellSeed';
 import { CAMERAS } from '../data/cameras';
 import { LENSES } from '../data/lenses';
@@ -16,7 +16,38 @@ import type { Venue } from '../types';
 const venue: Venue = { name: 'Halle', widthM: 24, heightM: 14, stages: [{ id: 's0', x: 8, y: 3, width: 6, height: 3, label: 'Stage' }] };
 const vorauswahl = () => ({ mount: 'E', lens: LENSES[0] });
 
-const seed = (over: Partial<SuiteSeed> = {}): SuiteSeed => ({ ...emptySeed(1), venue: { name: 'Halle A', widthM: 24, heightM: 14 }, ...over });
+/**
+ * Ein Seed fuer den Test.
+ *
+ * `cameras` ist hier die BEQUEME Schreibweise und nicht mehr der Inhalt des
+ * Seeds: seit ADR-011 Stufe 3 liest der Planer `geraete`, und die Sicht
+ * `cameras` wird daraus gerechnet. Der Helfer legt die Kameras deshalb als
+ * Geraete an — so pruefen die Tests denselben Weg, den die Shell geht, statt
+ * einen Zustand, den es im Betrieb nicht gibt.
+ */
+const seed = (over: Partial<SuiteSeed> & { cameras?: SeedCamera[] } = {}): SuiteSeed => {
+  const { cameras, ...rest } = over;
+  const geraete = (cameras ?? []).map((c) => ({
+    id: c.id,
+    name: c.name,
+    kategorie: 'Cameras',
+    ...(c.model !== undefined ? { model: c.model } : {}),
+    ...(c.x !== undefined ? { x: c.x } : {}),
+    ...(c.y !== undefined ? { y: c.y } : {}),
+    kamera: {
+      ...(c.lens !== undefined ? { lens: c.lens } : {}),
+      ...(c.focalMm !== undefined ? { focalMm: c.focalMm } : {}),
+      ...(c.hfovDeg !== undefined ? { hfovDeg: c.hfovDeg } : {}),
+    },
+  }));
+  return {
+    ...emptySeed(1),
+    venue: { name: 'Halle A', widthM: 24, heightM: 14 },
+    geraete,
+    cameras: alsKameras(geraete),
+    ...rest,
+  };
+};
 
 describe('shellSeed — Katalog-Aufloesung', () => {
   it('findet ein Modell, das der Katalog mit Praefix fuehrt', () => {
@@ -118,7 +149,10 @@ describe('shellSeed — Rueckweg', () => {
       venue,
       vorauswahl,
     );
-    const zurueck = camerasToSeedPatch(cameras).cameras[0];
+    // Der Rueckweg meldet jetzt `geraete`; die Kamera-Felder stehen in der
+    // Fachgruppe, damit die Shell nur schreibt, was dem Kameraplan gehoert.
+    const gemeldet = camerasToSeedPatch(cameras).geraete[0];
+    const zurueck = { ...gemeldet, ...gemeldet.kamera };
     expect(zurueck.id).toBe('k1');
     expect(zurueck.name).toBe('CAM 1');
     expect(zurueck.model).toBe('Sony PXW-FX9');

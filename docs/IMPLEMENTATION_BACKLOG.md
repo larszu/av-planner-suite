@@ -2183,7 +2183,7 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
 
 ### B-80 · Drei Listen für dasselbe Blech — ADR-001 galt im Planer und nicht dazwischen
 
-* **Status:** Stufen 1 und 2 von 4 gebaut am 2026-09-19 (ADR-011); Stufen 3 und 4
+* **Status:** Stufen 1 bis 3 von 4 gebaut am 2026-09-19 (ADR-011); Stufe 4
   offen und dort benannt.
 
 * **Die Entscheidung.** Eigentümer, 2026-09-19: „Es gibt nur ein universelles
@@ -2238,8 +2238,14 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
   gezogen wurde das mit Stufe 2 und nicht erst mit Stufe 3, weil eine Meldung
   die eine Liste sonst gar nicht erreicht hätte.
 
-* **Offen:** die Planer lesen weiter ihre Sicht (Stufe 3), danach fallen die
-  Sichten aus dem Seed (Stufe 4).
+* **Stufe 3, gebaut am selben Tag.** Alle drei Planer lesen `seed.geraete` und
+  melden `patch.geraete`. Dabei fiel ein Fehler auf, den es ohne den Umbau
+  nicht zu finden gab: **ein Feld hieß in zwei Welten verschieden** — die
+  Shell führte `sub`, das Protokoll `subtitle`. Der Untertitel verschwand auf
+  dem Weg zum Planer, und zwar still, weil ein `undefined` nirgends auffällt.
+
+* **Offen:** die Sichten `cameras`/`fixtures`/`devices` fallen aus dem Seed
+  (Stufe 4).
 
 * **Guards.** `packages/ui/test/geraet.test.ts` (7),
   `apps/shell/test/kategorieAussage.test.ts` (4), zwei Fälle in

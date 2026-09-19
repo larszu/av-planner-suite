@@ -323,6 +323,10 @@ export const conflictFieldName = (field: SeedVenueField): keyof SeedVenue => VEN
 
 /** Die gemeldete Liste dieser Domaene, in Geraete-Form. */
 function geraeteAusPatch(patch: SeedPatch): SeedGeraet[] | undefined {
+  // Ein Planer, der schon auf der einen Liste steht (Stufe 3), meldet sie
+  // direkt. Die Uebersetzung darunter gilt fuer die, die noch ihre Sicht
+  // melden — und faellt weg, wenn der letzte umgestellt ist.
+  if (patch.geraete) return patch.geraete
   if (patch.domain === 'signal') {
     return patch.devices?.map((d) => ({
       id: d.id,

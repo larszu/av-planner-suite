@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emptySeed, type SuiteSeed } from '@avplan/ui/embed';
+import { alsLeuchten, emptySeed, type SeedFixture, type SuiteSeed } from '@avplan/ui/embed';
 import { fixturesToSeedPatch, katalogFixture, seedToFixtures } from '../src/core/shellSeed';
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -11,7 +11,33 @@ import { fixturesToSeedPatch, katalogFixture, seedToFixtures } from '../src/core
 // passiert.
 // ───────────────────────────────────────────────────────────────────────────
 
-const seed = (over: Partial<SuiteSeed> = {}): SuiteSeed => ({ ...emptySeed(1), ...over });
+/**
+ * Ein Seed fuer den Test.
+ *
+ * `fixtures` ist die bequeme Schreibweise und nicht mehr der Inhalt: seit
+ * ADR-011 Stufe 3 liest der Planer `geraete`, und die Sicht `fixtures` wird
+ * daraus gerechnet. Der Helfer legt die Leuchten deshalb als Geraete an — so
+ * pruefen die Tests den Weg, den die Shell wirklich geht.
+ */
+const seed = (over: Partial<SuiteSeed> & { fixtures?: SeedFixture[] } = {}): SuiteSeed => {
+  const { fixtures, ...rest } = over;
+  const geraete = (fixtures ?? []).map((f) => ({
+    id: f.id,
+    name: f.name,
+    kategorie: 'Licht',
+    ...(f.model !== undefined ? { model: f.model } : {}),
+    ...(f.x !== undefined ? { x: f.x } : {}),
+    ...(f.y !== undefined ? { y: f.y } : {}),
+    licht: {
+      ...(f.purpose !== undefined ? { purpose: f.purpose } : {}),
+      ...(f.dimmerPct !== undefined ? { dimmerPct: f.dimmerPct } : {}),
+      ...(f.dmxChannel !== undefined ? { dmxChannel: f.dmxChannel } : {}),
+      ...(f.universe !== undefined ? { universe: f.universe } : {}),
+      ...(f.rigHeightM !== undefined ? { rigHeightM: f.rigHeightM } : {}),
+    },
+  }));
+  return { ...emptySeed(1), geraete, fixtures: alsLeuchten(geraete), ...rest };
+};
 
 describe('shellSeed — Bibliotheks-Aufloesung', () => {
   it('findet einen Scheinwerfer ueber Hersteller + Name', () => {
@@ -64,7 +90,10 @@ describe('shellSeed — Rueckweg', () => {
       seed({ fixtures: [{ id: 'lx1', name: 'LX 1', model: 'ETC Source Four 19°', x: 8.6, y: 5.6, dimmerPct: 82 }] }),
       6,
     );
-    const zurueck = fixturesToSeedPatch(fixtures).fixtures[0];
+    // Der Rueckweg meldet `geraete`; die Licht-Felder stehen in der
+    // Fachgruppe, damit die Shell nur schreibt, was dem Lichtplan gehoert.
+    const gemeldet = fixturesToSeedPatch(fixtures).geraete[0];
+    const zurueck = { ...gemeldet, ...gemeldet.licht };
     expect(zurueck.id).toBe('lx1');
     expect(zurueck.name).toBe('LX 1');
     expect(zurueck.model).toContain('Source Four 19°');

@@ -76,8 +76,24 @@ lauffähigen Stand.
 | --- | --- | --- |
 | 1 | `geraete` ist die Wahrheit **im Seed**; `cameras`/`fixtures`/`devices` werden daraus abgeleitet (`alsKameras`, `alsLeuchten`, `alsSignalGeraete`). Die Kategorie fährt mit. Der Signalplan sieht ab hier alle Geräte. | **gebaut, 2026-09-19** |
 | 2 | Das Shell-Projekt führt `geraete` statt drei Listen. Damit verschwindet die Sonderregel auf dem Rückweg (siehe unten) und `altIds`. | **gebaut, 2026-09-19** |
-| 3 | Die drei Planer lesen und melden `geraete` statt ihrer Liste. | offen — **das Eigentum je Feldgruppe steht aber schon** (mit Stufe 2 in `mergeSeedPatch` gezogen, weil eine Meldung sonst die eine Liste gar nicht erreicht hätte) |
+| 3 | Die drei Planer lesen und melden `geraete` statt ihrer Liste. | **gebaut, 2026-09-19** |
 | 4 | `cameras`, `fixtures`, `devices` und `altIds` fallen aus dem Seed. | offen |
+
+### Was Stufe 3 gebracht hat
+
+Alle drei Planer lesen `seed.geraete` und melden `patch.geraete`. Die Sichten werden dabei aus der
+einen Liste **gerechnet** (`alsKameras`, `alsLeuchten`, `alsSignalGeraete`) statt übertragen — was
+der Planer sieht, ist damit definitionsgemäß dasselbe, was die Shell führt.
+
+Zwei Dinge, die dabei auffielen und ohne den Umbau nicht auffallen konnten:
+
+* **Der Signalplan bekommt jetzt wirklich alle Geräte**, Kameras und Leuchten eingeschlossen. Sie
+  hängen an Kabeln und gehören dorthin; wer sie dort vermisste, legte sie ein zweites Mal an.
+* **Ein Feld hieß in zwei Welten verschieden**: die Shell führte `sub`, das Protokoll `subtitle`.
+  Beim Zusammenlegen verschwand der Untertitel auf dem Weg zum Planer — still, weil `undefined`
+  nirgends auffällt. Das Protokoll heißt jetzt auch `sub`; die Sicht `devices` übersetzt es noch
+  nach `subtitle`, weil das alte Protokoll so hieß, und mit Stufe 4 fällt die Übersetzung mit der
+  Sicht weg.
 
 ### Was Stufe 2 abgeräumt hat
 

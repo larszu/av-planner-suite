@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { seedToFixtures, fixturesToSeedPatch } from '../../light-planner/src/core/shellSeed'
-import { emptySeed, type SuiteSeed } from '@avplan/ui/embed'
+import { alsLeuchten, emptySeed, type SuiteSeed } from '@avplan/ui/embed'
 import type { PlacedFixture } from '../../light-planner/src/types'
 import { PROJECT, lichtGeraete } from '../src/data/project'
 import { applyPatchToSuite, suiteToSeed } from '../src/data/seed'
@@ -24,7 +24,25 @@ const VORGABE = 6
 
 const lampe = (id: string, model: string): SuiteSeed['fixtures'][number] => ({ id, name: id, model })
 
-const seed = (fixtures: SuiteSeed['fixtures']): SuiteSeed => ({ ...emptySeed(1), fixtures })
+// Seit ADR-011 Stufe 3 liest der Licht-Planer `geraete`; `fixtures` ist die
+// daraus gerechnete Sicht. Der Helfer legt die Lampen deshalb als Geraete an.
+const seed = (fixtures: SuiteSeed['fixtures']): SuiteSeed => {
+  const geraete = fixtures.map((f) => ({
+    id: f.id,
+    name: f.name,
+    kategorie: 'Licht',
+    ...(f.model !== undefined ? { model: f.model } : {}),
+    ...(f.x !== undefined ? { x: f.x } : {}),
+    ...(f.y !== undefined ? { y: f.y } : {}),
+    licht: {
+      ...(f.purpose !== undefined ? { purpose: f.purpose } : {}),
+      ...(f.dimmerPct !== undefined ? { dimmerPct: f.dimmerPct } : {}),
+      ...(f.dmxChannel !== undefined ? { dmxChannel: f.dmxChannel } : {}),
+      ...(f.rigHeightM !== undefined ? { rigHeightM: f.rigHeightM } : {}),
+    },
+  }))
+  return { ...emptySeed(1), geraete, fixtures: alsLeuchten(geraete) }
+}
 
 /** Ein Modell, das der Katalog eindeutig kennt — sonst wird nichts platziert. */
 const MODELL = 'ETC Source Four 26°'
@@ -135,8 +153,11 @@ describe('Ein nie ausgerichtetes Ziel wandert mit', () => {
 describe('Die Hoehe geht in die Suite zurueck', () => {
   it('steht im Rueckweg-Patch', () => {
     // Ohne sie faende die Stueckliste die Kabel zum Scheinwerfer zu kurz.
+    // Seit Stufe 3 meldet der Licht-Planer `geraete`, und die Hoehe steht in
+    // der Fachgruppe `licht` — dort, wo die Shell sie als Eigentum des
+    // Lichtplans erkennt und nichts anderes damit ueberschreibt.
     const patch = fixturesToSeedPatch([platziert({ mountingHeight: 8 })])
-    expect(patch.fixtures[0].rigHeightM).toBe(8)
+    expect(patch.geraete[0].licht?.rigHeightM).toBe(8)
   })
 })
 

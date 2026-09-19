@@ -32,7 +32,7 @@
 //      eine Falschaussage ueber echte Hardware. Das Kabel wird dann NICHT
 //      angelegt, sondern als ausgelassen gemeldet — sichtbar, nicht still.
 // ───────────────────────────────────────────────────────────────────────────
-import type { SeedCable, SeedDevice, SuiteSeed } from '@avplan/ui/embed'
+import { alsSignalGeraete, type SeedCable, type SeedDevice, type SeedGeraet, type SuiteSeed } from '@avplan/ui/embed'
 import type { ConnectorType, EquipmentItem, EquipmentTemplate, Port } from '../types/equipment'
 import type { Cable, CableType } from '../types/cable'
 import type { SignalStandard } from '../types/cableSpec'
@@ -134,7 +134,15 @@ const klonPort = (p: Port, praefix: string, i: number): Port => ({
   id: `${praefix}-${i}-${p.id}`,
 })
 
-interface SeedGeraet {
+/**
+ * Ein Geraet IM AUFBAU, waehrend der Seed gelesen wird.
+ *
+ * Hiess bis 2026-09-19 `SeedGeraet` — derselbe Name, den seit ADR-011 der
+ * Geraete-Typ des Protokolls traegt. Zwei verschiedene Dinge unter einem
+ * Namen in derselben Datei: genau die Sorte Verwechslung, die dieser Umbau
+ * gerade abschafft.
+ */
+interface ImAufbau {
   item: EquipmentItem
   /** true = kein eindeutiger Katalog-Treffer, Ports duerfen ergaenzt werden. */
   offen: boolean
@@ -174,10 +182,16 @@ export interface SeedUebernahme {
  */
 export function seedToCable(seed: SuiteSeed, vorhandene: EquipmentItem[] = []): SeedUebernahme {
   const ausgelassen: SeedUebernahme['ausgelassen'] = []
-  const geraete = new Map<string, SeedGeraet>()
+  const geraete = new Map<string, ImAufbau>()
   const schonDa = new Map(vorhandene.map((e) => [e.id, e]))
 
-  seed.devices.forEach((d, i) => {
+  // ── Gelesen wird die EINE Liste (ADR-011, Stufe 3) ──────────────────────
+  //
+  // `alsSignalGeraete` ist dieselbe Sicht, die die Shell bisher mitschickte —
+  // gerechnet statt uebertragen. Sie traegt ALLE Geraete, Kameras und
+  // Leuchten eingeschlossen: die haengen an Kabeln und gehoeren in diesen
+  // Plan. Wer sie hier vermisste, legte sie ein zweites Mal an.
+  alsSignalGeraete(seed.geraete).forEach((d, i) => {
     const basis = {
       id: d.id,
       name: d.name,
@@ -355,10 +369,14 @@ const kategorieAus = (e: EquipmentItem): string | undefined =>
 export function cableToSeedPatch(project: {
   equipment?: EquipmentItem[]
   cables?: Cable[]
-}): { devices: SeedDevice[]; cables: SeedCable[] } {
+}): { geraete: SeedGeraet[]; cables: SeedCable[] } {
   const equipment = project.equipment ?? []
   return {
-    devices: equipment.map((e) => {
+    // Gemeldet wird auf der EINEN Liste (Stufe 3). Die Fachgruppen `kamera`
+    // und `licht` fasst dieser Planer NICHT an — sie gehoeren dem Kamera-
+    // bzw. Lichtplan, und die Shell laesst sie deshalb stehen, auch wenn
+    // dieser Planer ein Geraet meldet, das drueben eine Brennweite hat.
+    geraete: equipment.map((e) => {
       // Das MODELL, nicht der Instanzname. `e.name` ist „Kamera 1"; was fuer
       // ein Geraet dahintersteht, sagt allein das Template hinter der
       // `deviceTypeId` (ADR-002). Der Kameraplan loest sein Katalog-Modell
@@ -368,7 +386,7 @@ export function cableToSeedPatch(project: {
       return {
         id: e.id,
         name: e.name,
-        ...(e.subtitle ? { subtitle: e.subtitle } : {}),
+        ...(e.subtitle ? { sub: e.subtitle } : {}),
         ...(modell ? { model: modell } : {}),
         ...(kategorie ? { kategorie } : {}),
         nx: Math.min(1, Math.max(0, e.x / CANVAS_W)),
