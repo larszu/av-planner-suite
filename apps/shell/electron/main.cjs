@@ -181,6 +181,25 @@ ipcMain.handle('suiteHost:lexware:hasKey', () => lexware.hasKey())
 const linkVorschau = require('./linkVorschau.cjs')
 ipcMain.handle('suiteHost:linkVorschau:hole', (_e, url) => linkVorschau.hole(String(url ?? '')))
 
+// Der Einwurf: die Stelle, an der etwas von AUSSEN auf ein Board kommt
+// (Web-Clipper). Er laeuft NICHT von selbst — der Nutzer macht ihn in den
+// Einstellungen auf, bekommt Adresse und Geheimnis und traegt sie in die
+// Erweiterung ein. Ein Briefkasten, der immer offensteht, waere eine Tuer,
+// von der niemand weiss.
+const einwurf = require('./einwurf.cjs')
+ipcMain.handle('suiteHost:einwurf:starte', async () => {
+  const r = await einwurf.starte((sendung) => {
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed()) w.webContents.send('suiteHost:einwurf:sendung', sendung)
+    }
+  }, (...a) => console.log(...a))
+  return r
+})
+ipcMain.handle('suiteHost:einwurf:beende', () => { einwurf.beende(); return true })
+ipcMain.handle('suiteHost:einwurf:zugang', () => einwurf.zugang())
+// Kein verwaister Briefkasten, wenn jemand die Suite schliesst.
+app.on('before-quit', () => einwurf.beende())
+
 
 app.whenReady().then(() => {
   registerPlannerProtocols()

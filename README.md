@@ -76,6 +76,12 @@ project overview dashboard, a Milanote-style creative **board**, and a shared Da
 with per-module accents. Embeds the planners as isolated iframe modules and speaks to them over
 a small postMessage bridge. **React 19 · Vite · Tailwind.**
 
+The board plays as a film, exports one as a real video file, records a voice-over that travels
+inside it, takes a photo with the machine's camera, and receives pages from the browser
+extension in [`tools/web-clipper/`](tools/web-clipper/) — see [`docs/board.md`](docs/board.md).
+The clipper's inbox listens on `127.0.0.1` only, is opened by hand in the settings, and carries
+a secret that is new on every start.
+
 ### ⚡ Cable Planner — *Signal*
 Node-based editor for **broadcast cabling** — SDI signal flow, ATEM multiviewer layouts and
 Blackmagic Videohub routing, with a bill of materials and per-device patch sheets.

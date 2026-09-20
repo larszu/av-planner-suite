@@ -244,4 +244,15 @@ export const chrome: Record<string, string> = {
   'chrome.preview.stage': 'Stage',
   // Topbar: Einstieg in den Projekt-Hub
   'chrome.topbar.manageProjects': 'Manage projects…',
+  // Der Briefkasten fuer den Web-Clipper
+  'chrome.einwurf.titel': 'Web clipper',
+  'chrome.einwurf.oeffnen': 'Open inbox',
+  'chrome.einwurf.schliessen': 'Close inbox',
+  'chrome.einwurf.adresse': 'Address',
+  'chrome.einwurf.geheimnis': 'Secret — valid until the suite is closed',
+  'chrome.einwurf.kopieren': 'Copy both',
+  'chrome.einwurf.kopiert': 'Copied',
+  'chrome.einwurf.hinweis': 'While the inbox is open, the browser extension in tools/web-clipper can put the page you are looking at onto the board you currently have open. It listens on this computer only.',
+  'chrome.einwurf.nurDesktop': 'The inbox exists only in the desktop edition — in a browser this page cannot receive anything.',
+  'chrome.einwurf.keinServer': 'The inbox could not be opened.',
 }

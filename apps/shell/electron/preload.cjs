@@ -87,6 +87,20 @@ contextBridge.exposeInMainWorld('__suiteLinkVorschau', {
   hole: (url) => ipcRenderer.invoke('suiteHost:linkVorschau:hole', url),
 })
 
+// Der Einwurf. Der Renderer bekommt die SENDUNG und nicht den Server: ob
+// daraus eine Karte wird und auf welchem Board, entscheidet die Oberflaeche.
+contextBridge.exposeInMainWorld('__suiteEinwurf', {
+  starte: () => ipcRenderer.invoke('suiteHost:einwurf:starte'),
+  beende: () => ipcRenderer.invoke('suiteHost:einwurf:beende'),
+  zugang: () => ipcRenderer.invoke('suiteHost:einwurf:zugang'),
+  /** Auf Sendungen hoeren. Gibt eine Abmelde-Funktion zurueck. */
+  hoere: (rueckruf) => {
+    const h = (_e, sendung) => rueckruf(sendung)
+    ipcRenderer.on('suiteHost:einwurf:sendung', h)
+    return () => ipcRenderer.removeListener('suiteHost:einwurf:sendung', h)
+  },
+})
+
 if (nativeCable) {
   contextBridge.exposeInMainWorld('__suiteNativeHost', {
     cable: {

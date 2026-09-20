@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { EinwurfSection } from './EinwurfSection'
 import { Badge, Icon, Modal, type ThemePreference } from '@avplan/ui'
 import { MODULES, type ModuleId } from '../modules/registry'
 import { useT, type TFunc } from '../i18n'
@@ -208,6 +209,10 @@ function SettingsBody({
             )}
           </p>
         </div>
+        {/* Der Briefkasten fuer den Web-Clipper. Er steht NICHT von selbst
+            offen — ein Empfang, der mit der Anwendung startet, ist eine Tuer,
+            von der niemand weiss. */}
+        <EinwurfSection t={t} />
       </section>
 
       {/* Backend / Sync — optional, opt-in. Offline-first bleibt Default. */}

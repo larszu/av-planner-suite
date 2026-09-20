@@ -9,6 +9,7 @@ import { holeVorschau } from './linkVorschauHost'
 import { besterTyp, exportiereFilm } from './filmExport'
 import { starteAufnahme, type LaufendeAufnahme } from './tonAufnahme'
 import { KameraDialog } from './KameraDialog'
+import { hoereAufSendungen, type Sendung } from './einwurfHost'
 import { offeneJeObjekt, type Identitaet, type Kommentar } from '@avplan/ui/embed'
 import {
   applyTemplate,
@@ -619,10 +620,11 @@ export function BoardCanvas({
       // Board werfen. Ohne das musste man eine Link-Karte anlegen, sie
       // aufklappen und die Adresse hineintippen.
       //
-      // KEINE VORSCHAU. Milanote holt dafuer Titel und Bild von der Seite;
-      // das braucht einen Abruf, und eine erfundene Vorschau waere eine
-      // Behauptung ueber eine Seite, die niemand gelesen hat. Die Karte
-      // zeigt den Host — das ist, was dasteht.
+      // KEINE VORSCHAU VON SELBST. Sie braucht einen Abruf, und der gehoert
+      // dem Nutzer: ein Einfuegen, das im Hintergrund eine fremde Seite
+      // anruft, ist eine Verbindung, die niemand angefragt hat. Die Karte
+      // zeigt den Host — das ist, was dasteht — und traegt den Knopf, der
+      // die Vorschau holt.
       const text = e.clipboardData?.getData('text/plain')?.trim()
       if (!text || !/^https?:\/\/\S+$/i.test(text)) return
       e.preventDefault()
@@ -641,6 +643,51 @@ export function BoardCanvas({
     window.addEventListener('paste', onPaste)
     return () => window.removeEventListener('paste', onPaste)
   }, [addDateiKarte, mutate, selectOnly])
+
+  /**
+   * DER EINWURF: eine Sendung von aussen wird eine Karte.
+   *
+   * Sie landet auf dem Board, das GERADE OFFEN ist, und nicht auf einem
+   * festgelegten — wer etwas einwirft, hat vorher aufgemacht, wohin es soll.
+   *
+   * Sie wird AUSGEWAEHLT und die Flaeche springt nicht. Beides mit Grund:
+   * eine Karte, die lautlos irgendwo erscheint, waehrend jemand anderswo
+   * arbeitet, ist ein Geist; eine Flaeche, die von selbst wegspringt,
+   * waehrend jemand zieht, ist schlimmer.
+   *
+   * Die markierte Textstelle wird zum Notiz-Text der Karte — sie ist die
+   * staerkste Angabe darueber, worum es dem Absender ging. Fehlt sie, steht
+   * die Beschreibung der Seite da; fehlt auch die, steht nichts. Erfunden
+   * wird nichts.
+   */
+  useEffect(() => {
+    return hoereAufSendungen((sendung: Sendung) => {
+      const scroll = boardRef.current?.parentElement
+      const karte: BoardCard = {
+        id: nextId(),
+        type: 'link',
+        w: 240,
+        url: sendung.url.replace(/^https?:\/\//i, ''),
+        title: sendung.titel ?? hostVon(sendung.url),
+        text: sendung.auswahl ?? sendung.beschreibung,
+        x: (scroll?.scrollLeft ?? 0) + 160,
+        y: (scroll?.scrollTop ?? 0) + 160,
+        // Die Vorschau kommt aus dem, was die Seite SELBST ueber sich sagt —
+        // der Clipper hat sie dort gelesen. Kein zweiter Abruf: die Seite
+        // war schon offen.
+        vorschau: {
+          url: sendung.url,
+          host: hostVon(sendung.url),
+          titel: sendung.titel,
+          beschreibung: sendung.beschreibung,
+          bildUrl: sendung.bildUrl,
+          geholtAm: sendung.geholtAm,
+        },
+      }
+      mutate((b) => ({ ...b, cards: [...b.cards, karte] }))
+      selectOnly(karte.id)
+    })
+  }, [mutate, selectOnly])
 
   // ── Größe ziehen (Milanote: untere rechte Ecke) ──
   const onResizePointerDown = (e: React.PointerEvent, card: BoardCard) => {
