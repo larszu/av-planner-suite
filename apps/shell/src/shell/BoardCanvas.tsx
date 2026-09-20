@@ -4,6 +4,8 @@ import { Icon, Menu, MenuItem, confirmDialog } from '@avplan/ui'
 import { useLanguage, useT, format, type Language, type TFunc } from '../i18n'
 import { BOARD_FORMAT_RATIO, EINBETT_GRENZE, type Board, type BoardCard, type BoardCardType, type BoardFormat } from '../data/project'
 import { BoardPlayer } from './BoardPlayer'
+import { KommentarFaden } from './KommentarFaden'
+import { offeneJeObjekt, type Identitaet, type Kommentar } from '@avplan/ui/embed'
 import {
   applyTemplate,
   boardToMarkdown,
@@ -84,6 +86,11 @@ export function BoardCanvas({
   seed,
   title: titleProp,
   crew = [],
+  kommentare = [],
+  identitaet,
+  onKommentar,
+  onKommentarErledigt,
+  onEinstellungen,
   onChange,
 }: {
   seed: Board
@@ -96,6 +103,12 @@ export function BoardCanvas({
    * naechsten Umbesetzen die zweite Wahrheit (ADR-001).
    */
   crew?: string[]
+  /** Die Aeusserungen des ganzen Projekts — gefiltert wird je Karte. */
+  kommentare?: readonly Kommentar[]
+  identitaet?: Identitaet
+  onKommentar?: (objektId: string, text: string, antwortAuf?: string) => void
+  onKommentarErledigt?: (id: string, erledigt: boolean) => void
+  onEinstellungen?: () => void
   /**
    * Das geaenderte Board zurueck an die Shell.
    *
@@ -219,6 +232,11 @@ export function BoardCanvas({
   // Einstellung wegzieht, loest sie aus der Szene. Deshalb hier gerechnet
   // und nirgends gespeichert.
   const szenen = useMemo(() => sceneGroups(shots, layout), [shots, layout])
+  // EINMAL je Durchlauf und nicht je Karte: bei 200 Karten und 500
+  // Kommentaren waere die Frage je Karte eine Schleife ueber alles.
+  const offeneKommentare = useMemo(() => offeneJeObjekt(kommentare), [kommentare])
+  /** Die Karte, deren Faden gerade offen ist. */
+  const [fadenAn, setFadenAn] = useState<string | null>(null)
 
   const mutate = useCallback((fn: (b: Board) => Board) => setRoot((r) => updateBoardAtPath(r, path, fn)), [path])
 
@@ -1228,6 +1246,7 @@ export function BoardCanvas({
                 selected={isSelected(card.id)} allein={selection.length === 1 && isSelected(card.id)}
                 editing={editingId === card.id}
                 shot={shotById.get(card.id)} boardFormat={current.format} crew={crew}
+                offen={offeneKommentare.get(card.id) ?? 0} onFaden={() => { selectOnly(card.id); setFadenAn(card.id) }}
                 onHeaderPointerDown={(e) => onHeaderPointerDown(e, card)}
                 onHeaderPointerMove={onHeaderPointerMove}
                 onHeaderPointerUp={(e) => onHeaderPointerUp(e, card)}
@@ -1280,6 +1299,40 @@ export function BoardCanvas({
             ))}
           </div>
         </>
+      )}
+
+      {/* DER FADEN. Er liegt neben der Flaeche und nicht auf ihr: eine
+          Sprechblase an der Karte waere beim Zoomen entweder unlesbar oder
+          so gross, dass sie das Board verdeckt, ueber das gesprochen wird. */}
+      {fadenAn && (
+        <aside
+          className="absolute bottom-3 right-3 z-[120] flex max-h-[60%] w-80 flex-col gap-2 overflow-auto rounded-av-card border border-av-border bg-av-surface-2 p-3"
+          aria-label={t('kommentar.zeigen', 'Kommentare')}
+        >
+          <div className="flex items-center gap-2">
+            <Icon name="library" size={14} style={{ color: 'var(--av-accent)' }} />
+            <span className="truncate text-[12.5px] font-semibold text-av-text">
+              {cardById.get(fadenAn)?.title ?? cardById.get(fadenAn)?.text ?? t('kommentar.zeigen', 'Kommentare')}
+            </span>
+            <button
+              type="button"
+              className="av-icon-btn av-focus ml-auto"
+              style={{ width: 24, height: 24 }}
+              onClick={() => setFadenAn(null)}
+              aria-label={t('board.play.close', 'Schließen')}
+            >
+              <Icon name="close" size={14} />
+            </button>
+          </div>
+          <KommentarFaden
+            objektId={fadenAn}
+            kommentare={kommentare}
+            identitaet={identitaet}
+            onSchreiben={(text, antwortAuf) => onKommentar?.(fadenAn, text, antwortAuf)}
+            onErledigt={(id, erledigt) => onKommentarErledigt?.(id, erledigt)}
+            onEinstellungen={onEinstellungen}
+          />
+        </aside>
       )}
 
       {spielt && (
@@ -1415,7 +1468,7 @@ function PrintDoc({ title, board, mode, format: bildformat }: { title: string; b
 
 /* ── Einzelne Karte ────────────────────────────────────────────────────────*/
 function BoardCardView({
-  card, rect, selected, allein, editing, dim, shot, boardFormat, crew,
+  card, rect, selected, allein, editing, dim, shot, boardFormat, crew, offen, onFaden,
   onHeaderPointerDown, onHeaderPointerMove, onHeaderPointerUp,
   onStartEdit, onEndEdit, onOpen, onPatch, onDelete, onStartConnect,
   onResizePointerDown, onResizePointerMove, onResizePointerUp,
@@ -1437,6 +1490,9 @@ function BoardCardView({
   boardFormat?: BoardFormat
   /** Die Crew dieses Projekts — die Namen, an die eine Aufgabe gehen kann. */
   crew: string[]
+  /** Offene Kommentare an DIESER Karte. 0 heisst: nichts anzeigen. */
+  offen: number
+  onFaden: () => void
   onHeaderPointerDown: (e: React.PointerEvent) => void
   onHeaderPointerMove: (e: React.PointerEvent) => void
   onHeaderPointerUp: (e: React.PointerEvent) => void
@@ -1473,6 +1529,20 @@ function BoardCardView({
           {card.type !== 'board' && card.type !== 'column' && SWATCHES.slice(0, 6).map((s) => (
             <button key={s} type="button" className="h-4 w-4 rounded-none border border-av-border" style={{ background: s }} onClick={() => onPatch({ color: s })} aria-label={format(t('board.swatch', 'Farbe {color}'), { color: s })} />
           ))}
+          {/* KOMMENTARE. Der Knopf steht an JEDER Karte und nicht nur an
+              denen, die schon einen Faden haben — sonst liesse sich der
+              erste nie schreiben. Die Zahl erscheint nur, wenn es etwas
+              Offenes gibt: eine „0" waere eine Zeile Auskunft ueber nichts. */}
+          <button
+            type="button"
+            className="av-focus flex items-center gap-1 px-1 text-[11px] text-av-text-muted hover:text-av-text"
+            onClick={onFaden}
+            aria-label={t('kommentar.zeigen', 'Kommentare')}
+            title={t('kommentar.zeigen', 'Kommentare')}
+          >
+            <Icon name="library" size={13} />
+            {offen > 0 && <span className="tabular-nums text-av-accent">{offen}</span>}
+          </button>
           {shot && (
             /* Die Standzeit gehoert an die Einstellung und nicht in einen
                Dialog: sie wird beim Ansehen des Bildes geaendert, nicht
@@ -1508,6 +1578,15 @@ function BoardCardView({
           Ein Storyboard wird im Ausdruck besprochen („die Drei nach der
           Totalen"), und eine Reihenfolge, die man nur im Abspielen sieht,
           laesst sich nicht besprechen. */}
+      {offen > 0 && !allein && (
+        <div
+          className="pointer-events-none absolute -right-1 -top-1 z-10 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-semibold tabular-nums"
+          style={{ background: 'var(--av-accent)', color: 'var(--av-accent-text)' }}
+          aria-hidden="true"
+        >
+          {offen}
+        </div>
+      )}
       {shot && (
         <div className="pointer-events-none absolute left-1 top-1 z-10 flex items-center gap-1 bg-av-surface-1/90 px-1.5 py-0.5 text-[11px] tabular-nums text-av-text">
           <span className="font-semibold">{shot.nr}</span>

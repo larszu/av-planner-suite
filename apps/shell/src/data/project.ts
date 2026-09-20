@@ -466,6 +466,15 @@ export interface SuiteProject {
    */
   seedConflicts?: SeedConflictRecord[]
   /** Angebotene Uebergaben an die anderen Planer (Nutzer-Auftrag 2026-09-12). */
+  /**
+   * Die Aeusserungen zu den Dingen dieses Projekts.
+   *
+   * Am PROJEKT und nicht am Board: dieselbe Kamera ist im MultiCam eine
+   * Position, im Kabel-Planer ein Geraet mit Ports und im Lager ein Artikel.
+   * Ein Kommentar an der Karte waere einer an EINER dieser Ansichten (siehe
+   * `@avplan/ui`, `kommentare.ts`).
+   */
+  kommentare?: import('@avplan/ui/embed').Kommentar[]
   seedHandoffs?: SeedHandoffRecord[]
   /**
    * Knoten-Ids, deren Kamera-Uebergabe der Nutzer ABGELEHNT hat.

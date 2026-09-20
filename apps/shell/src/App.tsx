@@ -15,7 +15,7 @@ import { loadAddresses, runtimeUrl, saveAddresses, type RuntimeAddresses } from 
 import { useRuntimeHealth } from './shell/runtimeHealth'
 import { PROJECT, type SeedConflictRecord, type SeedHandoffRecord, type ShowDetails, type SuiteProject } from './data/project'
 import { applyPatchToSuite, suiteToSeed, uebergabeAbschluss } from './data/seed'
-import { acceptProposal, type SeedDomain, type SeedPatch } from '@avplan/ui/embed'
+import { acceptProposal, schreibeKommentar, type Identitaet, type SeedDomain, type SeedPatch } from '@avplan/ui/embed'
 import {
   downloadProject,
   projectFileHost,
@@ -51,6 +51,7 @@ import {
   type SettingValue,
 } from './shell/appSettings'
 import { loadLanguage, saveLanguage, type Language } from './shell/language'
+import { ladeIdentitaet, speichereIdentitaet } from './shell/identitaetSpeicher'
 import { LibraryPanel } from './shell/LibraryPanel'
 import { PropertiesPanel } from './shell/PropertiesPanel'
 import { TabDeck } from './shell/TabDeck'
@@ -80,6 +81,18 @@ export function App() {
   // Suite-weite Sprache (gilt gemeinsam, an die Planer gebrückt). Weiter unten
   // per LanguageProvider in den Baum gereicht; hier oben via translate() genutzt.
   const [language, setLanguageState] = useState<Language>(loadLanguage)
+  /**
+   * Wer an diesem Rechner arbeitet.
+   *
+   * Neben der Sprache und aus demselben Grund am GERAET: wer eine
+   * Projektdatei weitergibt, gibt nicht seinen Namen mit. Sie faehrt am Seed
+   * mit, damit jeder Planer eine Aeusserung mit demselben Namen zeichnet.
+   */
+  const [identitaet, setIdentitaetState] = useState<Identitaet | undefined>(ladeIdentitaet)
+  const setIdentitaet = useCallback((i: Identitaet | undefined) => {
+    speichereIdentitaet(i)
+    setIdentitaetState(i)
+  }, [])
   const setLanguage = useCallback((lang: Language) => {
     saveLanguage(lang)
     setLanguageState(lang)
@@ -223,8 +236,8 @@ export function App() {
   }, [bumpSeed])
   // Seed = die Teilmenge des Projekts, die einen Planer etwas angeht.
   const plannerSeed = useMemo(
-    () => suiteToSeed(project, seedRevision, seedOrigin),
-    [project, seedRevision, seedOrigin],
+    () => suiteToSeed(project, seedRevision, seedOrigin, identitaet),
+    [project, seedRevision, seedOrigin, identitaet],
   )
   // Rueckweg: ein Planer meldet seine Domaene. Bewusst OHNE Eintrag in der
   // Shell-Historie — die Aenderung ist im Planer passiert und hat dort schon
@@ -251,6 +264,62 @@ export function App() {
       )
     }
   }, [seedRevision, pushToast, tt])
+
+  /**
+   * Eine Aeusserung ins Projekt schreiben.
+   *
+   * Sie geht durch die Projekt-Historie wie jede andere Aenderung: ein
+   * versehentlich abgeschickter Kommentar laesst sich mit Strg+Z zuruecknehmen,
+   * und er wandert mit dem Projekt in die Datei.
+   *
+   * Der Kommentar entsteht in `@avplan/ui` und nicht hier — dieselbe Pruefung
+   * fuer jeden Aufrufer, damit nicht die Shell entscheidet, was ein Kommentar
+   * ist, und ein Planer etwas anderes.
+   */
+  const schreibeKommentarInsProjekt = useCallback(
+    (objektId: string, text: string, antwortAuf?: string) => {
+      const r = schreibeKommentar({
+        objektId,
+        text,
+        autor: identitaet,
+        jetzt: Date.now(),
+        id: `km${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+        antwortAuf,
+      })
+      if (!r.ok) return
+      setHistory((h) => {
+        if (!h.present) return h
+        const next: SuiteProject = {
+          ...h.present,
+          kommentare: [...(h.present.kommentare ?? []), r.kommentar],
+          meta: { ...h.present.meta, saved: false },
+        }
+        return { past: [...h.past, h.present], present: next, future: [] }
+      })
+      bumpSeed()
+    },
+    [identitaet, bumpSeed],
+  )
+
+  /**
+   * Abhaken — die einzige Aenderung, die ein Kommentar kennt.
+   *
+   * Der Text wird NICHT geaendert und nicht geloescht: eine Aeusserung ist
+   * ein Ereignis, kein Feld. Wer sie wegwirft, nimmt dem naechsten Leser die
+   * Moeglichkeit nachzusehen, was damals besprochen war.
+   */
+  const setzeKommentarErledigt = useCallback((id: string, erledigt: boolean) => {
+    setHistory((h) => {
+      if (!h.present) return h
+      const next: SuiteProject = {
+        ...h.present,
+        kommentare: (h.present.kommentare ?? []).map((k) => (k.id === id ? { ...k, erledigt } : k)),
+        meta: { ...h.present.meta, saved: false },
+      }
+      return { past: [...h.past, h.present], present: next, future: [] }
+    })
+    bumpSeed()
+  }, [bumpSeed])
 
   /**
    * Eine Uebergabe annehmen: der Stand geht an die ANDEREN Planer.
@@ -981,6 +1050,10 @@ export function App() {
             onSeedPatch={applySeedPatch}
             runtimeUrl={mod.runtime ? runtimeUrl(mod.runtime, runtimeAddresses) : undefined}
             onOpenSettings={() => setSettingsOpen(true)}
+            identitaet={identitaet}
+            kommentare={project?.kommentare ?? []}
+            onKommentar={schreibeKommentarInsProjekt}
+            onKommentarErledigt={setzeKommentarErledigt}
             tallyUrl={runtimeUrl('tally', runtimeAddresses)}
           />
         </main>
@@ -1063,6 +1136,8 @@ export function App() {
         language={language}
         onSetLanguage={setLanguage}
         runtimeAddresses={runtimeAddresses}
+        identitaet={identitaet}
+        onSetIdentitaet={setIdentitaet}
         onChangeRuntimeAddresses={updateRuntimeAddresses}
       />
 

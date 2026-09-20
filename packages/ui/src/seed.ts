@@ -206,6 +206,27 @@ export interface SuiteSeed {
   revision: number
   /** Name des Projekts in der Shell — nur zur Anzeige im Planer. */
   projectName?: string
+  /**
+   * Wer an DIESEM Rechner arbeitet.
+   *
+   * Sie faehrt mit, damit ein Planer eine Aeusserung zeichnen kann, ohne
+   * selbst nach einem Namen zu fragen — sonst haette jede App ihren eigenen
+   * Benutzer, und derselbe Mensch hiesse im Licht-Planer anders als im
+   * Kabel-Planer.
+   *
+   * Sie gehoert dem RECHNER und nicht dem Projekt: wer die Projektdatei
+   * weitergibt, gibt nicht seinen Namen mit. Die Shell setzt sie beim
+   * Aussenden ein; im gespeicherten Projekt steht sie nicht.
+   */
+  autor?: import('./identitaet').Identitaet
+  /**
+   * Die Aeusserungen zu den Dingen dieses Projekts.
+   *
+   * Am OBJEKT und nicht an der Ansicht (siehe `kommentare.ts`): „der Ton an
+   * Kamera 3 brummt", im Kabel-Planer geschrieben, steht danach im MultiCam
+   * an derselben Kamera.
+   */
+  kommentare?: readonly import('./kommentare').Kommentar[]
   venue: SeedVenue
   /**
    * DIE Geraeteliste — eine, nicht drei (Eigentuemer-Entscheidung 2026-09-19,

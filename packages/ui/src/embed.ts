@@ -20,6 +20,22 @@ export type {
   SeedWriter,
   SuiteSeed,
 } from './seed'
+export type { Identitaet } from './identitaet'
+export {
+  IDENTITAETS_FARBEN,
+  farbeVon,
+  identitaetOk,
+  initialenVon,
+  vollstaendig,
+} from './identitaet'
+export type { Kommentar, KommentarErgebnis } from './kommentare'
+export {
+  fadenFuer,
+  fuehreKommentareZusammen,
+  offeneJeObjekt,
+  offeneKommentare,
+  schreibeKommentar,
+} from './kommentare'
 export {
   SUITE_SEED_KIND,
   SUITE_SEED_VERSION,

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button, Icon, type ResolvedTheme } from '@avplan/ui'
-import type { SeedPatch, SuiteSeed } from '@avplan/ui/embed'
+import type { Identitaet, Kommentar, SeedPatch, SuiteSeed } from '@avplan/ui/embed'
 import type { ModuleDef, ModuleId } from '../modules/registry'
 import { emptyBoard, type ShowDetails, type SuiteProject } from '../data/project'
 import type { HeaderDraft } from './dashboardEditors'
@@ -34,6 +34,10 @@ export function TabDeck({
   onSeedPatch,
   runtimeUrl,
   onOpenSettings,
+  identitaet,
+  kommentare = [],
+  onKommentar,
+  onKommentarErledigt,
   tallyUrl,
 }: {
   module: ModuleDef
@@ -63,6 +67,11 @@ export function TabDeck({
   runtimeUrl?: string
   /** Oeffnet die Einstellungen (Tab „Geraete im Netz"). */
   onOpenSettings?: () => void
+  /** Wer an diesem Rechner arbeitet — fuer Kommentare und Anwesenheit. */
+  identitaet?: Identitaet
+  kommentare?: readonly Kommentar[]
+  onKommentar?: (objektId: string, text: string, antwortAuf?: string) => void
+  onKommentarErledigt?: (id: string, erledigt: boolean) => void
   /** Adresse des tally-pi — fuer den Weg „Plan -> Pi" im Signal-Modul. */
   tallyUrl?: string
 }) {
@@ -118,6 +127,11 @@ export function TabDeck({
             key={project ? project.meta.name : 'scratch'}
             seed={project ? project.show.board : emptyBoard()}
             crew={project ? project.show.crew.map((c) => c.name) : []}
+            kommentare={kommentare}
+            identitaet={identitaet}
+            onKommentar={onKommentar}
+            onKommentarErledigt={onKommentarErledigt}
+            onEinstellungen={onOpenSettings}
             title={project ? format(t('chrome.tabdeck.boardTitle', '{name} — Board'), { name: project.meta.name }) : t('chrome.tabdeck.creativeBoard', 'Kreativ-Board')}
             // Ohne Projekt gibt es nichts, worin das Board leben koennte —
             // dann bleibt es der Notizzettel, der es vorher ueberall war.
