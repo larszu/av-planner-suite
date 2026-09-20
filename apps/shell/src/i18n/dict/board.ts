@@ -98,6 +98,8 @@ export const board: Record<string, string> = {
   'board.file.save': 'Save',
   'board.file.notEmbedded': 'Content not in the project',
   'board.file.tooLarge': '{groesse} — over the {grenze} limit. The file only exists on this machine.',
+  'board.todo.owner': 'Assigned to',
+  'board.todo.unassigned': '— nobody —',
   'board.color.none': 'No colour',
   'board.link.toArrow': 'Draw as an arrow',
   'board.link.toLine': 'Draw as a plain line',

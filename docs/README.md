@@ -14,6 +14,7 @@ Inhaltsverzeichnis; es verlinkte nur niemand.
 | Dokument | Was es ist |
 | --- | --- |
 | [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) | Was in den zehn Repos tatsächlich läuft — nach Ausführung belegt, nicht nach Plan. Enthält die Ausführungs-Nachweise (Exit-Codes echter Läufe) und den Stand je Bereich. |
+| [`board.md`](board.md) | Die Kreativ-Fläche: was von Milanote und von recceboard übernommen ist, die eine Regel dahinter („abgelesen, nicht geführt") — und die Tabelle, was bewusst NICHT gebaut ist, mit Grund. |
 | [`BLOCKIERT.md`](BLOCKIERT.md) | Die Restliste: jedes der 31 offenen Issues aller zehn Repos, was daran nicht am Programmieren scheitert, die **eine** Sache, die es löst, und der Prompt, der danach genügt. |
 | [`IMPLEMENTATION_BACKLOG.md`](IMPLEMENTATION_BACKLOG.md) | Die offenen Punkte mit Befund, Begründung und Aufwand — plus der Abschnitt „Nicht zu entscheiden ohne den Eigentümer". |
 

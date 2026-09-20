@@ -130,7 +130,17 @@ export interface BoardCard {
   url?: string
   /** Farbe für color-/look-Karten (look rendert daraus einen Verlauf). */
   color?: string
-  items?: { text: string; done: boolean }[]
+  /**
+   * Die Punkte einer To-do-Karte.
+   *
+   * `owner` ist der NAME eines Crew-Mitglieds dieses Projekts und keine
+   * freie Zeichenkette mit Personencharakter: „Aufgaben verteilen" heisst,
+   * sie jemandem zu geben, den es gibt. Wer nicht in der Crew steht,
+   * bekommt hier keine Aufgabe — und wer aus der Crew verschwindet, laesst
+   * seinen Namen an der Aufgabe stehen, statt sie still herrenlos zu
+   * machen.
+   */
+  items?: { text: string; done: boolean; owner?: string }[]
   /** Wenn gesetzt: Karte liegt in dieser Spalte (Container), nicht frei. */
   columnId?: string
   /** Für type 'board': das verschachtelte Unterboard (Board in Board). */

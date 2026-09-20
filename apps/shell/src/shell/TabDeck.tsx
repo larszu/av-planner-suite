@@ -117,6 +117,7 @@ export function TabDeck({
           <BoardCanvas
             key={project ? project.meta.name : 'scratch'}
             seed={project ? project.show.board : emptyBoard()}
+            crew={project ? project.show.crew.map((c) => c.name) : []}
             title={project ? format(t('chrome.tabdeck.boardTitle', '{name} — Board'), { name: project.meta.name }) : t('chrome.tabdeck.creativeBoard', 'Kreativ-Board')}
             // Ohne Projekt gibt es nichts, worin das Board leben koennte —
             // dann bleibt es der Notizzettel, der es vorher ueberall war.

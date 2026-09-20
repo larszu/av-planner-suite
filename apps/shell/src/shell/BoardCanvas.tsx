@@ -83,10 +83,19 @@ const menuButton = (label: string, icon: Parameters<typeof Icon>[0]['name']) => 
 export function BoardCanvas({
   seed,
   title: titleProp,
+  crew = [],
   onChange,
 }: {
   seed: Board
   title?: string
+  /**
+   * Die Crew dieses Projekts.
+   *
+   * Sie wird HEREINGEREICHT und nicht im Board gespeichert: die Crew
+   * gehoert dem Projekt, und eine Abschrift auf dem Board waere beim
+   * naechsten Umbesetzen die zweite Wahrheit (ADR-001).
+   */
+  crew?: string[]
   /**
    * Das geaenderte Board zurueck an die Shell.
    *
@@ -1218,7 +1227,7 @@ export function BoardCanvas({
                 key={card.id} card={card} rect={r} dim={!matchesQuery(card)}
                 selected={isSelected(card.id)} allein={selection.length === 1 && isSelected(card.id)}
                 editing={editingId === card.id}
-                shot={shotById.get(card.id)} boardFormat={current.format}
+                shot={shotById.get(card.id)} boardFormat={current.format} crew={crew}
                 onHeaderPointerDown={(e) => onHeaderPointerDown(e, card)}
                 onHeaderPointerMove={onHeaderPointerMove}
                 onHeaderPointerUp={(e) => onHeaderPointerUp(e, card)}
@@ -1406,7 +1415,7 @@ function PrintDoc({ title, board, mode, format: bildformat }: { title: string; b
 
 /* ── Einzelne Karte ────────────────────────────────────────────────────────*/
 function BoardCardView({
-  card, rect, selected, allein, editing, dim, shot, boardFormat,
+  card, rect, selected, allein, editing, dim, shot, boardFormat, crew,
   onHeaderPointerDown, onHeaderPointerMove, onHeaderPointerUp,
   onStartEdit, onEndEdit, onOpen, onPatch, onDelete, onStartConnect,
   onResizePointerDown, onResizePointerMove, onResizePointerUp,
@@ -1426,6 +1435,8 @@ function BoardCardView({
   /** Gesetzt, wenn diese Karte eine Einstellung der Schnittfolge ist. */
   shot?: Shot
   boardFormat?: BoardFormat
+  /** Die Crew dieses Projekts — die Namen, an die eine Aufgabe gehen kann. */
+  crew: string[]
   onHeaderPointerDown: (e: React.PointerEvent) => void
   onHeaderPointerMove: (e: React.PointerEvent) => void
   onHeaderPointerUp: (e: React.PointerEvent) => void
@@ -1511,7 +1522,7 @@ function BoardCardView({
       >
         {isBoard
           ? <BoardTile card={card} selected={selected} onPatch={onPatch} onOpen={onOpen} />
-          : <CardBody card={card} editing={editing} onEndEdit={onEndEdit} onPatch={onPatch} />}
+          : <CardBody card={card} editing={editing} onEndEdit={onEndEdit} onPatch={onPatch} crew={crew} />}
       </div>
       {/* Die Bildgrenze liegt UEBER dem Bild und schneidet es nicht weg: was
           ausserhalb liegt, ist die Information, die beim Schneiden gebraucht
@@ -1608,7 +1619,7 @@ function dateiGroesse(bytes: number | undefined, lang: Language): string {
   return `${zahl(mb, mb < 10 ? 1 : 0)} MB`
 }
 
-function CardBody({ card, editing, onEndEdit, onPatch }: { card: BoardCard; editing: boolean; onEndEdit: () => void; onPatch: (p: Partial<BoardCard>) => void }) {
+function CardBody({ card, editing, onEndEdit, onPatch, crew }: { card: BoardCard; editing: boolean; onEndEdit: () => void; onPatch: (p: Partial<BoardCard>) => void; crew: string[] }) {
   const t = useT()
   const lang = useLanguage()
   if (card.type === 'heading') {
@@ -1664,7 +1675,34 @@ function CardBody({ card, editing, onEndEdit, onPatch }: { card: BoardCard; edit
               <button type="button" className="grid h-3.5 w-3.5 flex-none place-items-center rounded" style={{ border: it.done ? 'none' : '1.5px solid var(--av-border)', background: it.done ? 'var(--av-ok)' : 'transparent', color: 'var(--av-accent-text)' }} onClick={() => onPatch({ items: card.items?.map((x, j) => (j === i ? { ...x, done: !x.done } : x)) })} aria-label={it.done ? t('board.todo.done', 'Erledigt') : t('board.todo.open', 'Offen')}>
                 {it.done && <Icon name="check" size={10} />}
               </button>
-              <span className={it.done ? 'text-av-text-faint line-through' : 'text-av-text-secondary'}>{it.text}</span>
+              <span className={`min-w-0 flex-1 truncate ${it.done ? 'text-av-text-faint line-through' : 'text-av-text-secondary'}`}>{it.text}</span>
+              {/* AUFGABEN VERTEILEN — an jemanden, den es gibt.
+                  Die Liste kommt aus der Crew DIESES Projekts, nicht aus
+                  einem freien Feld: eine Aufgabe an „Max" ist keine
+                  Zuteilung, solange niemand weiss, welcher Max. */}
+              {crew.length > 0 && (
+                <select
+                  value={it.owner ?? ''}
+                  onChange={(e) =>
+                    onPatch({
+                      items: card.items?.map((x, j) =>
+                        j === i ? { ...x, owner: e.target.value || undefined } : x,
+                      ),
+                    })
+                  }
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="av-focus max-w-[7.5rem] flex-none border border-av-border bg-av-surface-3 px-1 py-0.5 text-[10.5px] text-av-text-muted"
+                  aria-label={t('board.todo.owner', 'Zuständig')}
+                >
+                  <option value="">{t('board.todo.unassigned', '— niemand —')}</option>
+                  {/* Ein Name, der an der Aufgabe steht, aber nicht mehr in
+                      der Crew, bleibt waehlbar: sonst fiele er beim naechsten
+                      Oeffnen still heraus. */}
+                  {[...new Set([...crew, ...(it.owner ? [it.owner] : [])])].map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              )}
             </li>
           ))}
         </ul>
