@@ -174,6 +174,13 @@ ipcMain.handle('suiteHost:lexware:setKey', (_e, key) => lexware.setKey(key))
 ipcMain.handle('suiteHost:lexware:deleteKey', () => lexware.deleteKey())
 ipcMain.handle('suiteHost:lexware:hasKey', () => lexware.hasKey())
 
+// Link-Vorschau: der Abruf gehoert in den Hauptprozess (CORS, und die
+// Grenzen stehen dort). Der Renderer bekommt HTML und Endadresse und liest
+// die Angaben mit `parseVorschau` aus `@avplan/ui` — derselbe Parser, den
+// die Tests messen.
+const linkVorschau = require('./linkVorschau.cjs')
+ipcMain.handle('suiteHost:linkVorschau:hole', (_e, url) => linkVorschau.hole(String(url ?? '')))
+
 
 app.whenReady().then(() => {
   registerPlannerProtocols()

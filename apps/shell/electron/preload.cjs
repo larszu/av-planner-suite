@@ -80,6 +80,13 @@ contextBridge.exposeInMainWorld('__suiteLexware', {
   hatKey: () => ipcRenderer.invoke('suiteHost:lexware:hasKey'),
 })
 
+// Die Link-Vorschau. Der Renderer bekommt HTML, nicht das Netz: was damit
+// geschieht, entscheidet `parseVorschau`, und was NICHT darin steht, kommt
+// auch nicht heraus.
+contextBridge.exposeInMainWorld('__suiteLinkVorschau', {
+  hole: (url) => ipcRenderer.invoke('suiteHost:linkVorschau:hole', url),
+})
+
 if (nativeCable) {
   contextBridge.exposeInMainWorld('__suiteNativeHost', {
     cable: {

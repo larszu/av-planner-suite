@@ -5,6 +5,7 @@ import { useLanguage, useT, format, type Language, type TFunc } from '../i18n'
 import { BOARD_FORMAT_RATIO, EINBETT_GRENZE, type Board, type BoardCard, type BoardCardType, type BoardFormat } from '../data/project'
 import { BoardPlayer } from './BoardPlayer'
 import { KommentarFaden } from './KommentarFaden'
+import { holeVorschau } from './linkVorschauHost'
 import { offeneJeObjekt, type Identitaet, type Kommentar } from '@avplan/ui/embed'
 import {
   applyTemplate,
@@ -237,6 +238,8 @@ export function BoardCanvas({
   const offeneKommentare = useMemo(() => offeneJeObjekt(kommentare), [kommentare])
   /** Die Karte, deren Faden gerade offen ist. */
   const [fadenAn, setFadenAn] = useState<string | null>(null)
+  const [vorschauLaeuft, setVorschauLaeuft] = useState<string | null>(null)
+  const [vorschauMeldung, setVorschauMeldung] = useState<string | null>(null)
 
   const mutate = useCallback((fn: (b: Board) => Board) => setRoot((r) => updateBoardAtPath(r, path, fn)), [path])
 
@@ -394,6 +397,34 @@ export function BoardCanvas({
     const shifted = tc.map((c) => (c.type === 'column' || !c.columnId ? { ...c, y: c.y + dy } : c))
     mutate((b) => ({ cards: [...b.cards, ...shifted], connections: [...b.connections, ...tcx] }))
   }, [layout, mutate])
+
+  /**
+   * Die Vorschau einer Link-Karte holen und an die Karte schreiben.
+   *
+   * Jede Absage wird GESAGT. Eine Karte, die nach dem Klick unveraendert
+   * dasteht, sieht aus wie ein kaputter Knopf — und der haeufigste Fall
+   * („im Browser gibt es keinen Abruf") ist gar kein Fehler, sondern eine
+   * Eigenschaft der Umgebung.
+   */
+  const holeVorschauFuer = useCallback(async (card: BoardCard) => {
+    if (!card.url) return
+    setVorschauLaeuft(card.id)
+    const r = await holeVorschau(card.url)
+    setVorschauLaeuft(null)
+    if (r.ok) {
+      patchCard(card.id, { vorschau: r.vorschau })
+      return
+    }
+    const texte: Record<string, string> = {
+      'nur-im-desktop': t('board.link.previewDesktopOnly', 'Vorschauen holt nur die Desktop-Fassung — im Browser lassen fremde Seiten den Abruf nicht zu.'),
+      'keine-webadresse': t('board.link.previewNoUrl', 'Das ist keine Web-Adresse.'),
+      'nicht-erreichbar': t('board.link.previewUnreachable', 'Die Seite antwortet nicht.'),
+      'kein-html': t('board.link.previewNoHtml', 'Dahinter liegt keine Seite, sondern eine Datei.'),
+      'zeitueberschreitung': t('board.link.previewTimeout', 'Die Seite hat zu lange gebraucht.'),
+      'zu-viele-weiterleitungen': t('board.link.previewRedirects', 'Zu viele Weiterleitungen.'),
+    }
+    setVorschauMeldung(texte[r.grund] ?? texte['nicht-erreichbar']!)
+  }, [patchCard, t, setVorschauLaeuft, setVorschauMeldung])
 
   const exportMarkdown = useCallback(() => {
     const md = boardToMarkdown(root, title)
@@ -1247,6 +1278,7 @@ export function BoardCanvas({
                 editing={editingId === card.id}
                 shot={shotById.get(card.id)} boardFormat={current.format} crew={crew}
                 offen={offeneKommentare.get(card.id) ?? 0} onFaden={() => { selectOnly(card.id); setFadenAn(card.id) }}
+                onVorschau={() => holeVorschauFuer(card)} vorschauLaeuft={vorschauLaeuft === card.id}
                 onHeaderPointerDown={(e) => onHeaderPointerDown(e, card)}
                 onHeaderPointerMove={onHeaderPointerMove}
                 onHeaderPointerUp={(e) => onHeaderPointerUp(e, card)}
@@ -1333,6 +1365,19 @@ export function BoardCanvas({
             onEinstellungen={onEinstellungen}
           />
         </aside>
+      )}
+
+      {vorschauMeldung && (
+        <div className="absolute bottom-3 left-1/2 z-[130] -translate-x-1/2 border border-av-border bg-av-surface-2 px-3 py-1.5 text-[12px] text-av-text">
+          {vorschauMeldung}
+          <button
+            type="button"
+            className="av-focus ml-3 text-av-accent"
+            onClick={() => setVorschauMeldung(null)}
+          >
+            {t('board.link.previewOk', 'Verstanden')}
+          </button>
+        </div>
       )}
 
       {spielt && (
@@ -1468,7 +1513,7 @@ function PrintDoc({ title, board, mode, format: bildformat }: { title: string; b
 
 /* ── Einzelne Karte ────────────────────────────────────────────────────────*/
 function BoardCardView({
-  card, rect, selected, allein, editing, dim, shot, boardFormat, crew, offen, onFaden,
+  card, rect, selected, allein, editing, dim, shot, boardFormat, crew, offen, onFaden, onVorschau, vorschauLaeuft,
   onHeaderPointerDown, onHeaderPointerMove, onHeaderPointerUp,
   onStartEdit, onEndEdit, onOpen, onPatch, onDelete, onStartConnect,
   onResizePointerDown, onResizePointerMove, onResizePointerUp,
@@ -1493,6 +1538,9 @@ function BoardCardView({
   /** Offene Kommentare an DIESER Karte. 0 heisst: nichts anzeigen. */
   offen: number
   onFaden: () => void
+  onVorschau: () => void
+  /** Laeuft der Abruf gerade? Ein Knopf ohne Rueckmeldung wirkt kaputt. */
+  vorschauLaeuft: boolean
   onHeaderPointerDown: (e: React.PointerEvent) => void
   onHeaderPointerMove: (e: React.PointerEvent) => void
   onHeaderPointerUp: (e: React.PointerEvent) => void
@@ -1529,6 +1577,23 @@ function BoardCardView({
           {card.type !== 'board' && card.type !== 'column' && SWATCHES.slice(0, 6).map((s) => (
             <button key={s} type="button" className="h-4 w-4 rounded-none border border-av-border" style={{ background: s }} onClick={() => onPatch({ color: s })} aria-label={format(t('board.swatch', 'Farbe {color}'), { color: s })} />
           ))}
+          {card.type === 'link' && (
+            /* Die Vorschau HOLEN — ein Knopf und kein Automatismus. Ein
+               Board, das beim Oeffnen zwanzig fremde Server anfragt, sagt
+               diesen zwanzig Servern, wann jemand sein Projekt aufmacht.
+               Wer eine Vorschau will, holt sie. */
+            <button
+              type="button"
+              className="av-focus flex items-center gap-1 px-1 text-[11px] text-av-text-muted hover:text-av-text"
+              onClick={onVorschau}
+              disabled={vorschauLaeuft}
+              style={vorschauLaeuft ? { opacity: 0.5 } : undefined}
+              aria-label={t('board.link.preview', 'Vorschau holen')}
+              title={t('board.link.preview', 'Vorschau holen')}
+            >
+              <Icon name={vorschauLaeuft ? 'redo' : 'eye'} size={13} />
+            </button>
+          )}
           {/* KOMMENTARE. Der Knopf steht an JEDER Karte und nicht nur an
               denen, die schon einen Faden haben — sonst liesse sich der
               erste nie schreiben. Die Zahl erscheint nur, wenn es etwas
@@ -1727,8 +1792,23 @@ function CardBody({ card, editing, onEndEdit, onPatch, crew }: { card: BoardCard
     )
   }
   if (card.type === 'link') {
+    const v = card.vorschau
     return (
-      <div className="flex h-full w-full items-center gap-2.5 border border-av-border bg-av-surface-1 p-2.5">
+      <div className="flex h-full w-full flex-col overflow-hidden border border-av-border bg-av-surface-1">
+        {/* DAS VORSCHAUBILD, falls die Seite eines nennt. Es wird hier
+            GELADEN und nicht ins Projekt kopiert: ein heruntergeladenes Bild
+            waere eine fremde Datei im Projekt, ohne dass jemand sie abgelegt
+            hat. Laedt es nicht, verschwindet es — die Karte bleibt lesbar. */}
+        {v?.bildUrl && (
+          <img
+            src={v.bildUrl}
+            alt=""
+            className="h-20 w-full flex-none object-cover"
+            draggable={false}
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
+          />
+        )}
+        <div className="flex min-h-0 flex-1 items-center gap-2.5 p-2.5">
         <span className="grid h-8 w-8 flex-none place-items-center rounded-md bg-av-surface-3 text-av-accent"><Icon name="external" size={15} /></span>
         {editing ? (
           <span className="min-w-0 flex-1">
@@ -1737,10 +1817,18 @@ function CardBody({ card, editing, onEndEdit, onPatch, crew }: { card: BoardCard
           </span>
         ) : (
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[12.5px] font-semibold text-av-text">{card.title}</span>
-            <span className="block truncate text-[11px] text-av-accent">{card.url}</span>
+            <span className="block truncate text-[12.5px] font-semibold text-av-text">
+              {v?.titel ?? card.title}
+            </span>
+            {v?.beschreibung && (
+              <span className="mt-0.5 block overflow-hidden text-[11px] leading-snug text-av-text-secondary" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                {v.beschreibung}
+              </span>
+            )}
+            <span className="block truncate text-[11px] text-av-accent">{v?.host ?? card.url}</span>
           </span>
         )}
+        </div>
       </div>
     )
   }

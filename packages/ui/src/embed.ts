@@ -28,6 +28,8 @@ export {
   initialenVon,
   vollstaendig,
 } from './identitaet'
+export type { LinkVorschau } from './linkVorschau'
+export { abrufbar, parseVorschau } from './linkVorschau'
 export type { Kommentar, KommentarErgebnis } from './kommentare'
 export {
   fadenFuer,

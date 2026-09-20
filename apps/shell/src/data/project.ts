@@ -150,6 +150,15 @@ export interface BoardCard {
   /** Für type 'image': Seitenverhältnis Breite/Höhe (für die Karten-Höhe). */
   ratio?: number
   /**
+   * Was die verlinkte Seite ÜBER SICH SELBST sagt — geholt, nicht geraten.
+   *
+   * Sie steht an der Karte und nicht in einem Zwischenspeicher: eine
+   * Vorschau, die beim nächsten Öffnen neu geholt werden müsste, ist in
+   * einem offline-first Werkzeug keine. Der Abrufzeitpunkt fährt mit, damit
+   * eine alte Vorschau als alte erkennbar bleibt.
+   */
+  vorschau?: import('@avplan/ui/embed').LinkVorschau
+  /**
    * Der Name der Datei, aus der diese Karte entstanden ist.
    *
    * Er steht NEBEN dem Titel: der Titel ist, was jemand hingeschrieben hat,
