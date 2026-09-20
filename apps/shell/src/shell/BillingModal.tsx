@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Modal } from '@avplan/ui'
+import { Modal, dateiName, herunterladen } from '@avplan/ui'
 import {
   buildPayload,
   grossTotal,
@@ -279,13 +279,7 @@ function BillingBody({ project, onPersistSettings, onRecordInvoice }: { project:
     })
   }
   const doExport = () => {
-    const blob = new Blob([payloadJson], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${kind}-${project.meta.name.replace(/\s+/g, '-').toLowerCase()}.json`
-    a.click()
-    URL.revokeObjectURL(url)
+    herunterladen(new Blob([payloadJson], { type: 'application/json' }), `${kind}-${dateiName(project.meta.name)}.json`)
     recordInvoice()
     showFlash(t('billing.exported', 'JSON exportiert'))
   }

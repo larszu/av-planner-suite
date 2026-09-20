@@ -150,6 +150,15 @@ export interface BoardCard {
   /** Für type 'image': Seitenverhältnis Breite/Höhe (für die Karten-Höhe). */
   ratio?: number
   /**
+   * Was die verlinkte Seite ÜBER SICH SELBST sagt — geholt, nicht geraten.
+   *
+   * Sie steht an der Karte und nicht in einem Zwischenspeicher: eine
+   * Vorschau, die beim nächsten Öffnen neu geholt werden müsste, ist in
+   * einem offline-first Werkzeug keine. Der Abrufzeitpunkt fährt mit, damit
+   * eine alte Vorschau als alte erkennbar bleibt.
+   */
+  vorschau?: import('@avplan/ui/embed').LinkVorschau
+  /**
    * Der Name der Datei, aus der diese Karte entstanden ist.
    *
    * Er steht NEBEN dem Titel: der Titel ist, was jemand hingeschrieben hat,
@@ -219,6 +228,21 @@ export interface Board {
   format?: BoardFormat
   /** Vorgabe-Standzeit je Einstellung in Sekunden. Fehlt sie, gilt DEFAULT_SHOT_S. */
   shotSeconds?: number
+  /**
+   * Die Vertonung des ganzen Boards als data-URL.
+   *
+   * EINE für das Board und nicht eine je Einstellung: wer ein Storyboard
+   * vorführt, spricht darüber, während es läuft — ein Kommentar je Bild wäre
+   * eine Tonspur mit Löchern, und die Löcher lägen genau da, wo jemand
+   * zwischen zwei Einstellungen weiterredet.
+   *
+   * Sie unterliegt derselben Einbettungsgrenze wie jede Datei; eine
+   * Aufnahme, die darüber liegt, wird gar nicht erst übernommen (siehe
+   * `EINBETT_GRENZE`).
+   */
+  tonSrc?: string
+  /** Länge der Vertonung in Sekunden, wie bei der Aufnahme gemessen. */
+  tonSekunden?: number
 }
 
 /**
@@ -466,6 +490,15 @@ export interface SuiteProject {
    */
   seedConflicts?: SeedConflictRecord[]
   /** Angebotene Uebergaben an die anderen Planer (Nutzer-Auftrag 2026-09-12). */
+  /**
+   * Die Aeusserungen zu den Dingen dieses Projekts.
+   *
+   * Am PROJEKT und nicht am Board: dieselbe Kamera ist im MultiCam eine
+   * Position, im Kabel-Planer ein Geraet mit Ports und im Lager ein Artikel.
+   * Ein Kommentar an der Karte waere einer an EINER dieser Ansichten (siehe
+   * `@avplan/ui`, `kommentare.ts`).
+   */
+  kommentare?: import('@avplan/ui/embed').Kommentar[]
   seedHandoffs?: SeedHandoffRecord[]
   /**
    * Knoten-Ids, deren Kamera-Uebergabe der Nutzer ABGELEHNT hat.

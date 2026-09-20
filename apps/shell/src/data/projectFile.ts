@@ -6,6 +6,7 @@
  * Projekt-Container.
  */
 
+import { herunterladen } from '@avplan/ui'
 import { PROJECT, emptyBoard, type SuiteGeraet, type SuiteProject } from './project'
 
 const PERSIST_KEY = 'avplan.project'
@@ -103,15 +104,7 @@ export function projectFileHost(): ProjectFileHost | null {
 }
 
 export function downloadProject(p: SuiteProject): void {
-  const blob = new Blob([serializeProject(p)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${sanitize(p.meta.name)}.avsuite.json`
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  URL.revokeObjectURL(url)
+  herunterladen(new Blob([serializeProject(p)], { type: 'application/json' }), `${sanitize(p.meta.name)}.avsuite.json`)
 }
 
 /** „Speichern" — Projekt in localStorage ablegen. */

@@ -174,6 +174,41 @@ ipcMain.handle('suiteHost:lexware:setKey', (_e, key) => lexware.setKey(key))
 ipcMain.handle('suiteHost:lexware:deleteKey', () => lexware.deleteKey())
 ipcMain.handle('suiteHost:lexware:hasKey', () => lexware.hasKey())
 
+// Link-Vorschau: der Abruf gehoert in den Hauptprozess (CORS, und die
+// Grenzen stehen dort). Der Renderer bekommt HTML und Endadresse und liest
+// die Angaben mit `parseVorschau` aus `@avplan/ui` — derselbe Parser, den
+// die Tests messen.
+const linkVorschau = require('./linkVorschau.cjs')
+ipcMain.handle('suiteHost:linkVorschau:hole', (_e, url) => linkVorschau.hole(String(url ?? '')))
+
+// Der Einwurf: die Stelle, an der etwas von AUSSEN auf ein Board kommt
+// (Web-Clipper). Er laeuft NICHT von selbst — der Nutzer macht ihn in den
+// Einstellungen auf, bekommt Adresse und Geheimnis und traegt sie in die
+// Erweiterung ein. Ein Briefkasten, der immer offensteht, waere eine Tuer,
+// von der niemand weiss.
+const einwurf = require('./einwurf.cjs')
+ipcMain.handle('suiteHost:einwurf:starte', async () => {
+  const r = await einwurf.starte((sendung) => {
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed()) w.webContents.send('suiteHost:einwurf:sendung', sendung)
+    }
+  }, (...a) => console.log(...a))
+  return r
+})
+ipcMain.handle('suiteHost:einwurf:beende', () => { einwurf.beende(); return true })
+ipcMain.handle('suiteHost:einwurf:zugang', () => einwurf.zugang())
+// Kein verwaister Briefkasten, wenn jemand die Suite schliesst.
+app.on('before-quit', () => einwurf.beende())
+
+// Das offene Fenster fuer die Zusammenarbeit im eigenen Netz. Wie der
+// Briefkasten: NICHT von selbst offen — und anders als er auf 0.0.0.0,
+// weil andere Geraete herankommen sollen.
+const mitmachen = require('./mitmachen.cjs')
+ipcMain.handle('suiteHost:mitmachen:starte', () => mitmachen.starte((...a) => console.log(...a)))
+ipcMain.handle('suiteHost:mitmachen:beende', () => { mitmachen.beende(); return true })
+ipcMain.handle('suiteHost:mitmachen:zugang', () => mitmachen.zugang())
+app.on('before-quit', () => mitmachen.beende())
+
 
 app.whenReady().then(() => {
   registerPlannerProtocols()

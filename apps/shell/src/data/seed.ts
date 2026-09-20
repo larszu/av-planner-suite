@@ -31,6 +31,7 @@
 // Projekt statt zu einer stillen Ueberschreibung.
 // ───────────────────────────────────────────────────────────────────────────
 
+import type { Identitaet } from '@avplan/ui/embed'
 import {
   SUITE_SEED_KIND,
   SUITE_SEED_VERSION,
@@ -71,6 +72,16 @@ export function suiteToSeed(
    * nicht; alle anderen bekommen ihn (siehe `origin` in `@avplan/ui`).
    */
   origin?: SeedDomain,
+  /**
+   * Wer an DIESEM Rechner arbeitet.
+   *
+   * Sie faehrt am Seed mit, damit ein Planer eine Aeusserung zeichnen kann,
+   * ohne selbst nach einem Namen zu fragen — sonst haette jede App ihren
+   * eigenen Benutzer, und derselbe Mensch hiesse im Licht-Planer anders als
+   * im Kabel-Planer. Sie gehoert dem RECHNER und nicht dem Projekt: wer die
+   * Projektdatei weitergibt, gibt nicht seinen Namen mit.
+   */
+  autor?: Identitaet,
 ): SuiteSeed {
   if (!project) {
     return {
@@ -78,6 +89,7 @@ export function suiteToSeed(
       formatVersion: SUITE_SEED_VERSION,
       revision,
       ...(origin ? { origin } : {}),
+      ...(autor ? { autor } : {}),
       venue: { name: '' },
       geraete: [],
       cables: [],
@@ -107,6 +119,8 @@ export function suiteToSeed(
     formatVersion: SUITE_SEED_VERSION,
     revision,
     ...(origin ? { origin } : {}),
+    ...(autor ? { autor } : {}),
+    ...(project.kommentare?.length ? { kommentare: project.kommentare } : {}),
     projectName: project.meta.name,
     venue: {
       name: project.meta.venue,

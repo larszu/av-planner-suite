@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
+import { EinwurfSection } from './EinwurfSection'
+import { MitmachenSection } from './MitmachenSection'
 import { Badge, Icon, Modal, type ThemePreference } from '@avplan/ui'
 import { MODULES, type ModuleId } from '../modules/registry'
 import { useT, type TFunc } from '../i18n'
+import { vollstaendig, type Identitaet } from '@avplan/ui/embed'
 import type { Language } from './language'
 import { RUNTIMES } from '../modules/runtimes'
 import { runtimeUrl, type RuntimeAddresses } from './runtimeHosts'
@@ -36,6 +39,8 @@ export function SettingsModal({
   appSettings,
   onChangeAppSetting,
   language,
+  identitaet,
+  onSetIdentitaet,
   onSetLanguage,
   runtimeAddresses,
   onChangeRuntimeAddresses,
@@ -49,6 +54,8 @@ export function SettingsModal({
   appSettings: SuiteAppSettings
   onChangeAppSetting: (app: AppModuleId, key: string, value: SettingValue) => void
   language: Language
+  identitaet: Identitaet | undefined
+  onSetIdentitaet: (i: Identitaet | undefined) => void
   onSetLanguage: (lang: Language) => void
   runtimeAddresses: RuntimeAddresses
   onChangeRuntimeAddresses: (a: RuntimeAddresses) => void
@@ -66,6 +73,8 @@ export function SettingsModal({
         appSettings={appSettings}
         onChangeAppSetting={onChangeAppSetting}
         language={language}
+        identitaet={identitaet}
+        onSetIdentitaet={onSetIdentitaet}
         onSetLanguage={onSetLanguage}
         runtimeAddresses={runtimeAddresses}
         onChangeRuntimeAddresses={onChangeRuntimeAddresses}
@@ -81,6 +90,8 @@ function SettingsBody({
   appSettings,
   onChangeAppSetting,
   language,
+  identitaet,
+  onSetIdentitaet,
   onSetLanguage,
   runtimeAddresses,
   onChangeRuntimeAddresses,
@@ -91,6 +102,8 @@ function SettingsBody({
   appSettings: SuiteAppSettings
   onChangeAppSetting: (app: AppModuleId, key: string, value: SettingValue) => void
   language: Language
+  identitaet: Identitaet | undefined
+  onSetIdentitaet: (i: Identitaet | undefined) => void
   onSetLanguage: (lang: Language) => void
   runtimeAddresses: RuntimeAddresses
   onChangeRuntimeAddresses: (a: RuntimeAddresses) => void
@@ -160,6 +173,49 @@ function SettingsBody({
             })}
           </div>
         </div>
+        {/* ─── WER HIER ARBEITET ────────────────────────────────────────
+            Eine SELBSTAUSKUNFT und keine Anmeldung: niemand prueft sie, und
+            sie beweist nichts. Sie reicht fuer das, wofuer sie da ist — ein
+            Kommentar auf einem Board, ein Name neben einem Mauszeiger unter
+            Leuten, die ohnehin im selben Raum sitzen.
+
+            Sie liegt am GERAET und nicht im Projekt: wer eine Projektdatei
+            weitergibt, gibt nicht seinen Namen mit. */}
+        <div className="mt-2 rounded-av-card border border-av-border bg-av-surface-2 px-3.5 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[13px] font-medium text-av-text">
+              {t('chrome.settings.identity', 'Wer hier arbeitet')}
+            </span>
+            <input
+              value={identitaet?.name ?? ''}
+              onChange={(e) => onSetIdentitaet(e.target.value ? { ...identitaet, name: e.target.value } : undefined)}
+              placeholder={t('chrome.settings.identityPlaceholder', 'Dein Name')}
+              aria-label={t('chrome.settings.identity', 'Wer hier arbeitet')}
+              className="av-focus ml-auto w-48 rounded-av-control border border-av-border bg-av-surface-3 px-2 py-1 text-[12.5px] text-av-text outline-none placeholder:text-av-text-faint"
+            />
+            {identitaet?.name?.trim() ? (
+              <span
+                className="grid h-7 w-7 flex-none place-items-center rounded-av-control text-[11px] font-semibold"
+                style={{ background: vollstaendig(identitaet).farbe, color: '#12161d' }}
+                aria-hidden="true"
+              >
+                {vollstaendig(identitaet).initialen}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-1.5 text-[11.5px] leading-snug text-av-text-muted">
+            {t(
+              'chrome.settings.identityHint',
+              'Steht an deinen Kommentaren und an deinem Zeiger, wenn jemand mitarbeitet. Ohne Namen lässt sich kein Kommentar schreiben — „unbekannt" wäre keine Auskunft.',
+            )}
+          </p>
+        </div>
+        {/* Der Briefkasten fuer den Web-Clipper. Er steht NICHT von selbst
+            offen — ein Empfang, der mit der Anwendung startet, ist eine Tuer,
+            von der niemand weiss. */}
+        <EinwurfSection t={t} />
+        {/* Zusammenarbeit im eigenen Netz — ohne gemieteten Rechner. */}
+        <MitmachenSection t={t} />
       </section>
 
       {/* Backend / Sync — optional, opt-in. Offline-first bleibt Default. */}

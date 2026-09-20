@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>To the board</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body { font: 13px/1.45 system-ui, sans-serif; margin: 0; padding: 12px; width: 300px; }
+      h1 { font-size: 13px; margin: 0 0 8px; }
+      label { display: block; margin: 8px 0 2px; font-size: 12px; opacity: .75; }
+      input { width: 100%; box-sizing: border-box; padding: 5px 6px; font: inherit; }
+      button { margin-top: 10px; padding: 6px 10px; font: inherit; width: 100%; }
+      p { margin: 8px 0 0; font-size: 12px; }
+      .fehler { color: #c0392b; }
+      .gut { color: #1e8449; }
+    </style>
+  </head>
+  <body>
+    <h1>AV Planner — to the board</h1>
+    <label for="adresse">Address from the suite settings</label>
+    <input id="adresse" type="url" placeholder="http://127.0.0.1:0/einwurf" />
+    <label for="geheimnis">Secret</label>
+    <input id="geheimnis" type="password" />
+    <button id="senden">Send this page</button>
+    <p id="meldung"></p>
+    <script src="popup.js"></script>
+  </body>
+</html>

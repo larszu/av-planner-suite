@@ -1,9 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Icon, Menu, MenuItem, confirmDialog } from '@avplan/ui'
+import { Icon, Menu, MenuItem, confirmDialog, dateiName, herunterladen } from '@avplan/ui'
 import { useLanguage, useT, format, type Language, type TFunc } from '../i18n'
 import { BOARD_FORMAT_RATIO, EINBETT_GRENZE, type Board, type BoardCard, type BoardCardType, type BoardFormat } from '../data/project'
 import { BoardPlayer } from './BoardPlayer'
+import { KommentarFaden } from './KommentarFaden'
+import { holeVorschau } from './linkVorschauHost'
+import { besterTyp, exportiereFilm } from './filmExport'
+import { starteAufnahme, type LaufendeAufnahme } from './tonAufnahme'
+import { KameraDialog } from './KameraDialog'
+import { hoereAufSendungen, type Sendung } from './einwurfHost'
+import { useMitmachen } from './useMitmachen'
+import { MitmachZeiger } from './MitmachZeiger'
+import { FLAECHE } from '@avplan/ui/embed'
+import { offeneJeObjekt, type Identitaet, type Kommentar } from '@avplan/ui/embed'
 import {
   applyTemplate,
   boardToMarkdown,
@@ -84,6 +94,11 @@ export function BoardCanvas({
   seed,
   title: titleProp,
   crew = [],
+  kommentare = [],
+  identitaet,
+  onKommentar,
+  onKommentarErledigt,
+  onEinstellungen,
   onChange,
 }: {
   seed: Board
@@ -96,6 +111,12 @@ export function BoardCanvas({
    * naechsten Umbesetzen die zweite Wahrheit (ADR-001).
    */
   crew?: string[]
+  /** Die Aeusserungen des ganzen Projekts — gefiltert wird je Karte. */
+  kommentare?: readonly Kommentar[]
+  identitaet?: Identitaet
+  onKommentar?: (objektId: string, text: string, antwortAuf?: string) => void
+  onKommentarErledigt?: (id: string, erledigt: boolean) => void
+  onEinstellungen?: () => void
   /**
    * Das geaenderte Board zurueck an die Shell.
    *
@@ -219,8 +240,69 @@ export function BoardCanvas({
   // Einstellung wegzieht, loest sie aus der Szene. Deshalb hier gerechnet
   // und nirgends gespeichert.
   const szenen = useMemo(() => sceneGroups(shots, layout), [shots, layout])
+  // EINMAL je Durchlauf und nicht je Karte: bei 200 Karten und 500
+  // Kommentaren waere die Frage je Karte eine Schleife ueber alles.
+  const offeneKommentare = useMemo(() => offeneJeObjekt(kommentare), [kommentare])
+  /** Die Karte, deren Faden gerade offen ist. */
+  const [fadenAn, setFadenAn] = useState<string | null>(null)
+  const [vorschauLaeuft, setVorschauLaeuft] = useState<string | null>(null)
+  const [vorschauMeldung, setVorschauMeldung] = useState<string | null>(null)
+  /** Laeuft gerade eine Tonaufnahme? Dann steht hier, womit man sie beendet. */
+  const [aufnahme, setAufnahme] = useState<LaufendeAufnahme | null>(null)
+  /** Steht der Sucher offen? Sicht und nicht Inhalt — steht deshalb nicht im Board. */
+  const [sucher, setSucher] = useState(false)
+  /** Anteil des laufenden Film-Exports, 0..1. `null` heisst: laeuft nicht. */
+  const [exportAnteil, setExportAnteil] = useState<number | null>(null)
 
   const mutate = useCallback((fn: (b: Board) => Board) => setRoot((r) => updateBoardAtPath(r, path, fn)), [path])
+
+  // ─── MITMACHEN ──────────────────────────────────────────────────────────
+  //
+  // Der Anschluss an die Sitzung. Er ist untätig, solange niemand verbunden
+  // ist — `useMitmachen` schickt dann nichts und hört auf nichts.
+  const uebernimmVonAussen = useCallback((b: Board) => {
+    // Die Übernahme geht durch DENSELBEN Weg wie jede eigene Änderung.
+    // Ein zweiter Schreibweg neben `setRoot` hätte die Undo-Historie der
+    // Shell umgangen — und dann wäre „rückgängig" nach einer fremden
+    // Änderung eine Überraschung.
+    setRoot((r) => updateBoardAtPath(r, path, () => b))
+  }, [path])
+  const mitmachen = useMitmachen(current, onChange ? uebernimmVonAussen : undefined, identitaet?.name)
+
+  /**
+   * Was sich HIER geändert hat, den anderen melden.
+   *
+   * Gemessen wird das ERGEBNIS und nicht der Auslöser: ein Aufruf je
+   * Bearbeitungsweg (ziehen, tippen, löschen, einfügen, Format) wäre ein
+   * Dutzend Stellen, und die dreizehnte vergisst es. Ein Vergleich der
+   * Fläche mit ihrem letzten Stand findet alle — auch die, die es noch
+   * nicht gibt.
+   */
+  const gemeldet = useRef<Board | null>(null)
+  useEffect(() => {
+    if (!mitmachen.verbunden) { gemeldet.current = current; return }
+    const alt = gemeldet.current
+    gemeldet.current = current
+    if (!alt || alt === current) return
+    const vorher = new Map(alt.cards.map((c) => [c.id, c]))
+    const nachher = new Map(current.cards.map((c) => [c.id, c]))
+    const geaendert: string[] = []
+    for (const [id, c] of nachher) if (vorher.get(id) !== c) geaendert.push(id)
+    for (const v of current.connections) {
+      if (!alt.connections.some((x) => x === v)) geaendert.push(v.id)
+    }
+    // Die Felder der Fläche selbst hängen an einem eigenen Stand, damit
+    // „jemand hat das Bildformat geändert" nicht an einer Karte klebt.
+    if (alt.format !== current.format || alt.shotSeconds !== current.shotSeconds || alt.tonSrc !== current.tonSrc) {
+      geaendert.push(FLAECHE)
+    }
+    const geloescht = [
+      ...[...vorher.keys()].filter((id) => !nachher.has(id)),
+      ...alt.connections.filter((v) => !current.connections.some((x) => x.id === v.id)).map((v) => v.id),
+    ]
+    if (geaendert.length) mitmachen.melde(geaendert)
+    if (geloescht.length) mitmachen.melde(geloescht, true)
+  }, [current, mitmachen])
 
   /**
    * Das Bildformat dieses Boards.
@@ -377,15 +459,105 @@ export function BoardCanvas({
     mutate((b) => ({ cards: [...b.cards, ...shifted], connections: [...b.connections, ...tcx] }))
   }, [layout, mutate])
 
+  /**
+   * Die Vorschau einer Link-Karte holen und an die Karte schreiben.
+   *
+   * Jede Absage wird GESAGT. Eine Karte, die nach dem Klick unveraendert
+   * dasteht, sieht aus wie ein kaputter Knopf — und der haeufigste Fall
+   * („im Browser gibt es keinen Abruf") ist gar kein Fehler, sondern eine
+   * Eigenschaft der Umgebung.
+   */
+  const holeVorschauFuer = useCallback(async (card: BoardCard) => {
+    if (!card.url) return
+    setVorschauLaeuft(card.id)
+    const r = await holeVorschau(card.url)
+    setVorschauLaeuft(null)
+    if (r.ok) {
+      patchCard(card.id, { vorschau: r.vorschau })
+      return
+    }
+    const texte: Record<string, string> = {
+      'nur-im-desktop': t('board.link.previewDesktopOnly', 'Vorschauen holt nur die Desktop-Fassung — im Browser lassen fremde Seiten den Abruf nicht zu.'),
+      'keine-webadresse': t('board.link.previewNoUrl', 'Das ist keine Web-Adresse.'),
+      'nicht-erreichbar': t('board.link.previewUnreachable', 'Die Seite antwortet nicht.'),
+      'kein-html': t('board.link.previewNoHtml', 'Dahinter liegt keine Seite, sondern eine Datei.'),
+      'zeitueberschreitung': t('board.link.previewTimeout', 'Die Seite hat zu lange gebraucht.'),
+      'zu-viele-weiterleitungen': t('board.link.previewRedirects', 'Zu viele Weiterleitungen.'),
+    }
+    setVorschauMeldung(texte[r.grund] ?? texte['nicht-erreichbar']!)
+  }, [patchCard, t, setVorschauLaeuft, setVorschauMeldung])
+
+  /**
+   * Vertonung aufnehmen — starten und beenden mit demselben Knopf.
+   *
+   * Die Aufnahme laeuft, bis jemand sie beendet, und nicht „bis der Film
+   * durch ist": wer eine Erklaerung spricht, braucht am Ende oft noch einen
+   * Satz, und ein Schnitt bei Sekunde neun naehme ihn weg.
+   */
+  const tonKnopf = useCallback(async () => {
+    if (aufnahme) {
+      const r = await aufnahme.stop()
+      setAufnahme(null)
+      if (!r.ok) return
+      if (r.groesse > EINBETT_GRENZE) {
+        // Dieselbe Grenze wie fuer jede Datei, und derselbe Grund: eine
+        // Aufnahme, die das Projekt unspeicherbar macht, ist keine Hilfe.
+        // Sie wird gar nicht erst uebernommen — ein halb eingebetteter Ton
+        // waere schlimmer als keiner.
+        setVorschauMeldung(t('board.ton.zuGross', 'Die Aufnahme ist zu lang für das Projekt. Nimm sie kürzer auf.'))
+        return
+      }
+      mutate((b) => ({ ...b, tonSrc: r.dataUrl, tonSekunden: r.sekunden }))
+      return
+    }
+    const a = await starteAufnahme()
+    if ('ok' in a) {
+      const texte: Record<string, string> = {
+        'kein-mikrofon': t('board.ton.keinMikro', 'Dieser Rechner bietet kein Mikrofon an.'),
+        abgelehnt: t('board.ton.abgelehnt', 'Ohne Mikrofon-Freigabe geht keine Aufnahme.'),
+        'kein-recorder': t('board.ton.keinRecorder', 'Dieser Browser nimmt keinen Ton auf.'),
+      }
+      setVorschauMeldung(texte[a.grund] ?? texte['kein-recorder']!)
+      return
+    }
+    setAufnahme(a)
+  }, [aufnahme, mutate, t, setVorschauMeldung])
+
+  /**
+   * Den Film als Datei.
+   *
+   * Er wird in ECHTZEIT aufgenommen — `MediaRecorder` stempelt jedes Bild
+   * mit seiner Ankunftszeit, und wer schneller einspeist, bekommt einen
+   * Film, der zu schnell laeuft. Deshalb steht der Fortschritt am Knopf:
+   * sonst wartet jemand auf einen Fehler.
+   */
+  const exportFilm = useCallback(async () => {
+    setExportAnteil(0)
+    const r = await exportiereFilm({
+      shots,
+      format: current.format,
+      tonSrc: current.tonSrc,
+      onFortschritt: setExportAnteil,
+    })
+    setExportAnteil(null)
+    if (!r.ok) {
+      const texte: Record<string, string> = {
+        'kein-recorder': t('board.film.keinRecorder', 'Dieser Browser nimmt kein Video auf.'),
+        'keine-einstellung': t('board.film.leer', 'Auf diesem Board ist keine Einstellung.'),
+        abgebrochen: t('board.film.abgebrochen', 'Abgebrochen.'),
+      }
+      setVorschauMeldung(texte[r.grund] ?? texte['kein-recorder']!)
+      return
+    }
+    // Die Endung sagt, was WIRKLICH in der Datei liegt. Ein `.mp4`, in dem
+    // WebM steckt, ist eine Datei, die der Empfaenger nicht oeffnen kann —
+    // deshalb steht sie erst hier, nach der Aufnahme.
+    herunterladen(r.blob, `${dateiName(title)}.${r.typ.endung}`)
+  }, [shots, current.format, current.tonSrc, title, t, setVorschauMeldung])
+
   const exportMarkdown = useCallback(() => {
     const md = boardToMarkdown(root, title)
-    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${title.toLowerCase().replace(/\s+/g, '-')}.md`
-    a.click()
-    URL.revokeObjectURL(url)
+    herunterladen(new Blob([md], { type: 'text/markdown;charset=utf-8' }), `${dateiName(title)}.md`)
   }, [root, title])
 
   const exportPrint = useCallback(() => { setDruckModus('doc'); setTimeout(() => window.print(), 0) }, [])
@@ -499,10 +671,11 @@ export function BoardCanvas({
       // Board werfen. Ohne das musste man eine Link-Karte anlegen, sie
       // aufklappen und die Adresse hineintippen.
       //
-      // KEINE VORSCHAU. Milanote holt dafuer Titel und Bild von der Seite;
-      // das braucht einen Abruf, und eine erfundene Vorschau waere eine
-      // Behauptung ueber eine Seite, die niemand gelesen hat. Die Karte
-      // zeigt den Host — das ist, was dasteht.
+      // KEINE VORSCHAU VON SELBST. Sie braucht einen Abruf, und der gehoert
+      // dem Nutzer: ein Einfuegen, das im Hintergrund eine fremde Seite
+      // anruft, ist eine Verbindung, die niemand angefragt hat. Die Karte
+      // zeigt den Host — das ist, was dasteht — und traegt den Knopf, der
+      // die Vorschau holt.
       const text = e.clipboardData?.getData('text/plain')?.trim()
       if (!text || !/^https?:\/\/\S+$/i.test(text)) return
       e.preventDefault()
@@ -521,6 +694,51 @@ export function BoardCanvas({
     window.addEventListener('paste', onPaste)
     return () => window.removeEventListener('paste', onPaste)
   }, [addDateiKarte, mutate, selectOnly])
+
+  /**
+   * DER EINWURF: eine Sendung von aussen wird eine Karte.
+   *
+   * Sie landet auf dem Board, das GERADE OFFEN ist, und nicht auf einem
+   * festgelegten — wer etwas einwirft, hat vorher aufgemacht, wohin es soll.
+   *
+   * Sie wird AUSGEWAEHLT und die Flaeche springt nicht. Beides mit Grund:
+   * eine Karte, die lautlos irgendwo erscheint, waehrend jemand anderswo
+   * arbeitet, ist ein Geist; eine Flaeche, die von selbst wegspringt,
+   * waehrend jemand zieht, ist schlimmer.
+   *
+   * Die markierte Textstelle wird zum Notiz-Text der Karte — sie ist die
+   * staerkste Angabe darueber, worum es dem Absender ging. Fehlt sie, steht
+   * die Beschreibung der Seite da; fehlt auch die, steht nichts. Erfunden
+   * wird nichts.
+   */
+  useEffect(() => {
+    return hoereAufSendungen((sendung: Sendung) => {
+      const scroll = boardRef.current?.parentElement
+      const karte: BoardCard = {
+        id: nextId(),
+        type: 'link',
+        w: 240,
+        url: sendung.url.replace(/^https?:\/\//i, ''),
+        title: sendung.titel ?? hostVon(sendung.url),
+        text: sendung.auswahl ?? sendung.beschreibung,
+        x: (scroll?.scrollLeft ?? 0) + 160,
+        y: (scroll?.scrollTop ?? 0) + 160,
+        // Die Vorschau kommt aus dem, was die Seite SELBST ueber sich sagt —
+        // der Clipper hat sie dort gelesen. Kein zweiter Abruf: die Seite
+        // war schon offen.
+        vorschau: {
+          url: sendung.url,
+          host: hostVon(sendung.url),
+          titel: sendung.titel,
+          beschreibung: sendung.beschreibung,
+          bildUrl: sendung.bildUrl,
+          geholtAm: sendung.geholtAm,
+        },
+      }
+      mutate((b) => ({ ...b, cards: [...b.cards, karte] }))
+      selectOnly(karte.id)
+    })
+  }, [mutate, selectOnly])
 
   // ── Größe ziehen (Milanote: untere rechte Ecke) ──
   const onResizePointerDown = (e: React.PointerEvent, card: BoardCard) => {
@@ -797,6 +1015,13 @@ export function BoardCanvas({
   }
 
   const onSurfacePointerMove = (e: React.PointerEvent) => {
+    // Den eigenen Zeiger melden, bevor irgendetwas anderes passiert: auch
+    // beim Schieben und beim Aufziehen eines Rahmens sollen die anderen
+    // sehen, wo jemand ist.
+    if (mitmachen.verbunden) {
+      const z = toBoard(e.clientX, e.clientY)
+      mitmachen.zeiger(z.x, z.y, selection[0])
+    }
     const pan = panRef.current
     if (pan) {
       const sc = scrollRef.current
@@ -893,6 +1118,11 @@ export function BoardCanvas({
             <Icon name={CARD_META[ty].icon} size={15} /> <span className="text-[12px]">{CARD_META[ty].label}</span>
           </button>
         ))}
+        {/* Knipsen statt importieren. Derselbe Ablage-Weg wie jede Datei —
+            und damit dieselbe Prüfung gegen die Einbettungs-Grenze. */}
+        <button type="button" className="av-toolbar-btn av-focus" onClick={() => setSucher(true)} aria-label={t('board.toolbar.kamera', 'Foto aufnehmen')} title={t('board.toolbar.kamera', 'Foto aufnehmen')}>
+          <Icon name="camera" size={15} />
+        </button>
         <button type="button" className="av-toolbar-btn av-focus" onClick={() => fileInputRef.current?.click()} aria-label={t('board.toolbar.photoImport', 'Foto importieren')} title={t('board.toolbar.photoImport', 'Foto importieren')}>
           <Icon name="eye" size={15} /> <span className="text-[12px]">{t('board.toolbar.photo', 'Foto')}</span>
         </button>
@@ -940,6 +1170,27 @@ export function BoardCanvas({
                     zeit: formatLaufzeit(sequenceSeconds(shots)),
                   })
                 : t('board.play.buttonEmpty', 'Abspielen')}
+            </span>
+          </button>
+          {/* VERTONUNG. Ein Knopf, zwei Zustaende — aufnehmen und beenden.
+              Waehrend der Aufnahme traegt er die Farbe, die im Haus „Achtung"
+              heisst, damit niemand vergisst, dass das Mikrofon offen ist. */}
+          <button
+            type="button"
+            className="av-toolbar-btn av-focus"
+            onClick={() => void tonKnopf()}
+            style={aufnahme ? { color: 'var(--av-danger)' } : undefined}
+            aria-pressed={!!aufnahme}
+            aria-label={aufnahme ? t('board.ton.stop', 'Aufnahme beenden') : t('board.ton.start', 'Vertonung aufnehmen')}
+            title={aufnahme ? t('board.ton.stop', 'Aufnahme beenden') : t('board.ton.start', 'Vertonung aufnehmen')}
+          >
+            <Icon name="signal" size={15} />
+            <span className="text-[12px]">
+              {aufnahme
+                ? t('board.ton.stopKurz', 'Aufnahme beenden')
+                : current.tonSrc
+                  ? format(t('board.ton.vorhanden', 'Ton · {zeit}'), { zeit: formatLaufzeit(current.tonSekunden ?? 0) })
+                  : t('board.ton.startKurz', 'Vertonen')}
             </span>
           </button>
           <Menu button={menuButton(current.format ?? t('board.format.none', 'Format'), 'ruler')} align="right">
@@ -994,6 +1245,19 @@ export function BoardCanvas({
                 <MenuItem icon={<Icon name="library" size={14} />} onClick={() => { exportMarkdown(); close() }}>{t('board.export.markdown', 'Als Markdown')}</MenuItem>
                 <MenuItem icon={<Icon name="external" size={14} />} onClick={() => { close(); exportPrint() }}>{t('board.export.pdf', 'Als PDF (Druck)')}</MenuItem>
                 <MenuItem icon={<Icon name="grid" size={14} />} onClick={() => { close(); exportSheet() }}>{t('board.export.sheet', 'Kontaktabzug (PDF)')}</MenuItem>
+                {/* Der Film als Datei. Die Endung steht im Eintrag, weil sie
+                    von diesem Browser abhaengt und nicht von uns. */}
+                <MenuItem
+                  icon={<Icon name="monitor" size={14} />}
+                  onClick={() => { close(); void exportFilm() }}
+                >
+                  {shots.length === 0
+                    ? t('board.export.filmLeer', 'Film — keine Einstellung')
+                    : format(t('board.export.film', 'Film als {endung} ({zeit})'), {
+                        endung: besterTyp()?.endung.toUpperCase() ?? '—',
+                        zeit: formatLaufzeit(sequenceSeconds(shots)),
+                      })}
+                </MenuItem>
               </>
             )}
           </Menu>
@@ -1062,6 +1326,9 @@ export function BoardCanvas({
               style={{ left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h, background: 'color-mix(in srgb, var(--av-accent) 12%, transparent)' }}
             />
           )}
+          {/* Die Zeiger der anderen liegen HIER — in Flaechen-Koordinaten,
+              also mit demselben Zoom wie die Karten. */}
+          <MitmachZeiger andere={mitmachen.andere} />
           {/* Spalten-Panels */}
           {columns.map((col) => {
             const r = layout.get(col.id)!
@@ -1228,6 +1495,8 @@ export function BoardCanvas({
                 selected={isSelected(card.id)} allein={selection.length === 1 && isSelected(card.id)}
                 editing={editingId === card.id}
                 shot={shotById.get(card.id)} boardFormat={current.format} crew={crew}
+                offen={offeneKommentare.get(card.id) ?? 0} onFaden={() => { selectOnly(card.id); setFadenAn(card.id) }}
+                onVorschau={() => holeVorschauFuer(card)} vorschauLaeuft={vorschauLaeuft === card.id}
                 onHeaderPointerDown={(e) => onHeaderPointerDown(e, card)}
                 onHeaderPointerMove={onHeaderPointerMove}
                 onHeaderPointerUp={(e) => onHeaderPointerUp(e, card)}
@@ -1282,10 +1551,71 @@ export function BoardCanvas({
         </>
       )}
 
+      {/* DER FADEN. Er liegt neben der Flaeche und nicht auf ihr: eine
+          Sprechblase an der Karte waere beim Zoomen entweder unlesbar oder
+          so gross, dass sie das Board verdeckt, ueber das gesprochen wird. */}
+      {fadenAn && (
+        <aside
+          className="absolute bottom-3 right-3 z-[120] flex max-h-[60%] w-80 flex-col gap-2 overflow-auto rounded-av-card border border-av-border bg-av-surface-2 p-3"
+          aria-label={t('kommentar.zeigen', 'Kommentare')}
+        >
+          <div className="flex items-center gap-2">
+            <Icon name="library" size={14} style={{ color: 'var(--av-accent)' }} />
+            <span className="truncate text-[12.5px] font-semibold text-av-text">
+              {cardById.get(fadenAn)?.title ?? cardById.get(fadenAn)?.text ?? t('kommentar.zeigen', 'Kommentare')}
+            </span>
+            <button
+              type="button"
+              className="av-icon-btn av-focus ml-auto"
+              style={{ width: 24, height: 24 }}
+              onClick={() => setFadenAn(null)}
+              aria-label={t('board.play.close', 'Schließen')}
+            >
+              <Icon name="close" size={14} />
+            </button>
+          </div>
+          <KommentarFaden
+            objektId={fadenAn}
+            kommentare={kommentare}
+            identitaet={identitaet}
+            onSchreiben={(text, antwortAuf) => onKommentar?.(fadenAn, text, antwortAuf)}
+            onErledigt={(id, erledigt) => onKommentarErledigt?.(id, erledigt)}
+            onEinstellungen={onEinstellungen}
+          />
+        </aside>
+      )}
+
+      {exportAnteil !== null && (
+        <div className="absolute bottom-3 left-1/2 z-[130] -translate-x-1/2 border border-av-border bg-av-surface-2 px-3 py-1.5 text-[12px] text-av-text">
+          {format(t('board.film.laeuft', 'Film wird aufgenommen … {prozent} %'), {
+            prozent: Math.round(exportAnteil * 100),
+          })}
+          <span className="ml-2 text-av-text-muted">
+            {t('board.film.echtzeit', 'läuft in Echtzeit — so lang wie der Film')}
+          </span>
+        </div>
+      )}
+
+      {vorschauMeldung && (
+        <div className="absolute bottom-3 left-1/2 z-[130] -translate-x-1/2 border border-av-border bg-av-surface-2 px-3 py-1.5 text-[12px] text-av-text">
+          {vorschauMeldung}
+          <button
+            type="button"
+            className="av-focus ml-3 text-av-accent"
+            onClick={() => setVorschauMeldung(null)}
+          >
+            {t('board.link.previewOk', 'Verstanden')}
+          </button>
+        </div>
+      )}
+
+      {sucher && <KameraDialog onFoto={(f) => addDateiKarte(f)} onClose={() => setSucher(false)} />}
+
       {spielt && (
         <BoardPlayer
           shots={shots}
           boardFormat={current.format}
+          tonSrc={current.tonSrc}
           title={crumbs[crumbs.length - 1]?.title ?? title}
           onClose={() => setSpielt(false)}
         />
@@ -1415,7 +1745,7 @@ function PrintDoc({ title, board, mode, format: bildformat }: { title: string; b
 
 /* ── Einzelne Karte ────────────────────────────────────────────────────────*/
 function BoardCardView({
-  card, rect, selected, allein, editing, dim, shot, boardFormat, crew,
+  card, rect, selected, allein, editing, dim, shot, boardFormat, crew, offen, onFaden, onVorschau, vorschauLaeuft,
   onHeaderPointerDown, onHeaderPointerMove, onHeaderPointerUp,
   onStartEdit, onEndEdit, onOpen, onPatch, onDelete, onStartConnect,
   onResizePointerDown, onResizePointerMove, onResizePointerUp,
@@ -1437,6 +1767,12 @@ function BoardCardView({
   boardFormat?: BoardFormat
   /** Die Crew dieses Projekts — die Namen, an die eine Aufgabe gehen kann. */
   crew: string[]
+  /** Offene Kommentare an DIESER Karte. 0 heisst: nichts anzeigen. */
+  offen: number
+  onFaden: () => void
+  onVorschau: () => void
+  /** Laeuft der Abruf gerade? Ein Knopf ohne Rueckmeldung wirkt kaputt. */
+  vorschauLaeuft: boolean
   onHeaderPointerDown: (e: React.PointerEvent) => void
   onHeaderPointerMove: (e: React.PointerEvent) => void
   onHeaderPointerUp: (e: React.PointerEvent) => void
@@ -1473,6 +1809,37 @@ function BoardCardView({
           {card.type !== 'board' && card.type !== 'column' && SWATCHES.slice(0, 6).map((s) => (
             <button key={s} type="button" className="h-4 w-4 rounded-none border border-av-border" style={{ background: s }} onClick={() => onPatch({ color: s })} aria-label={format(t('board.swatch', 'Farbe {color}'), { color: s })} />
           ))}
+          {card.type === 'link' && (
+            /* Die Vorschau HOLEN — ein Knopf und kein Automatismus. Ein
+               Board, das beim Oeffnen zwanzig fremde Server anfragt, sagt
+               diesen zwanzig Servern, wann jemand sein Projekt aufmacht.
+               Wer eine Vorschau will, holt sie. */
+            <button
+              type="button"
+              className="av-focus flex items-center gap-1 px-1 text-[11px] text-av-text-muted hover:text-av-text"
+              onClick={onVorschau}
+              disabled={vorschauLaeuft}
+              style={vorschauLaeuft ? { opacity: 0.5 } : undefined}
+              aria-label={t('board.link.preview', 'Vorschau holen')}
+              title={t('board.link.preview', 'Vorschau holen')}
+            >
+              <Icon name={vorschauLaeuft ? 'redo' : 'eye'} size={13} />
+            </button>
+          )}
+          {/* KOMMENTARE. Der Knopf steht an JEDER Karte und nicht nur an
+              denen, die schon einen Faden haben — sonst liesse sich der
+              erste nie schreiben. Die Zahl erscheint nur, wenn es etwas
+              Offenes gibt: eine „0" waere eine Zeile Auskunft ueber nichts. */}
+          <button
+            type="button"
+            className="av-focus flex items-center gap-1 px-1 text-[11px] text-av-text-muted hover:text-av-text"
+            onClick={onFaden}
+            aria-label={t('kommentar.zeigen', 'Kommentare')}
+            title={t('kommentar.zeigen', 'Kommentare')}
+          >
+            <Icon name="library" size={13} />
+            {offen > 0 && <span className="tabular-nums text-av-accent">{offen}</span>}
+          </button>
           {shot && (
             /* Die Standzeit gehoert an die Einstellung und nicht in einen
                Dialog: sie wird beim Ansehen des Bildes geaendert, nicht
@@ -1508,6 +1875,15 @@ function BoardCardView({
           Ein Storyboard wird im Ausdruck besprochen („die Drei nach der
           Totalen"), und eine Reihenfolge, die man nur im Abspielen sieht,
           laesst sich nicht besprechen. */}
+      {offen > 0 && !allein && (
+        <div
+          className="pointer-events-none absolute -right-1 -top-1 z-10 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-semibold tabular-nums"
+          style={{ background: 'var(--av-accent)', color: 'var(--av-accent-text)' }}
+          aria-hidden="true"
+        >
+          {offen}
+        </div>
+      )}
       {shot && (
         <div className="pointer-events-none absolute left-1 top-1 z-10 flex items-center gap-1 bg-av-surface-1/90 px-1.5 py-0.5 text-[11px] tabular-nums text-av-text">
           <span className="font-semibold">{shot.nr}</span>
@@ -1648,8 +2024,23 @@ function CardBody({ card, editing, onEndEdit, onPatch, crew }: { card: BoardCard
     )
   }
   if (card.type === 'link') {
+    const v = card.vorschau
     return (
-      <div className="flex h-full w-full items-center gap-2.5 border border-av-border bg-av-surface-1 p-2.5">
+      <div className="flex h-full w-full flex-col overflow-hidden border border-av-border bg-av-surface-1">
+        {/* DAS VORSCHAUBILD, falls die Seite eines nennt. Es wird hier
+            GELADEN und nicht ins Projekt kopiert: ein heruntergeladenes Bild
+            waere eine fremde Datei im Projekt, ohne dass jemand sie abgelegt
+            hat. Laedt es nicht, verschwindet es — die Karte bleibt lesbar. */}
+        {v?.bildUrl && (
+          <img
+            src={v.bildUrl}
+            alt=""
+            className="h-20 w-full flex-none object-cover"
+            draggable={false}
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
+          />
+        )}
+        <div className="flex min-h-0 flex-1 items-center gap-2.5 p-2.5">
         <span className="grid h-8 w-8 flex-none place-items-center rounded-md bg-av-surface-3 text-av-accent"><Icon name="external" size={15} /></span>
         {editing ? (
           <span className="min-w-0 flex-1">
@@ -1658,10 +2049,18 @@ function CardBody({ card, editing, onEndEdit, onPatch, crew }: { card: BoardCard
           </span>
         ) : (
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[12.5px] font-semibold text-av-text">{card.title}</span>
-            <span className="block truncate text-[11px] text-av-accent">{card.url}</span>
+            <span className="block truncate text-[12.5px] font-semibold text-av-text">
+              {v?.titel ?? card.title}
+            </span>
+            {v?.beschreibung && (
+              <span className="mt-0.5 block overflow-hidden text-[11px] leading-snug text-av-text-secondary" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                {v.beschreibung}
+              </span>
+            )}
+            <span className="block truncate text-[11px] text-av-accent">{v?.host ?? card.url}</span>
           </span>
         )}
+        </div>
       </div>
     )
   }

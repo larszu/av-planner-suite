@@ -80,6 +80,37 @@ contextBridge.exposeInMainWorld('__suiteLexware', {
   hatKey: () => ipcRenderer.invoke('suiteHost:lexware:hasKey'),
 })
 
+// Die Link-Vorschau. Der Renderer bekommt HTML, nicht das Netz: was damit
+// geschieht, entscheidet `parseVorschau`, und was NICHT darin steht, kommt
+// auch nicht heraus.
+contextBridge.exposeInMainWorld('__suiteLinkVorschau', {
+  hole: (url) => ipcRenderer.invoke('suiteHost:linkVorschau:hole', url),
+})
+
+// Der Einwurf. Der Renderer bekommt die SENDUNG und nicht den Server: ob
+// daraus eine Karte wird und auf welchem Board, entscheidet die Oberflaeche.
+contextBridge.exposeInMainWorld('__suiteEinwurf', {
+  starte: () => ipcRenderer.invoke('suiteHost:einwurf:starte'),
+  beende: () => ipcRenderer.invoke('suiteHost:einwurf:beende'),
+  zugang: () => ipcRenderer.invoke('suiteHost:einwurf:zugang'),
+  /** Auf Sendungen hoeren. Gibt eine Abmelde-Funktion zurueck. */
+  hoere: (rueckruf) => {
+    const h = (_e, sendung) => rueckruf(sendung)
+    ipcRenderer.on('suiteHost:einwurf:sendung', h)
+    return () => ipcRenderer.removeListener('suiteHost:einwurf:sendung', h)
+  },
+})
+
+// Das offene Fenster. Der Renderer bekommt Adresse und Geheimnis — den
+// Strom macht er selbst auf, mit denselben Mitteln wie jeder Mitmachende.
+// Ein zweiter Weg ueber das Preload waere dieselbe Sache zweimal, und der
+// Teil, der im Browser laufen MUSS, bliebe ungeprueft.
+contextBridge.exposeInMainWorld('__suiteMitmachen', {
+  starte: () => ipcRenderer.invoke('suiteHost:mitmachen:starte'),
+  beende: () => ipcRenderer.invoke('suiteHost:mitmachen:beende'),
+  zugang: () => ipcRenderer.invoke('suiteHost:mitmachen:zugang'),
+})
+
 if (nativeCable) {
   contextBridge.exposeInMainWorld('__suiteNativeHost', {
     cable: {

@@ -20,6 +20,27 @@ export type {
   SeedWriter,
   SuiteSeed,
 } from './seed'
+export { herunterladen, dateiName } from './herunterladen'
+export type { Anwesend, MitmachFlaeche, MitmachKarte, Stand, Staende, Zusammenfuehrung } from './mitmachen'
+export { FLAECHE, STILLE_MS, fuehreFlaecheZusammen, juenger, markiere, nochDa, seither } from './mitmachen'
+export type { Identitaet } from './identitaet'
+export {
+  IDENTITAETS_FARBEN,
+  farbeVon,
+  identitaetOk,
+  initialenVon,
+  vollstaendig,
+} from './identitaet'
+export type { LinkVorschau } from './linkVorschau'
+export { abrufbar, parseVorschau } from './linkVorschau'
+export type { Kommentar, KommentarErgebnis } from './kommentare'
+export {
+  fadenFuer,
+  fuehreKommentareZusammen,
+  offeneJeObjekt,
+  offeneKommentare,
+  schreibeKommentar,
+} from './kommentare'
 export {
   SUITE_SEED_KIND,
   SUITE_SEED_VERSION,
