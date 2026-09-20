@@ -92,6 +92,7 @@ export const board: Record<string, string> = {
   'board.format.off': 'No frame lines',
   'board.shot.duration': 'Shot length in seconds',
   'board.export.sheet': 'Contact sheet (PDF)',
+  'board.insert.here': 'Insert here',
   'board.sheet.head': '{n} shots · running time {zeit}{format}',
   'board.empty.gestures': 'Drag to select several · space or middle mouse button pans · Ctrl/Cmd + wheel zooms',
 }

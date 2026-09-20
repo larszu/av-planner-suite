@@ -3,6 +3,8 @@ import {
   DEFAULT_SHOT_S,
   formatLaufzeit,
   layoutBoard,
+  sceneGroups,
+  sceneOf,
   sequenceSeconds,
   shotAt,
   shotSequence,
@@ -129,5 +131,61 @@ describe('formatLaufzeit', () => {
     expect(formatLaufzeit(9)).toBe('0:09')
     expect(formatLaufzeit(64)).toBe('1:04')
     expect(formatLaufzeit(600)).toBe('10:00')
+  })
+})
+
+/**
+ * SZENEN — wörtlich aus der Hilfe von recceboard: „Shots placed close together
+ * on the same line are joined by a dotted line: they read as one scene. Pull
+ * one away and the link breaks."
+ *
+ * Auch das wird abgelesen und nicht geführt. Der zweite Satz ist der Test:
+ * wegziehen muss die Szene trennen, ohne dass jemand eine Gruppe auflöst.
+ */
+describe('sceneGroups', () => {
+  const gruppen = (cards: BoardCard[]) => {
+    const b = board(cards)
+    const l = layoutBoard(cards)
+    return sceneGroups(shotSequence(b, l), l).map((g) => g.map((s) => s.card.id))
+  }
+
+  it('fasst zwei dicht nebeneinander liegende Einstellungen zu einer Szene', () => {
+    // 100..300, dann 340 — 40 px Lücke, unter SZENEN_LUECKE.
+    expect(gruppen([bild('a', 100, 100), bild('b', 340, 100)])).toEqual([['a', 'b']])
+  })
+
+  it('trennt, sobald eine weggezogen wird', () => {
+    // Dieselben zwei Karten, die zweite 200 px weiter rechts.
+    expect(gruppen([bild('a', 100, 100), bild('b', 600, 100)])).toEqual([['a'], ['b']])
+  })
+
+  it('trennt über Zeilen hinweg, auch wenn die Lücke klein wäre', () => {
+    const g = gruppen([bild('oben', 100, 100), bild('unten', 340, 400)])
+    expect(g).toEqual([['oben'], ['unten']])
+  })
+
+  it('zählt eine einzeln stehende Einstellung als eigene Szene', () => {
+    // Kein Loch in der Nummerierung: „szenenlos" wäre eine Aussage, die
+    // niemand gemacht hat.
+    expect(gruppen([bild('allein', 100, 100)])).toEqual([['allein']])
+  })
+
+  it('misst die Lücke zwischen den KANTEN, nicht zwischen den Mittelpunkten', () => {
+    // Zwei breite Karten mit demselben sichtbaren Abstand wie zwei schmale
+    // müssen dieselbe Antwort geben.
+    const schmal = gruppen([bild('a', 100, 100, { w: 100 }), bild('b', 240, 100, { w: 100 })])
+    const breit = gruppen([bild('a', 100, 100, { w: 400 }), bild('b', 540, 100, { w: 400 })])
+    expect(schmal).toEqual([['a', 'b']])
+    expect(breit).toEqual([['a', 'b']])
+  })
+
+  it('nennt zu jeder Einstellung ihre Szene', () => {
+    const cards = [bild('a', 100, 100), bild('b', 340, 100), bild('c', 1200, 100)]
+    const l = layoutBoard(cards)
+    const g = sceneGroups(shotSequence(board(cards), l), l)
+    expect(sceneOf(g, 'a')).toBe(1)
+    expect(sceneOf(g, 'b')).toBe(1)
+    expect(sceneOf(g, 'c')).toBe(2)
+    expect(sceneOf(g, 'gibtsnicht')).toBeNull()
   })
 })

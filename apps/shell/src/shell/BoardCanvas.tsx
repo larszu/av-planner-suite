@@ -8,6 +8,7 @@ import {
   applyTemplate,
   boardToMarkdown,
   formatLaufzeit,
+  sceneGroups,
   sequenceSeconds,
   shotSequence,
   type Shot,
@@ -162,6 +163,8 @@ export function BoardCanvas({
    * Zustand und kein Parameter an `window.print()`.
    */
   const [druckModus, setDruckModus] = useState<'doc' | 'sheet'>('doc')
+  /** Rechtsklick auf die freie Flaeche: wo, und was dort hin soll. */
+  const [einfuegenAn, setEinfuegenAn] = useState<{ x: number; y: number; sx: number; sy: number } | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [connectFrom, setConnectFrom] = useState<string | null>(null)
   const [tempPoint, setTempPoint] = useState<Point | null>(null)
@@ -191,6 +194,10 @@ export function BoardCanvas({
   // nicht mehr stimmt (ADR-001).
   const shots = useMemo(() => shotSequence(current, layout), [current, layout])
   const shotById = useMemo(() => new Map(shots.map((sh) => [sh.card.id, sh])), [shots])
+  // Szenen entstehen aus der Lage und werden nicht gefuehrt — wer eine
+  // Einstellung wegzieht, loest sie aus der Szene. Deshalb hier gerechnet
+  // und nirgends gespeichert.
+  const szenen = useMemo(() => sceneGroups(shots, layout), [shots, layout])
 
   const mutate = useCallback((fn: (b: Board) => Board) => setRoot((r) => updateBoardAtPath(r, path, fn)), [path])
 
@@ -310,12 +317,22 @@ export function BoardCanvas({
   const openBoard = useCallback((id: string) => { setPath((p) => [...p, id]); setSelection([]); setEditingId(null) }, [])
   const goToCrumb = useCallback((index: number) => { setPath((p) => p.slice(0, index)); setSelection([]); setEditingId(null) }, [])
 
-  const addCard = useCallback((type: BoardCardType) => {
+  /**
+   * Eine Karte anlegen — wahlweise GENAU DORT.
+   *
+   * Woertlich aus der Hilfe von recceboard: „Press and hold empty canvas to
+   * add something exactly there." Auf einem Board, dessen Schnittfolge aus
+   * der Lage kommt, ist das keine Bequemlichkeit: wer eine Einstellung
+   * zwischen zwei andere setzen will, setzt sie DAZWISCHEN. Ohne die Stelle
+   * landet sie oben links und muss erst an ihren Platz gezogen werden — und
+   * bis dahin steht sie in der Schnittfolge an der falschen.
+   */
+  const addCard = useCallback((type: BoardCardType, at?: Point) => {
     const n = cards.length
     const base: BoardCard = {
       id: nextId(), type,
-      x: 120 + (n % 6) * 28 + (boardRef.current?.parentElement?.scrollLeft ?? 0),
-      y: 120 + (n % 6) * 28 + (boardRef.current?.parentElement?.scrollTop ?? 0),
+      x: at ? Math.max(0, Math.round(at.x)) : 120 + (n % 6) * 28 + (boardRef.current?.parentElement?.scrollLeft ?? 0),
+      y: at ? Math.max(0, Math.round(at.y)) : 120 + (n % 6) * 28 + (boardRef.current?.parentElement?.scrollTop ?? 0),
       w: type === 'color' ? 110 : type === 'look' ? 190 : type === 'column' ? 280 : type === 'board' ? 210 : 230,
     }
     if (type === 'heading') base.text = t('board.type.heading', 'Überschrift')
@@ -494,6 +511,40 @@ export function BoardCanvas({
     if (d) {
       const p = toBoard(e.clientX, e.clientY)
       const cur = cardById.get(d.id)
+
+      // ─── EINE KARTE AUF EINE ANDERE: PLAETZE TAUSCHEN ──────────────────
+      //
+      // Woertlich aus der Hilfe von recceboard: „Drag one card onto another
+      // to swap their places."
+      //
+      // Auf einem Board, dessen Schnittfolge aus der Lage kommt, IST der
+      // Tausch das Umsortieren — und zwar genau zweier Einstellungen, ohne
+      // dass der Rest sich bewegt. Das ist der Satz „rearranging two shots
+      // doesn't disturb the rest of the board", nur dass er hier aus der
+      // Regel folgt statt zusaetzlich gebaut zu werden.
+      //
+      // Nur bei EINER gezogenen Karte: was beim Tausch aus einer Auswahl von
+      // fuenf werden soll, hat niemand gesagt, und eine erfundene Antwort
+      // waere hier besonders teuer — sie versetzt fuenf Einstellungen.
+      const ziel = d.mit.length === 1
+        ? cards.find((c) => c.id !== d.id && c.type !== 'column' && !c.columnId && rectContains(layout.get(c.id), p))
+        : undefined
+      if (ziel && cur && cur.type !== 'column' && d.moved) {
+        const a = d.mit[0]!
+        mutate((b) => ({
+          ...b,
+          cards: b.cards.map((c) =>
+            c.id === d.id
+              ? { ...c, x: ziel.x, y: ziel.y, columnId: undefined }
+              : c.id === ziel.id
+                ? { ...c, x: a.x, y: a.y, columnId: undefined }
+                : c,
+          ),
+        }))
+        dragRef.current = null
+        return
+      }
+
       const targetCol = cards.find((c) => c.type === 'column' && c.id !== d.id && rectContains(layout.get(c.id), p))
       if (targetCol && cur && cur.type !== 'column') patchCard(d.id, { columnId: targetCol.id })
     }
@@ -878,7 +929,15 @@ export function BoardCanvas({
         onPointerMove={onSurfacePointerMove}
         onPointerUp={onSurfacePointerUp}
         onWheel={onWheel}
-        onContextMenu={(e) => { if (panRef.current) e.preventDefault() }}
+        onContextMenu={(e) => {
+          if (panRef.current) { e.preventDefault(); return }
+          // Nur auf der FREIEN Flaeche: ueber einer Karte gehoert das
+          // Kontextmenue des Browsers hin (Bild kopieren, Link oeffnen).
+          if ((e.target as HTMLElement).closest('[data-card-id],[data-column-id]')) return
+          e.preventDefault()
+          const p = toBoard(e.clientX, e.clientY)
+          setEinfuegenAn({ x: p.x, y: p.y, sx: e.clientX, sy: e.clientY })
+        }}
         onDragOver={(e) => { e.preventDefault() }}
         onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files, toBoard(e.clientX, e.clientY)) }}
       >
@@ -949,6 +1008,31 @@ export function BoardCanvas({
 
           {/* Verbindungen */}
           <svg className="pointer-events-none absolute inset-0" width={planeW} height={planeH}>
+            {/* SZENEN. Woertlich aus der Hilfe von recceboard: „Shots placed
+                close together on the same line are joined by a dotted line:
+                they read as one scene." Die Linie wird GERECHNET und nicht
+                gespeichert — wer eine Einstellung wegzieht, loest sie aus
+                der Szene, und niemand muss eine Gruppe aufloesen. */}
+            {szenen.flatMap((gruppe) =>
+              gruppe.slice(1).map((sh, i) => {
+                const a = layout.get(gruppe[i]!.card.id)
+                const b = layout.get(sh.card.id)
+                if (!a || !b) return null
+                const y = a.y + a.h / 2
+                return (
+                  <line
+                    key={`szene-${sh.card.id}`}
+                    x1={a.x + a.w}
+                    y1={y}
+                    x2={b.x}
+                    y2={b.y + b.h / 2}
+                    stroke="var(--av-text-muted)"
+                    strokeWidth={1.5}
+                    strokeDasharray="2 4"
+                  />
+                )
+              }),
+            )}
             {connections.map((x) => {
               const a = anchorOut(x.from); const b = anchorIn(x.to)
               if (!a || !b) return null
@@ -1033,6 +1117,36 @@ export function BoardCanvas({
           )}
         </div>
       </div>
+
+      {einfuegenAn && (
+        <>
+          {/* Die Klickfalle liegt UNTER dem Menue und faengt alles ab: ohne
+              sie bliebe das Menue beim naechsten Klick daneben stehen, und
+              zwei geoeffnete Menues auf einer Flaeche sind eins zu viel. */}
+          <div className="fixed inset-0 z-[190]" onPointerDown={() => setEinfuegenAn(null)} />
+          <div
+            className="fixed z-[200] min-w-[9rem] border border-av-border bg-av-surface-2 py-1 shadow-none"
+            style={{ left: Math.min(einfuegenAn.sx, window.innerWidth - 170), top: Math.min(einfuegenAn.sy, window.innerHeight - 320) }}
+            role="menu"
+            aria-label={t('board.insert.here', 'Hier einfügen')}
+          >
+            <div className="px-3 py-1 text-[11px] uppercase tracking-wider text-av-text-faint">
+              {t('board.insert.here', 'Hier einfügen')}
+            </div>
+            {ADD_TYPES.map((ty) => (
+              <button
+                key={ty}
+                type="button"
+                role="menuitem"
+                className="av-focus flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] text-av-text hover:bg-av-surface-3"
+                onClick={() => { addCard(ty, { x: einfuegenAn.x, y: einfuegenAn.y }); setEinfuegenAn(null) }}
+              >
+                <Icon name={CARD_META[ty].icon} size={14} /> {CARD_META[ty].label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {spielt && (
         <BoardPlayer
