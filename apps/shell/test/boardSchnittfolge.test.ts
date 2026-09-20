@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_SHOT_S,
+  boardToMarkdown,
+  cardHeight,
   formatLaufzeit,
   layoutBoard,
   sceneGroups,
@@ -187,5 +189,64 @@ describe('sceneGroups', () => {
     expect(sceneOf(g, 'b')).toBe(1)
     expect(sceneOf(g, 'c')).toBe(2)
     expect(sceneOf(g, 'gibtsnicht')).toBeNull()
+  })
+})
+
+/**
+ * DATEI-KARTEN — die „vielseitigen Elemente" aus der Milanote-Beschreibung:
+ * „Textnotizen, Bilder, To-Do-Listen, Links, Videos, Audio-Dateien und
+ * Dokumente (PDFs, Word etc.)".
+ *
+ * Bis dahin fiel eine abgelegte PDF lautlos auf den Boden. Gemessen wird
+ * hier die Regel, die beim Nachbauen schiefgehen kann: eine Karte hat eine
+ * HÖHE, und eine unbekannte Kartenart hätte keine.
+ */
+describe('Datei-Karten', () => {
+  it('gibt jeder neuen Kartenart eine Höhe', () => {
+    for (const type of ['video', 'audio', 'file'] as const) {
+      const h = cardHeight({ id: 'x', type, x: 0, y: 0, w: 260, ratio: 16 / 9 })
+      expect(h, type).toBeGreaterThan(0)
+    }
+  })
+
+  it('rechnet die Höhe eines Films aus seinem Seitenverhältnis plus Bedienleiste', () => {
+    const breit = cardHeight({ id: 'x', type: 'video', x: 0, y: 0, w: 320, ratio: 16 / 9 })
+    const hoch = cardHeight({ id: 'x', type: 'video', x: 0, y: 0, w: 320, ratio: 9 / 16 })
+    expect(hoch).toBeGreaterThan(breit)
+    // Ohne den Zuschlag für die Bedienleiste schnitte die Karte genau die
+    // Knöpfe ab, die man braucht.
+    expect(breit).toBeGreaterThan(Math.round(320 / (16 / 9)))
+  })
+
+  it('schreibt im Markdown den Dateinamen und nicht die data-URL', () => {
+    const md = boardToMarkdown(
+      board([
+        {
+          id: 'f',
+          type: 'file',
+          x: 0,
+          y: 0,
+          w: 260,
+          title: 'Ablaufplan',
+          fileName: 'Ablaufplan.pdf',
+          src: 'data:application/pdf;base64,AAAAAAAAAAAAAAAA',
+        },
+      ]),
+      'Test',
+    )
+    expect(md).toContain('Ablaufplan.pdf')
+    // Ein eingebettetes Video wäre dort ein Megabyte Zeichensalat.
+    expect(md).not.toContain('data:')
+  })
+
+  it('zählt eine Datei-Karte NICHT als Einstellung', () => {
+    // Eine PDF ist kein Bild: sie läuft im Film nicht mit, und die
+    // Schnittfolge bliebe sonst an einer Tabelle hängen.
+    const b = board([
+      bild('bild', 100, 100),
+      { id: 'pdf', type: 'file', x: 400, y: 100, w: 260, fileName: 'x.pdf' },
+      { id: 'ton', type: 'audio', x: 700, y: 100, w: 260, fileName: 'x.wav' },
+    ])
+    expect(shotSequence(b).map((s) => s.card.id)).toEqual(['bild'])
   })
 })

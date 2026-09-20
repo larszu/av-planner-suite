@@ -60,6 +60,13 @@ const typeLabel = (t: TFunc): Record<string, string> => ({
   column: t('panels.board.type.column', 'Spalten'),
   board: t('panels.board.type.board', 'Unterboards'),
   image: t('panels.board.type.image', 'Bilder'),
+  // Ohne diese drei stand im Panel „video 1" und „file 1" — der rohe
+  // Typname, klein geschrieben und englisch, mitten in einer deutschen
+  // Liste. Eine Tabelle mit einer Luecke faellt erst auf, wenn jemand die
+  // Luecke fuellt.
+  video: t('panels.board.type.video', 'Filme'),
+  audio: t('panels.board.type.audio', 'Tonaufnahmen'),
+  file: t('panels.board.type.file', 'Dateien'),
 })
 
 export function PropertiesPanel({

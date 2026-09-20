@@ -101,7 +101,22 @@ export interface ProjectTask {
 
 /* ── Board (Milanote-artiges Kreativ-Canvas) ───────────────────────────────*/
 
-export type BoardCardType = 'heading' | 'note' | 'link' | 'todo' | 'color' | 'look' | 'column' | 'board' | 'image'
+export type BoardCardType =
+  | 'heading'
+  | 'note'
+  | 'link'
+  | 'todo'
+  | 'color'
+  | 'look'
+  | 'column'
+  | 'board'
+  | 'image'
+  /** Ein Film — spielt auf der Karte, mit Bedienleiste. */
+  | 'video'
+  /** Eine Tonaufnahme — Sprachnotiz, Mitschnitt, Musik. */
+  | 'audio'
+  /** Alles andere: PDF, Textdokument, Tabelle, Zeichnung. */
+  | 'file'
 
 /** Eine Karte auf dem Board (frei positioniert oder in einer Spalte). */
 export interface BoardCard {
@@ -125,6 +140,30 @@ export interface BoardCard {
   /** Für type 'image': Seitenverhältnis Breite/Höhe (für die Karten-Höhe). */
   ratio?: number
   /**
+   * Der Name der Datei, aus der diese Karte entstanden ist.
+   *
+   * Er steht NEBEN dem Titel: der Titel ist, was jemand hingeschrieben hat,
+   * der Dateiname ist, was auf der Platte lag. Wer den Titel ändert, hat die
+   * Datei nicht umbenannt.
+   */
+  fileName?: string
+  /** Größe in Bytes, wie sie beim Ablegen gemessen wurde. */
+  fileSize?: number
+  /** MIME-Typ, unverändert wie ihn der Browser gemeldet hat. */
+  fileType?: string
+  /**
+   * Ist der Inhalt im Projekt enthalten?
+   *
+   * `false` heisst: die Karte KENNT die Datei, trägt sie aber nicht — sie war
+   * größer als `EINBETT_GRENZE`. Das ist eine Aussage und kein Defekt, und
+   * sie steht auf der Karte, damit niemand die Datei beim nächsten Öffnen
+   * vermisst, ohne zu wissen warum.
+   *
+   * Fehlt das Feld bei einer Karte mit `src`, ist der Inhalt da — so sind
+   * alle Bild-Karten entstanden, die es vor diesem Feld schon gab.
+   */
+  embedded?: boolean
+  /**
    * Standzeit dieser Einstellung in Sekunden, wenn das Board als Film läuft.
    *
    * Nur `image` und `look` tragen sie — eine Notiz ist keine Einstellung.
@@ -139,6 +178,18 @@ export interface BoardConnection {
   id: string
   from: string
   to: string
+  /**
+   * Trägt die Verbindung eine Pfeilspitze?
+   *
+   * Der Unterschied ist eine AUSSAGE und keine Verzierung: eine Linie sagt
+   * „das gehört zusammen", ein Pfeil sagt „daraus folgt das". Auf einem
+   * Board, das eine Kampagne oder einen Signalweg skizziert, ist das nicht
+   * dasselbe.
+   *
+   * Fehlt das Feld, ist es ein Pfeil — so waren alle Verbindungen gemeint,
+   * die es vor diesem Feld schon gab, und sie wurden auch so gezeichnet.
+   */
+  plain?: boolean
 }
 
 export interface Board {
@@ -168,6 +219,31 @@ export interface Board {
  * abgleichen, `2.3866` nicht.
  */
 export type BoardFormat = '16:9' | '2.39:1' | '2:1' | '4:3' | '1:1' | '9:16'
+
+/**
+ * Bis hierher wandert eine abgelegte Datei MIT ins Projekt.
+ *
+ * ─── WARUM ES EINE GRENZE GIBT ──────────────────────────────────────────
+ *
+ * Eine eingebettete Datei liegt als data-URL im Projekt, und das Projekt
+ * geht in den lokalen Speicher, in eine Datei und über den Seed an die
+ * Planer. Ein 400-MB-Mitschnitt darin macht das Projekt unspeicherbar —
+ * und zwar erst beim Speichern, also lange nachdem jemand ihn abgelegt hat.
+ *
+ * ─── WARUM SIE NICHT STILL ABLEHNT ──────────────────────────────────────
+ *
+ * Über der Grenze entsteht die Karte trotzdem, mit Name, Größe und Typ,
+ * und sie sagt auf dem Bild, dass der Inhalt nicht dabei ist. Eine
+ * verschluckte Datei wäre die schlechtere Antwort: wer sie ablegt, hat
+ * eine Absicht, und die gehört aufs Board, auch wenn der Inhalt dort nicht
+ * hinpasst.
+ *
+ * 8 MiB ist die Größe, bei der ein Projekt mit einem Dutzend solcher
+ * Karten noch in den lokalen Speicher passt (dessen übliche Grenze bei
+ * 5–10 MB je Ursprung liegt, weshalb grosse Projekte ohnehin in eine Datei
+ * gehören).
+ */
+export const EINBETT_GRENZE = 8 * 1024 * 1024
 
 export const BOARD_FORMAT_RATIO: Record<BoardFormat, number> = {
   '16:9': 16 / 9,

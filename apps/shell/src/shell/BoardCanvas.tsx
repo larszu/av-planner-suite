@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon, Menu, MenuItem, confirmDialog } from '@avplan/ui'
-import { useT, format, type TFunc } from '../i18n'
-import { BOARD_FORMAT_RATIO, type Board, type BoardCard, type BoardCardType, type BoardFormat } from '../data/project'
+import { useLanguage, useT, format, type Language, type TFunc } from '../i18n'
+import { BOARD_FORMAT_RATIO, EINBETT_GRENZE, type Board, type BoardCard, type BoardCardType, type BoardFormat } from '../data/project'
 import { BoardPlayer } from './BoardPlayer'
 import {
   applyTemplate,
@@ -48,6 +48,9 @@ const cardMeta = (t: TFunc): Record<BoardCardType, { label: string; icon: Parame
   column: { label: t('board.type.column', 'Spalte'), icon: 'layers' },
   board: { label: t('board.type.board', 'Unterboard'), icon: 'board' },
   image: { label: t('board.type.image', 'Bild'), icon: 'eye' },
+  video: { label: t('board.type.video', 'Film'), icon: 'monitor' },
+  audio: { label: t('board.type.audio', 'Ton'), icon: 'signal' },
+  file: { label: t('board.type.file', 'Datei'), icon: 'library' },
 })
 
 const templates = (t: TFunc): { id: TemplateId; label: string }[] => [
@@ -59,6 +62,15 @@ const templates = (t: TFunc): { id: TemplateId; label: string }[] => [
 interface Point { x: number; y: number }
 const rectContains = (r: Rect | undefined, p: Point) =>
   !!r && p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h
+
+/** „vimeo.com" aus einer Adresse — der Teil, den ein Mensch wiedererkennt. */
+function hostVon(url: string): string {
+  try {
+    return new URL(url).host.replace(/^www\./, '')
+  } catch {
+    return url
+  }
+}
 
 const cloneBoard = (b: Board): Board => JSON.parse(JSON.stringify(b)) as Board
 
@@ -378,32 +390,85 @@ export function BoardCanvas({
   const exportSheet = useCallback(() => { setDruckModus('sheet'); setTimeout(() => window.print(), 0) }, [])
 
   // ── Foto-Import (Upload / Drag&Drop / Einfügen) ──
-  const addImageFile = useCallback((file: File, at?: Point, index = 0) => {
+  /**
+   * Eine abgelegte Datei wird eine Karte.
+   *
+   * ─── VIER ARTEN, EINE REGEL ────────────────────────────────────────────
+   *
+   * Bild, Film, Ton, alles andere. Welche es ist, sagt der MIME-Typ des
+   * Browsers — nicht die Endung: eine `.mov`, die als `video/quicktime`
+   * gemeldet wird, ist ein Film, und eine umbenannte Textdatei ist keiner,
+   * egal was hinten steht.
+   *
+   * ─── UND DIE GRENZE ────────────────────────────────────────────────────
+   *
+   * Über `EINBETT_GRENZE` entsteht die Karte TROTZDEM — mit Name, Größe und
+   * Typ, und mit `embedded: false`. Wer eine Datei ablegt, hat eine Absicht,
+   * und die gehört aufs Board, auch wenn der Inhalt dort nicht hinpasst.
+   * Eine verschluckte Datei wäre die schlechtere Antwort, und eine
+   * eingebettete 400-MB-Datei machte das Projekt unspeicherbar — erst beim
+   * Speichern, also lange nachdem jemand sie abgelegt hat.
+   */
+  const addDateiKarte = useCallback((file: File, at?: Point, index = 0) => {
+    const scroll = boardRef.current?.parentElement
+    const type: BoardCardType = file.type.startsWith('image/')
+      ? 'image'
+      : file.type.startsWith('video/')
+        ? 'video'
+        : file.type.startsWith('audio/')
+          ? 'audio'
+          : 'file'
+    const x = (at?.x ?? (scroll?.scrollLeft ?? 0) + 120) + index * 24
+    const y = (at?.y ?? (scroll?.scrollTop ?? 0) + 120) + index * 24
+    const gemeinsam = {
+      id: nextId(),
+      type,
+      title: file.name.replace(/\.[^.]+$/, ''),
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      x,
+      y,
+    }
+
+    const lege = (karte: BoardCard) => {
+      mutate((b) => ({ ...b, cards: [...b.cards, karte] }))
+      selectOnly(karte.id)
+    }
+
+    if (file.size > EINBETT_GRENZE) {
+      lege({ ...gemeinsam, w: type === 'image' || type === 'video' ? 240 : 260, embedded: false })
+      return
+    }
+
     const reader = new FileReader()
     reader.onload = () => {
       const src = String(reader.result)
-      const img = new Image()
-      img.onload = () => {
-        const ratio = img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 1.5
-        const scroll = boardRef.current?.parentElement
-        const base: BoardCard = {
-          id: nextId(), type: 'image', w: 240, ratio, src,
-          title: file.name.replace(/\.[^.]+$/, ''),
-          x: (at?.x ?? (scroll?.scrollLeft ?? 0) + 120) + index * 24,
-          y: (at?.y ?? (scroll?.scrollTop ?? 0) + 120) + index * 24,
+      if (type === 'image') {
+        const img = new Image()
+        img.onload = () => {
+          const ratio = img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 1.5
+          lege({ ...gemeinsam, w: 240, ratio, src, embedded: true })
         }
-        mutate((b) => ({ ...b, cards: [...b.cards, base] }))
-        selectOnly(base.id)
+        // Ein Bild, das der Browser nicht dekodieren kann, wird keine
+        // Bild-Karte mit kaputtem Inhalt, sondern eine Datei-Karte. Der
+        // Unterschied ist sichtbar und erklaert sich selbst.
+        img.onerror = () => lege({ ...gemeinsam, type: 'file', w: 260, src, embedded: true })
+        img.src = src
+        return
       }
-      img.src = src
+      lege({ ...gemeinsam, w: type === 'video' ? 300 : 260, ...(type === 'video' ? { ratio: 16 / 9 } : {}), src, embedded: true })
     }
     reader.readAsDataURL(file)
   }, [mutate, selectOnly])
 
   const handleFiles = useCallback((files: FileList | null, at?: Point) => {
     if (!files) return
-    Array.from(files).filter((f) => f.type.startsWith('image/')).forEach((f, i) => addImageFile(f, at, i))
-  }, [addImageFile])
+    // ALLE Dateien, nicht nur Bilder. Bis hierher fiel ein abgelegtes PDF
+    // lautlos auf den Boden — und ein Werkzeug, das auf eine Handlung gar
+    // nicht antwortet, sieht kaputt aus.
+    Array.from(files).forEach((f, i) => addDateiKarte(f, at, i))
+  }, [addDateiKarte, mutate, selectOnly])
 
   // Einfügen aus der Zwischenablage (Cmd/Ctrl+V) → Bild-Karte.
   useEffect(() => {
@@ -411,15 +476,42 @@ export function BoardCanvas({
       const items = e.clipboardData?.items
       if (!items) return
       const files: File[] = []
-      for (const it of items) if (it.type.startsWith('image/')) { const f = it.getAsFile(); if (f) files.push(f) }
+      for (const it of items) if (it.kind === 'file') { const f = it.getAsFile(); if (f) files.push(f) }
       if (files.length) {
         e.preventDefault()
-        files.forEach((f, i) => addImageFile(f, undefined, i))
+        files.forEach((f, i) => addDateiKarte(f, undefined, i))
+        return
       }
+      // EINE EINGEFUEGTE ADRESSE WIRD EINE LINK-KARTE.
+      //
+      // Der Web-Clipper von Milanote ist eine Browser-Erweiterung und damit
+      // hier nicht zu haben. Was von ihm bleibt und ohne Erweiterung geht,
+      // ist der eigentliche Griff: etwas im Netz finden, kopieren, aufs
+      // Board werfen. Ohne das musste man eine Link-Karte anlegen, sie
+      // aufklappen und die Adresse hineintippen.
+      //
+      // KEINE VORSCHAU. Milanote holt dafuer Titel und Bild von der Seite;
+      // das braucht einen Abruf, und eine erfundene Vorschau waere eine
+      // Behauptung ueber eine Seite, die niemand gelesen hat. Die Karte
+      // zeigt den Host — das ist, was dasteht.
+      const text = e.clipboardData?.getData('text/plain')?.trim()
+      if (!text || !/^https?:\/\/\S+$/i.test(text)) return
+      e.preventDefault()
+      const base: BoardCard = {
+        id: nextId(),
+        type: 'link',
+        w: 240,
+        url: text.replace(/^https?:\/\//i, ''),
+        title: hostVon(text),
+        x: (boardRef.current?.parentElement?.scrollLeft ?? 0) + 140,
+        y: (boardRef.current?.parentElement?.scrollTop ?? 0) + 140,
+      }
+      mutate((b) => ({ ...b, cards: [...b.cards, base] }))
+      selectOnly(base.id)
     }
     window.addEventListener('paste', onPaste)
     return () => window.removeEventListener('paste', onPaste)
-  }, [addImageFile])
+  }, [addDateiKarte, mutate, selectOnly])
 
   // ── Größe ziehen (Milanote: untere rechte Ecke) ──
   const onResizePointerDown = (e: React.PointerEvent, card: BoardCard) => {
@@ -1008,6 +1100,14 @@ export function BoardCanvas({
 
           {/* Verbindungen */}
           <svg className="pointer-events-none absolute inset-0" width={planeW} height={planeH}>
+            <defs>
+              {/* Die Pfeilspitze sitzt AUF dem Linienende (`refX` am
+                  Spitzenende) und nicht dahinter — sonst steht sie im Bild
+                  der Zielkarte statt an ihrer Kante. */}
+              <marker id="av-pfeil" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 1 L 9 5 L 0 9 z" fill="var(--av-accent)" />
+              </marker>
+            </defs>
             {/* SZENEN. Woertlich aus der Hilfe von recceboard: „Shots placed
                 close together on the same line are joined by a dotted line:
                 they read as one scene." Die Linie wird GERECHNET und nicht
@@ -1053,7 +1153,14 @@ export function BoardCanvas({
                     style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
                     onPointerDown={(e) => { e.stopPropagation(); setSelectedLink(x.id); setSelection([]) }}
                   />
-                  <path d={d} fill="none" stroke="var(--av-accent)" strokeWidth={gewaehlt ? 2.6 : 1.6} opacity={gewaehlt ? 1 : 0.7} />
+                  <path
+                    d={d}
+                    fill="none"
+                    stroke="var(--av-accent)"
+                    strokeWidth={gewaehlt ? 2.6 : 1.6}
+                    opacity={gewaehlt ? 1 : 0.7}
+                    markerEnd={x.plain ? undefined : 'url(#av-pfeil)'}
+                  />
                 </g>
               )
             })}
@@ -1072,15 +1179,33 @@ export function BoardCanvas({
             const a = anchorOut(x.from); const b = anchorIn(x.to)
             if (!a || !b) return null
             return (
-              <button
-                type="button"
-                className="av-focus absolute z-30 grid h-6 w-6 place-items-center rounded-none border border-av-border bg-av-surface-2 text-av-text"
-                style={{ left: (a.x + b.x) / 2 - 12, top: (a.y + b.y) / 2 - 12 }}
-                onClick={() => { mutate((bd) => ({ ...bd, connections: bd.connections.filter((c) => c.id !== x.id) })); setSelectedLink(null) }}
-                aria-label={t('board.link.delete', 'Verbindung löschen')}
+              <div
+                className="absolute z-30 flex items-center gap-0.5 border border-av-border bg-av-surface-2 p-0.5"
+                style={{ left: (a.x + b.x) / 2 - 28, top: (a.y + b.y) / 2 - 14 }}
               >
-                <Icon name="close" size={13} />
-              </button>
+                {/* Linie oder Pfeil — eine Aussage und keine Verzierung: die
+                    Linie sagt „gehoert zusammen", der Pfeil „daraus folgt". */}
+                <button
+                  type="button"
+                  className="av-focus grid h-6 w-6 place-items-center text-av-text"
+                  onClick={() => mutate((bd) => ({
+                    ...bd,
+                    connections: bd.connections.map((c) => (c.id === x.id ? { ...c, plain: !c.plain } : c)),
+                  }))}
+                  aria-label={x.plain ? t('board.link.toArrow', 'Als Pfeil zeichnen') : t('board.link.toLine', 'Als Linie zeichnen')}
+                  title={x.plain ? t('board.link.toArrow', 'Als Pfeil zeichnen') : t('board.link.toLine', 'Als Linie zeichnen')}
+                >
+                  <Icon name={x.plain ? 'redo' : 'ruler'} size={13} />
+                </button>
+                <button
+                  type="button"
+                  className="av-focus grid h-6 w-6 place-items-center text-av-text"
+                  onClick={() => { mutate((bd) => ({ ...bd, connections: bd.connections.filter((c) => c.id !== x.id) })); setSelectedLink(null) }}
+                  aria-label={t('board.link.delete', 'Verbindung löschen')}
+                >
+                  <Icon name="close" size={13} />
+                </button>
+              </div>
             )
           })()}
 
@@ -1317,7 +1442,24 @@ function BoardCardView({
     <div data-card-id={card.id} className="absolute select-none" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h, opacity: dim ? 0.28 : 1 }}>
       {allein && (
         <div className="absolute -top-8 left-0 z-20 flex items-center gap-1 rounded-av-control border border-av-border bg-av-surface-2 p-0.5">
-          {(card.type === 'color' || card.type === 'look') && SWATCHES.slice(0, 6).map((s) => (
+          {/* FARBE FUER JEDE KARTE, nicht nur fuer Farb- und Look-Karten.
+              Auf einem Milanote-artigen Board ist die Farbe einer Notiz eine
+              Ordnung: „alles Gelbe ist offen". Bis hierher konnten genau
+              zwei Kartenarten eine tragen, und die Ordnung war damit nicht
+              zu machen. Das letzte Feld nimmt sie wieder weg — ohne das
+              waere eine einmal gesetzte Farbe endgueltig. */}
+          {card.type !== 'board' && card.type !== 'column' && (
+            <button
+              type="button"
+              className="av-focus grid h-4 w-4 place-items-center border border-av-border text-[9px] text-av-text-muted"
+              onClick={() => onPatch({ color: undefined })}
+              aria-label={t('board.color.none', 'Ohne Farbe')}
+              title={t('board.color.none', 'Ohne Farbe')}
+            >
+              ×
+            </button>
+          )}
+          {card.type !== 'board' && card.type !== 'column' && SWATCHES.slice(0, 6).map((s) => (
             <button key={s} type="button" className="h-4 w-4 rounded-none border border-av-border" style={{ background: s }} onClick={() => onPatch({ color: s })} aria-label={format(t('board.swatch', 'Farbe {color}'), { color: s })} />
           ))}
           {shot && (
@@ -1420,8 +1562,55 @@ function BoardTile({ card, selected, onPatch, onOpen }: { card: BoardCard; selec
   )
 }
 
+/**
+ * „Der Inhalt ist nicht dabei" — als Aussage, nicht als Fehler.
+ *
+ * Die Karte kennt die Datei (Name, Groesse, Typ); sie traegt sie nur nicht,
+ * weil sie ueber der Einbettungsgrenze lag. Wer das nicht liest, sucht beim
+ * naechsten Oeffnen nach einem Bild, das nie da war.
+ */
+function NichtDabei({ card }: { card: BoardCard }) {
+  const t = useT()
+  const lang = useLanguage()
+  return (
+    <div className="flex min-h-0 flex-1 flex-col justify-center gap-0.5 bg-av-surface-3 px-2 py-1.5">
+      <span className="text-[11px] font-semibold text-av-warn">
+        {t('board.file.notEmbedded', 'Inhalt nicht im Projekt')}
+      </span>
+      <span className="text-[10.5px] leading-snug text-av-text-muted">
+        {format(t('board.file.tooLarge', '{groesse} — über der Grenze von {grenze}. Die Datei liegt nur auf diesem Rechner.'), {
+          groesse: dateiGroesse(card.fileSize, lang),
+          grenze: dateiGroesse(EINBETT_GRENZE, lang),
+        })}
+      </span>
+    </div>
+  )
+}
+
+/**
+ * „3,4 MB" — eine Groesse, wie sie ein Mensch liest.
+ *
+ * Mit dem Dezimalzeichen der eingestellten Sprache und nicht mit dem Punkt
+ * aus `toFixed`: „9.0 MB" liest sich auf Deutsch wie neun Bytes, und die
+ * Zahl steht hier neben einer Grenze, an der jemand etwas ablesen soll.
+ */
+function dateiGroesse(bytes: number | undefined, lang: Language): string {
+  if (bytes === undefined) return '—'
+  const zahl = (n: number, stellen: number) =>
+    new Intl.NumberFormat(lang === 'de' ? 'de-DE' : 'en-GB', {
+      minimumFractionDigits: stellen,
+      maximumFractionDigits: stellen,
+    }).format(n)
+  if (bytes < 1024) return `${zahl(bytes, 0)} B`
+  const kb = bytes / 1024
+  if (kb < 1024) return `${zahl(kb, kb < 10 ? 1 : 0)} kB`
+  const mb = kb / 1024
+  return `${zahl(mb, mb < 10 ? 1 : 0)} MB`
+}
+
 function CardBody({ card, editing, onEndEdit, onPatch }: { card: BoardCard; editing: boolean; onEndEdit: () => void; onPatch: (p: Partial<BoardCard>) => void }) {
   const t = useT()
+  const lang = useLanguage()
   if (card.type === 'heading') {
     return editing
       ? <input autoFocus className="w-full bg-transparent text-[18px] font-bold text-av-text outline-none" value={card.text ?? ''} onChange={(e) => onPatch({ text: e.target.value })} onBlur={onEndEdit} onKeyDown={(e) => e.key === 'Enter' && onEndEdit()} />
@@ -1429,7 +1618,18 @@ function CardBody({ card, editing, onEndEdit, onPatch }: { card: BoardCard; edit
   }
   if (card.type === 'note') {
     return (
-      <div className="h-full w-full border border-av-border p-2.5" style={{ background: 'color-mix(in srgb, var(--av-warn) 12%, var(--av-surface-1))' }}>
+      <div
+        className="h-full w-full border border-av-border p-2.5"
+        style={{
+          // Die gewaehlte Farbe als LASUR und nicht als Flaeche: eine Notiz
+          // in vollem Orange traegt keinen lesbaren Text mehr, und auf einem
+          // Board sind Farben Ordnung, keine Fuellung.
+          background: card.color
+            ? `color-mix(in srgb, ${card.color} 18%, var(--av-surface-1))`
+            : 'color-mix(in srgb, var(--av-warn) 12%, var(--av-surface-1))',
+          borderColor: card.color ? `color-mix(in srgb, ${card.color} 55%, var(--av-border))` : undefined,
+        }}
+      >
         {editing
           ? <textarea autoFocus className="h-full w-full resize-none bg-transparent text-[12.5px] leading-snug text-av-text outline-none" value={card.text ?? ''} onChange={(e) => onPatch({ text: e.target.value })} onBlur={onEndEdit} />
           : <p className="text-[12.5px] leading-snug text-av-text">{card.text}</p>}
@@ -1482,12 +1682,70 @@ function CardBody({ card, editing, onEndEdit, onPatch }: { card: BoardCard; edit
       </div>
     )
   }
+  if (card.type === 'video') {
+    return (
+      <div className="flex h-full w-full flex-col overflow-hidden border border-av-border bg-av-surface-1">
+        {card.src ? (
+          // `controls` und sonst nichts: kein Autoplay, keine Schleife. Ein
+          // Board mit vier Filmen, die von allein loslaufen, ist ein Laerm
+          // und kein Moodboard.
+          <video src={card.src} controls preload="metadata" className="min-h-0 flex-1 bg-black" />
+        ) : (
+          <NichtDabei card={card} />
+        )}
+        <div className="truncate bg-av-surface-1 px-2 py-1 text-[11px] text-av-text-secondary">{card.title}</div>
+      </div>
+    )
+  }
+  if (card.type === 'audio') {
+    return (
+      <div className="flex h-full w-full flex-col justify-center gap-1.5 overflow-hidden border border-av-border bg-av-surface-1 px-2.5 py-2">
+        <div className="flex items-center gap-2">
+          <Icon name="signal" size={14} style={{ color: 'var(--av-accent)' }} />
+          <span className="truncate text-[12px] font-semibold text-av-text">{card.title}</span>
+        </div>
+        {card.src
+          ? <audio src={card.src} controls preload="metadata" className="w-full" style={{ height: 32 }} />
+          : <NichtDabei card={card} />}
+      </div>
+    )
+  }
+  if (card.type === 'file') {
+    return (
+      <div className="flex h-full w-full flex-col justify-center gap-1 overflow-hidden border border-av-border bg-av-surface-1 px-2.5 py-2">
+        <div className="flex items-center gap-2">
+          <Icon name="library" size={14} style={{ color: 'var(--av-text-muted)' }} />
+          <span className="truncate text-[12px] font-semibold text-av-text">{card.title}</span>
+        </div>
+        <div className="truncate text-[11px] text-av-text-muted">{card.fileName}</div>
+        {card.embedded === false ? (
+          <NichtDabei card={card} />
+        ) : (
+          <div className="flex items-center gap-2 text-[11px] text-av-text-faint">
+            <span>{dateiGroesse(card.fileSize, lang)}</span>
+            {card.src && (
+              <a
+                href={card.src}
+                download={card.fileName}
+                className="av-focus text-av-accent underline"
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                {t('board.file.save', 'Speichern')}
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
   if (card.type === 'image') {
     return (
       <div className="flex h-full w-full flex-col overflow-hidden border border-av-border bg-av-surface-1">
         {card.src
           ? <img src={card.src} alt={card.title ?? t('board.photoAlt', 'Foto')} className="min-h-0 flex-1 object-cover" draggable={false} />
-          : <div className="flex-1" style={{ background: 'var(--av-surface-3)' }} />}
+          : card.embedded === false
+            ? <NichtDabei card={card} />
+            : <div className="flex-1" style={{ background: 'var(--av-surface-3)' }} />}
         {editing
           ? <input autoFocus className="bg-av-surface-1 px-2 py-1 text-[11px] text-av-text outline-none" value={card.title ?? ''} onChange={(e) => onPatch({ title: e.target.value })} onBlur={onEndEdit} onKeyDown={(e) => e.key === 'Enter' && onEndEdit()} />
           : <div className="truncate bg-av-surface-1 px-2 py-1 text-[11px] text-av-text-secondary">{card.title}</div>}

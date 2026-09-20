@@ -21,6 +21,11 @@ export function cardHeight(card: BoardCard): number {
     case 'column': return COL_HEADER + 40
     case 'board': return 116
     case 'image': return Math.round(card.w / (card.ratio && card.ratio > 0 ? card.ratio : 1.5)) + 24
+    // Ein Film bekommt dieselbe Rechnung wie ein Bild plus die Bedienleiste;
+    // ohne sie schnitte die Karte genau die Knoepfe ab, die man braucht.
+    case 'video': return Math.round(card.w / (card.ratio && card.ratio > 0 ? card.ratio : 16 / 9)) + 58
+    case 'audio': return 84
+    case 'file': return 92
   }
 }
 
@@ -138,6 +143,13 @@ function cardMarkdown(c: BoardCard): string {
     case 'note': return c.text ?? ''
     case 'link': return `- [${c.title ?? c.url ?? 'Link'}](${c.url ?? ''})`
     case 'todo': return [`**${c.title ?? 'To-do'}**`, ...(c.items ?? []).map((i) => `- [${i.done ? 'x' : ' '}] ${i.text}`)].join('\n')
+    // Im Markdown steht der DATEINAME und nicht die data-URL: ein
+    // eingebettetes Video waere dort ein Megabyte Zeichensalat, und der
+    // Leser sucht den Namen.
+    case 'video':
+    case 'audio':
+    case 'file':
+      return `- ${c.title ?? c.fileName ?? ''}${c.fileName && c.title !== c.fileName ? ` (${c.fileName})` : ''}`
     case 'color': return `- ${c.title ?? 'Farbe'} \`${c.color ?? ''}\``
     case 'look': return `- Look: ${c.title ?? ''}`
     case 'image': return `- Bild: ${c.title ?? 'Foto'}`
