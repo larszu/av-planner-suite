@@ -24,6 +24,12 @@ export const seed: Record<string, string> = {
   'seed.handoff.changed': '{n} changed',
   'seed.handoff.removed': '{n} removed',
   'seed.handoff.toast': 'Handed over to the other planners',
+  'seed.handoff.toastMany': '{n} reports handed over',
+  'seed.handoff.keptToast': 'Kept here',
+  'seed.handoff.keptToastMany': '{n} reports kept here',
+  'seed.handoff.count': '{n} open reports',
+  'seed.handoff.acceptAll': 'Hand over all',
+  'seed.handoff.dismissAll': 'Keep all here',
 
   // ── Die Kamera aus dem Signalplan, die im Kameraplan fehlt
   //    (Nutzer-Auftrag 2026-09-19) ──

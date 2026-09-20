@@ -41,6 +41,37 @@ import { format, useT } from '../i18n'
  * Planer weiter, „Nur hier" lässt ihn im Suite-Projekt stehen und nimmt nur
  * die Frage weg. Ohne den zweiten wäre der Streifen nicht wegzubekommen,
  * ohne weiterzugeben.
+ *
+ * ─── UND EIN KNOPF FÜR ALLE ─────────────────────────────────────────────
+ *
+ * NUTZER-MELDUNG 2026-09-20: „die Meldung … muss man auch alle auf einmal
+ * akzeptieren oder ablehnen können und rückgängig machen können."
+ *
+ * Wer eine Stunde im Licht-Planer gearbeitet hat, findet hier nicht eine
+ * Zeile, sondern sechs — und beantwortet dann sechsmal dieselbe Frage. Der
+ * Kopf trägt deshalb ab der zweiten Zeile beide Sammelknöpfe.
+ *
+ * Sie stehen NEBEN den einzelnen und nicht an ihrer Stelle: die Meldungen
+ * kommen aus verschiedenen Planern, und „alle aus dem Licht-Planer ja, die
+ * aus dem Kabel-Planer nein" ist eine gewöhnliche Antwort. Ein Sammelknopf,
+ * der die einzelne Entscheidung verdrängt, nimmt sie weg.
+ *
+ * ─── WAS „RÜCKGÄNGIG" HIER HEISST, UND WAS NICHT ────────────────────────
+ *
+ * Beide Wege legen einen Schritt in die Projekt-Historie und melden sich mit
+ * „Rückgängig"; Strg+Z tut dasselbe. Zurück kommt die FRAGE.
+ *
+ * Was NICHT zurückkommt, ist der Stand bei den anderen Planern: die Meldung
+ * war beim Eintreffen schon ins Suite-Projekt eingearbeitet (deshalb heißt
+ * der zweite Knopf „Nur hier" und nicht „Verwerfen"), und was ein anderer
+ * Planer übernommen hat, hat er. Ein „Rückgängig", das den Stand dort
+ * zurückholte, müsste den älteren Stand hinterherschieben — und überschriebe
+ * damit, was seither dort gearbeitet wurde. Das ist „letzter gewinnt", also
+ * genau die Regel, gegen die dieser Streifen steht.
+ *
+ * Wer den Inhalt der Meldung selbst zurücknehmen will (die sechs gelöschten
+ * Geräte zurückhaben), tut das IM meldenden Planer: dort ist die Änderung
+ * passiert, und dort hat sie ihr eigenes Undo.
  */
 export function SeedHandoffBar({
   handoffs,
@@ -48,8 +79,9 @@ export function SeedHandoffBar({
   onDismiss,
 }: {
   handoffs: SeedHandoffRecord[]
-  onAccept: (record: SeedHandoffRecord) => void
-  onDismiss: (id: string) => void
+  /** Immer eine LISTE — der Sammelknopf ist derselbe Weg, nur mit mehr drin. */
+  onAccept: (records: SeedHandoffRecord[]) => void
+  onDismiss: (ids: string[]) => void
 }) {
   const t = useT()
   if (handoffs.length === 0) return null
@@ -59,6 +91,29 @@ export function SeedHandoffBar({
       className="flex flex-col gap-1 border-t border-av-border bg-av-surface-2 px-3 py-2"
       aria-label={t('seed.handoff.region', 'Angebotene Übergaben an die anderen Planer')}
     >
+      {handoffs.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-av-border-muted pb-1.5 text-[13px] text-av-text-muted">
+          <span>
+            {format(t('seed.handoff.count', '{n} offene Meldungen'), { n: handoffs.length })}
+          </span>
+          <span className="ml-auto flex gap-1">
+            <button
+              type="button"
+              className="av-focus rounded-av-control border border-av-border px-2 py-0.5 text-av-text hover:bg-av-surface-3"
+              onClick={() => onAccept(handoffs)}
+            >
+              {t('seed.handoff.acceptAll', 'Alle übernehmen')}
+            </button>
+            <button
+              type="button"
+              className="av-focus rounded-av-control border border-av-border px-2 py-0.5 text-av-text hover:bg-av-surface-3"
+              onClick={() => onDismiss(handoffs.map((r) => r.id))}
+            >
+              {t('seed.handoff.dismissAll', 'Alle nur hier')}
+            </button>
+          </span>
+        </div>
+      )}
       {handoffs.map((r) => (
         <div key={r.id} className="flex flex-wrap items-center gap-2 text-[13px] text-av-text">
           <Icon name="nodes" size={14} style={{ color: 'var(--av-accent)' }} />
@@ -72,14 +127,14 @@ export function SeedHandoffBar({
             <button
               type="button"
               className="av-focus rounded-av-control border border-av-border px-2 py-0.5 hover:bg-av-surface-3"
-              onClick={() => onAccept(r)}
+              onClick={() => onAccept([r])}
             >
               {t('seed.handoff.accept', 'Übernehmen')}
             </button>
             <button
               type="button"
               className="av-focus rounded-av-control border border-av-border px-2 py-0.5 hover:bg-av-surface-3"
-              onClick={() => onDismiss(r.id)}
+              onClick={() => onDismiss([r.id])}
             >
               {t('seed.handoff.dismiss', 'Nur hier')}
             </button>
