@@ -829,6 +829,7 @@ export function BoardCanvas({
           {columns.map((col) => {
             const r = layout.get(col.id)!
             const selected = isSelected(col.id)
+            const alleinGewaehlt = selected && selection.length === 1
             const hasChildren = cards.some((c) => c.columnId === col.id)
             return (
               <div key={col.id} data-column-id={col.id} className="absolute rounded-av-card border border-dashed border-av-border bg-av-surface-1/40" style={{ left: r.x, top: r.y, width: r.w, height: r.h, boxShadow: selected ? '0 0 0 2px var(--av-accent)' : undefined }}>
@@ -846,7 +847,7 @@ export function BoardCanvas({
                   ) : (
                     <span className="flex-1 truncate text-[12px] font-semibold text-av-text">{col.title}</span>
                   )}
-                  {selected && (
+                  {alleinGewaehlt && (
                     <button
                       type="button"
                       className="av-icon-btn"
@@ -929,7 +930,8 @@ export function BoardCanvas({
             return (
               <BoardCardView
                 key={card.id} card={card} rect={r} dim={!matchesQuery(card)}
-                selected={isSelected(card.id)} editing={editingId === card.id}
+                selected={isSelected(card.id)} allein={selection.length === 1 && isSelected(card.id)}
+                editing={editingId === card.id}
                 onHeaderPointerDown={(e) => onHeaderPointerDown(e, card)}
                 onHeaderPointerMove={onHeaderPointerMove}
                 onHeaderPointerUp={(e) => onHeaderPointerUp(e, card)}
@@ -999,12 +1001,23 @@ function PrintDoc({ title, board }: { title: string; board: Board }) {
 
 /* ── Einzelne Karte ────────────────────────────────────────────────────────*/
 function BoardCardView({
-  card, rect, selected, editing, dim,
+  card, rect, selected, allein, editing, dim,
   onHeaderPointerDown, onHeaderPointerMove, onHeaderPointerUp,
   onStartEdit, onEndEdit, onOpen, onPatch, onDelete, onStartConnect,
   onResizePointerDown, onResizePointerMove, onResizePointerUp,
 }: {
   card: BoardCard; rect: Rect; selected: boolean; editing: boolean; dim: boolean
+  /**
+   * EINZIGE gewaehlte Karte.
+   *
+   * Die kleine Leiste ueber der Karte (Farben, Loeschen) und der Griff zum
+   * Verbinden gehoeren genau dann dorthin. Bei zehn gewaehlten Karten waeren
+   * es zehn Leisten und zehn Griffe — ein Bildschirm voller Knoepfe, von
+   * denen jeder etwas anderes tut als der, den man gerade meint. Was fuer
+   * mehrere gilt, steht in der Werkzeugleiste oben („10 ausgewaehlt ·
+   * Verdoppeln · Loeschen"), und das ist ein Ort statt zehn.
+   */
+  allein: boolean
   onHeaderPointerDown: (e: React.PointerEvent) => void
   onHeaderPointerMove: (e: React.PointerEvent) => void
   onHeaderPointerUp: (e: React.PointerEvent) => void
@@ -1019,7 +1032,7 @@ function BoardCardView({
   const isBoard = card.type === 'board'
   return (
     <div data-card-id={card.id} className="absolute select-none" style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h, opacity: dim ? 0.28 : 1 }}>
-      {selected && (
+      {allein && (
         <div className="absolute -top-8 left-0 z-20 flex items-center gap-1 rounded-av-control border border-av-border bg-av-surface-2 p-0.5">
           {(card.type === 'color' || card.type === 'look') && SWATCHES.slice(0, 6).map((s) => (
             <button key={s} type="button" className="h-4 w-4 rounded-none border border-av-border" style={{ background: s }} onClick={() => onPatch({ color: s })} aria-label={format(t('board.swatch', 'Farbe {color}'), { color: s })} />
@@ -1027,7 +1040,7 @@ function BoardCardView({
           <button type="button" className="av-icon-btn" style={{ width: 24, height: 24 }} onClick={onDelete} aria-label={t('board.card.delete', 'Karte löschen')}><Icon name="close" size={14} /></button>
         </div>
       )}
-      {selected && (
+      {allein && (
         <button type="button" className="absolute top-1/2 z-20 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-none border border-av-border bg-av-surface-2 text-av-accent" style={{ right: -10 }} onPointerDown={onStartConnect} aria-label={t('board.connect', 'Verbindung ziehen')}>
           <Icon name="nodes" size={11} />
         </button>
@@ -1042,7 +1055,7 @@ function BoardCardView({
           ? <BoardTile card={card} selected={selected} onPatch={onPatch} onOpen={onOpen} />
           : <CardBody card={card} editing={editing} onEndEdit={onEndEdit} onPatch={onPatch} />}
       </div>
-      {selected && card.type !== 'column' && (
+      {allein && card.type !== 'column' && (
         <div
           className="absolute z-20 h-3.5 w-3.5 cursor-nwse-resize rounded-sm border border-av-accent bg-av-surface-2"
           style={{ right: -6, bottom: -6 }}
