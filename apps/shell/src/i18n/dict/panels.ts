@@ -84,6 +84,9 @@ export const panels: Record<string, string> = {
   'panels.board.type.look': 'Looks',
   'panels.board.type.column': 'Columns',
   'panels.board.type.board': 'Sub-boards',
+  'panels.board.type.video': 'Videos',
+  'panels.board.type.audio': 'Audio',
+  'panels.board.type.file': 'Files',
   'panels.board.type.image': 'Images',
   'panels.group.operation': 'Operation',
   'panels.board.opBody':
