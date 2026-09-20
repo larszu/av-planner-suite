@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { EinwurfSection } from './EinwurfSection'
+import { MitmachenSection } from './MitmachenSection'
 import { Badge, Icon, Modal, type ThemePreference } from '@avplan/ui'
 import { MODULES, type ModuleId } from '../modules/registry'
 import { useT, type TFunc } from '../i18n'
@@ -213,6 +214,8 @@ function SettingsBody({
             offen — ein Empfang, der mit der Anwendung startet, ist eine Tuer,
             von der niemand weiss. */}
         <EinwurfSection t={t} />
+        {/* Zusammenarbeit im eigenen Netz — ohne gemieteten Rechner. */}
+        <MitmachenSection t={t} />
       </section>
 
       {/* Backend / Sync — optional, opt-in. Offline-first bleibt Default. */}

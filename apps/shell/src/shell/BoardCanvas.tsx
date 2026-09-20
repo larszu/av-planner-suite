@@ -10,6 +10,9 @@ import { besterTyp, exportiereFilm } from './filmExport'
 import { starteAufnahme, type LaufendeAufnahme } from './tonAufnahme'
 import { KameraDialog } from './KameraDialog'
 import { hoereAufSendungen, type Sendung } from './einwurfHost'
+import { useMitmachen } from './useMitmachen'
+import { MitmachZeiger } from './MitmachZeiger'
+import { FLAECHE } from '@avplan/ui/embed'
 import { offeneJeObjekt, type Identitaet, type Kommentar } from '@avplan/ui/embed'
 import {
   applyTemplate,
@@ -252,6 +255,54 @@ export function BoardCanvas({
   const [exportAnteil, setExportAnteil] = useState<number | null>(null)
 
   const mutate = useCallback((fn: (b: Board) => Board) => setRoot((r) => updateBoardAtPath(r, path, fn)), [path])
+
+  // ─── MITMACHEN ──────────────────────────────────────────────────────────
+  //
+  // Der Anschluss an die Sitzung. Er ist untätig, solange niemand verbunden
+  // ist — `useMitmachen` schickt dann nichts und hört auf nichts.
+  const uebernimmVonAussen = useCallback((b: Board) => {
+    // Die Übernahme geht durch DENSELBEN Weg wie jede eigene Änderung.
+    // Ein zweiter Schreibweg neben `setRoot` hätte die Undo-Historie der
+    // Shell umgangen — und dann wäre „rückgängig" nach einer fremden
+    // Änderung eine Überraschung.
+    setRoot((r) => updateBoardAtPath(r, path, () => b))
+  }, [path])
+  const mitmachen = useMitmachen(current, onChange ? uebernimmVonAussen : undefined, identitaet?.name)
+
+  /**
+   * Was sich HIER geändert hat, den anderen melden.
+   *
+   * Gemessen wird das ERGEBNIS und nicht der Auslöser: ein Aufruf je
+   * Bearbeitungsweg (ziehen, tippen, löschen, einfügen, Format) wäre ein
+   * Dutzend Stellen, und die dreizehnte vergisst es. Ein Vergleich der
+   * Fläche mit ihrem letzten Stand findet alle — auch die, die es noch
+   * nicht gibt.
+   */
+  const gemeldet = useRef<Board | null>(null)
+  useEffect(() => {
+    if (!mitmachen.verbunden) { gemeldet.current = current; return }
+    const alt = gemeldet.current
+    gemeldet.current = current
+    if (!alt || alt === current) return
+    const vorher = new Map(alt.cards.map((c) => [c.id, c]))
+    const nachher = new Map(current.cards.map((c) => [c.id, c]))
+    const geaendert: string[] = []
+    for (const [id, c] of nachher) if (vorher.get(id) !== c) geaendert.push(id)
+    for (const v of current.connections) {
+      if (!alt.connections.some((x) => x === v)) geaendert.push(v.id)
+    }
+    // Die Felder der Fläche selbst hängen an einem eigenen Stand, damit
+    // „jemand hat das Bildformat geändert" nicht an einer Karte klebt.
+    if (alt.format !== current.format || alt.shotSeconds !== current.shotSeconds || alt.tonSrc !== current.tonSrc) {
+      geaendert.push(FLAECHE)
+    }
+    const geloescht = [
+      ...[...vorher.keys()].filter((id) => !nachher.has(id)),
+      ...alt.connections.filter((v) => !current.connections.some((x) => x.id === v.id)).map((v) => v.id),
+    ]
+    if (geaendert.length) mitmachen.melde(geaendert)
+    if (geloescht.length) mitmachen.melde(geloescht, true)
+  }, [current, mitmachen])
 
   /**
    * Das Bildformat dieses Boards.
@@ -964,6 +1015,13 @@ export function BoardCanvas({
   }
 
   const onSurfacePointerMove = (e: React.PointerEvent) => {
+    // Den eigenen Zeiger melden, bevor irgendetwas anderes passiert: auch
+    // beim Schieben und beim Aufziehen eines Rahmens sollen die anderen
+    // sehen, wo jemand ist.
+    if (mitmachen.verbunden) {
+      const z = toBoard(e.clientX, e.clientY)
+      mitmachen.zeiger(z.x, z.y, selection[0])
+    }
     const pan = panRef.current
     if (pan) {
       const sc = scrollRef.current
@@ -1268,6 +1326,9 @@ export function BoardCanvas({
               style={{ left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h, background: 'color-mix(in srgb, var(--av-accent) 12%, transparent)' }}
             />
           )}
+          {/* Die Zeiger der anderen liegen HIER — in Flaechen-Koordinaten,
+              also mit demselben Zoom wie die Karten. */}
+          <MitmachZeiger andere={mitmachen.andere} />
           {/* Spalten-Panels */}
           {columns.map((col) => {
             const r = layout.get(col.id)!

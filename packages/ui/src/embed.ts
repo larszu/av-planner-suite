@@ -21,6 +21,8 @@ export type {
   SuiteSeed,
 } from './seed'
 export { herunterladen, dateiName } from './herunterladen'
+export type { Anwesend, MitmachFlaeche, MitmachKarte, Stand, Staende, Zusammenfuehrung } from './mitmachen'
+export { FLAECHE, STILLE_MS, fuehreFlaecheZusammen, juenger, markiere, nochDa, seither } from './mitmachen'
 export type { Identitaet } from './identitaet'
 export {
   IDENTITAETS_FARBEN,

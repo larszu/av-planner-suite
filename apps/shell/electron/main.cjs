@@ -200,6 +200,15 @@ ipcMain.handle('suiteHost:einwurf:zugang', () => einwurf.zugang())
 // Kein verwaister Briefkasten, wenn jemand die Suite schliesst.
 app.on('before-quit', () => einwurf.beende())
 
+// Das offene Fenster fuer die Zusammenarbeit im eigenen Netz. Wie der
+// Briefkasten: NICHT von selbst offen — und anders als er auf 0.0.0.0,
+// weil andere Geraete herankommen sollen.
+const mitmachen = require('./mitmachen.cjs')
+ipcMain.handle('suiteHost:mitmachen:starte', () => mitmachen.starte((...a) => console.log(...a)))
+ipcMain.handle('suiteHost:mitmachen:beende', () => { mitmachen.beende(); return true })
+ipcMain.handle('suiteHost:mitmachen:zugang', () => mitmachen.zugang())
+app.on('before-quit', () => mitmachen.beende())
+
 
 app.whenReady().then(() => {
   registerPlannerProtocols()

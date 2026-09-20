@@ -101,6 +101,16 @@ contextBridge.exposeInMainWorld('__suiteEinwurf', {
   },
 })
 
+// Das offene Fenster. Der Renderer bekommt Adresse und Geheimnis — den
+// Strom macht er selbst auf, mit denselben Mitteln wie jeder Mitmachende.
+// Ein zweiter Weg ueber das Preload waere dieselbe Sache zweimal, und der
+// Teil, der im Browser laufen MUSS, bliebe ungeprueft.
+contextBridge.exposeInMainWorld('__suiteMitmachen', {
+  starte: () => ipcRenderer.invoke('suiteHost:mitmachen:starte'),
+  beende: () => ipcRenderer.invoke('suiteHost:mitmachen:beende'),
+  zugang: () => ipcRenderer.invoke('suiteHost:mitmachen:zugang'),
+})
+
 if (nativeCable) {
   contextBridge.exposeInMainWorld('__suiteNativeHost', {
     cable: {

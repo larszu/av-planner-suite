@@ -117,13 +117,13 @@ Diese Tabelle ist am 2026-09-20 von sechs Zeilen auf eine geschrumpft. Die
 Gründe stehen NICHT als Abschrift daneben — wer wissen will, warum es eine
 Sache vorher nicht gab, findet den Grund im Kopf des Moduls, das sie jetzt
 tut (`filmExport.ts`, `tonAufnahme.ts`, `kameraAufnahme.ts`,
-`linkVorschau.ts`, `kommentare.ts`, `einwurf.cjs`). Dort steht er bei dem
-Code, der ihn widerlegt, und driftet nicht davon weg.
+`linkVorschau.ts`, `kommentare.ts`, `einwurf.cjs`, `mitmachen.ts`). Dort
+steht er bei dem Code, der ihn widerlegt, und driftet nicht davon weg.
 
 | Aus dem Vorbild | Warum nicht |
 |---|---|
 | **Ein Schnitt-Programm** (Blenden, Tonmischung, Farbkorrektur) | Ein Board ist eine Folge von Standbildern, jedes seine Standzeit lang. Genau das nimmt der Film-Export auf. Eine Blende, ein zweites Tonbett, ein Pegelsteller wären der Anfang eines Werkzeugs, das die Suite nicht sein will — und ein halber Mischer ist schlechter als keiner |
-| **Echtzeit-Zusammenarbeit** | NOCH nicht gebaut. Die Identität steht seit 2026-09-20 im Seed, damit fehlt nur noch der Weg zwischen zwei Rechnern. Ein gemieteter Server soll es nicht sein — im Hallen-WLAN sitzen die Beteiligten ohnehin im selben Netz |
+| **Zusammenarbeit über das Internet** (Konten, Fremdverwahrung) | Im eigenen Netz geht es seit 2026-09-20 (siehe unten). Über das Internet ist es eine andere Frage — sie hängt an Konten und daran, wem die Daten unterwegs gehören, und sie steht in `cable-planner#868`–`#871` vor einem Nachfragetest |
 
 ### Was dazugekommen ist, und wo
 
@@ -135,4 +135,5 @@ Code, der ihn widerlegt, und driftet nicht davon weg.
 | **Vertonung** | `apps/shell/src/shell/tonAufnahme.ts`. Eine Spur, kein Mischer. Sie läuft im Film mit und liegt mit ihm in der Datei |
 | **Kamera** | `apps/shell/src/shell/kameraAufnahme.ts` + `KameraDialog.tsx`. Das Foto geht denselben Ablage-Weg wie jede Datei — und damit durch dieselbe Prüfung gegen die Einbettungs-Grenze |
 | **Standzeit je Einstellung** | im Eigenschaften-Feld der Karte. Das ist das „Trimmen" eines Storyboards |
+| **Zusammen an einem Board** | `packages/ui/src/mitmachen.ts` (das Zusammenführen, rein und geprüft), `apps/shell/electron/mitmachen.cjs` (das offene Fenster im eigenen Netz). Einer macht auf, die anderen kommen im Browser dazu — ohne Installation und ohne gemieteten Rechner |
 | **Web-Clipper** | `tools/web-clipper/` (die Erweiterung, aus dem Ordner geladen) und `apps/shell/electron/einwurf.cjs` (der Briefkasten). Er steht NICHT von selbst offen: aufgemacht wird er in den Einstellungen, und er hört nur auf 127.0.0.1 mit einem Geheimnis, das je Programmlauf neu ist |
