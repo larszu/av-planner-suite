@@ -228,6 +228,21 @@ export interface Board {
   format?: BoardFormat
   /** Vorgabe-Standzeit je Einstellung in Sekunden. Fehlt sie, gilt DEFAULT_SHOT_S. */
   shotSeconds?: number
+  /**
+   * Die Vertonung des ganzen Boards als data-URL.
+   *
+   * EINE für das Board und nicht eine je Einstellung: wer ein Storyboard
+   * vorführt, spricht darüber, während es läuft — ein Kommentar je Bild wäre
+   * eine Tonspur mit Löchern, und die Löcher lägen genau da, wo jemand
+   * zwischen zwei Einstellungen weiterredet.
+   *
+   * Sie unterliegt derselben Einbettungsgrenze wie jede Datei; eine
+   * Aufnahme, die darüber liegt, wird gar nicht erst übernommen (siehe
+   * `EINBETT_GRENZE`).
+   */
+  tonSrc?: string
+  /** Länge der Vertonung in Sekunden, wie bei der Aufnahme gemessen. */
+  tonSekunden?: number
 }
 
 /**

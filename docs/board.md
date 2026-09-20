@@ -113,11 +113,26 @@ den, der es **dreht**.
 
 ## Was bewusst NICHT gebaut ist
 
+Diese Tabelle ist am 2026-09-20 von sechs Zeilen auf eine geschrumpft. Die
+Gründe stehen NICHT als Abschrift daneben — wer wissen will, warum es eine
+Sache vorher nicht gab, findet den Grund im Kopf des Moduls, das sie jetzt
+tut (`filmExport.ts`, `tonAufnahme.ts`, `kameraAufnahme.ts`,
+`linkVorschau.ts`, `kommentare.ts`). Dort steht er bei dem Code, der ihn
+widerlegt, und driftet nicht davon weg.
+
 | Aus dem Vorbild | Warum nicht |
 |---|---|
-| **Echtzeit-Zusammenarbeit** (Milanote: Teams einladen) | braucht einen Server. Die Suite hat dafür eine eigene, offene Kette: `cable-planner#868`–`#871`, und die steht vor einem Nachfragetest. Ein halbes Echtzeit-Board wäre schlimmer als keins |
-| **Kommentare** | ein Kommentar braucht einen Urheber. Diese Anwendung kennt keinen angemeldeten Benutzer; ein Kommentar ohne Namen ist eine Notiz, und die gibt es schon |
-| **Web-Clipper** (Browser-Erweiterung) | eine eigene Auslieferung in zwei Browser-Läden. Der Griff, um den es geht — im Netz etwas finden, kopieren, aufs Board werfen — ist über das Einfügen einer Adresse da |
-| **Link-Vorschau** (Titel und Bild von der Seite) | braucht einen Abruf. Eine erfundene Vorschau wäre eine Behauptung über eine Seite, die niemand gelesen hat. Die Karte zeigt den Host — das ist, was dasteht |
-| **MP4-Export** des Films | ein Schnittprogramm. Der Kontaktabzug ist der Weg nach draußen |
-| **Kamera, Trimmen, Vertonung** (recceboard) | ein Telefon-Werkzeug und ein Schnittprogramm; die Suite läuft auf dem Rechner |
+| **Ein Schnitt-Programm** (Blenden, Tonmischung, Farbkorrektur) | Ein Board ist eine Folge von Standbildern, jedes seine Standzeit lang. Genau das nimmt der Film-Export auf. Eine Blende, ein zweites Tonbett, ein Pegelsteller wären der Anfang eines Werkzeugs, das die Suite nicht sein will — und ein halber Mischer ist schlechter als keiner |
+| **Web-Clipper** (Browser-Erweiterung) | NOCH nicht gebaut, und der Grund ist nicht mehr „zwei Browser-Läden": eine Erweiterung lässt sich aus dem Ordner laden. Offen ist der Empfang — die Shell braucht einen Weg, auf dem etwas von aussen auf ein Board kommt |
+| **Echtzeit-Zusammenarbeit** | NOCH nicht gebaut. Die Identität steht seit 2026-09-20 im Seed, damit fehlt nur noch der Weg zwischen zwei Rechnern. Ein gemieteter Server soll es nicht sein — im Hallen-WLAN sitzen die Beteiligten ohnehin im selben Netz |
+
+### Was dazugekommen ist, und wo
+
+| Sache | Wo sie lebt |
+|---|---|
+| **Kommentare** mit Urheber | `packages/ui/src/kommentare.ts`, Identität in `identitaet.ts` — sie steht im Seed und gilt damit für alle Planer |
+| **Link-Vorschau** | `packages/ui/src/linkVorschau.ts` (liest), `apps/shell/electron/linkVorschau.cjs` (holt). Im Browser sagt die Karte, dass sie den Abruf nicht hat — statt eine Vorschau zu erfinden |
+| **Film als Datei** | `apps/shell/src/shell/filmExport.ts`. In Echtzeit, weil `MediaRecorder` jedes Bild mit seiner Ankunftszeit stempelt; die Endung sagt, was wirklich drin liegt |
+| **Vertonung** | `apps/shell/src/shell/tonAufnahme.ts`. Eine Spur, kein Mischer. Sie läuft im Film mit und liegt mit ihm in der Datei |
+| **Kamera** | `apps/shell/src/shell/kameraAufnahme.ts` + `KameraDialog.tsx`. Das Foto geht denselben Ablage-Weg wie jede Datei — und damit durch dieselbe Prüfung gegen die Einbettungs-Grenze |
+| **Standzeit je Einstellung** | im Eigenschaften-Feld der Karte. Das ist das „Trimmen" eines Storyboards |

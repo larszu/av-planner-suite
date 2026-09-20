@@ -36,11 +36,14 @@ export function BoardPlayer({
   shots,
   boardFormat,
   title,
+  tonSrc,
   onClose,
 }: {
   shots: Shot[]
   boardFormat?: BoardFormat
   title: string
+  /** Die Vertonung des Boards. Sie laeuft MIT dem Film, nicht daneben. */
+  tonSrc?: string
   onClose: () => void
 }) {
   const t = useT()
@@ -48,6 +51,22 @@ export function BoardPlayer({
   const [t0, setT0] = useState(0)
   const [laeuft, setLaeuft] = useState(true)
   const uhr = useRef<number | null>(null)
+  const ton = useRef<HTMLAudioElement | null>(null)
+
+  /**
+   * Der Ton folgt dem Film und nicht umgekehrt.
+   *
+   * Er wird an die Zeitleiste gesetzt, wenn jemand springt oder zieht —
+   * sonst liefe die Erklaerung zu einer anderen Einstellung als die, die
+   * man sieht, und das faellt frueher auf als jede Bildstoerung.
+   */
+  useEffect(() => {
+    const a = ton.current
+    if (!a) return
+    if (Math.abs(a.currentTime - t0) > 0.35) a.currentTime = Math.min(t0, a.duration || t0)
+    if (laeuft && a.paused) void a.play().catch(() => {})
+    if (!laeuft && !a.paused) a.pause()
+  }, [t0, laeuft])
 
   // Die Uhr läuft in Bildschirmschritten und nicht in Sekunden-Tickern: eine
   // Zeitleiste, die in Sprüngen von einer Sekunde wandert, sieht kaputt aus,
@@ -132,6 +151,8 @@ export function BoardPlayer({
           <Icon name="close" size={15} />
         </button>
       </div>
+
+      {tonSrc && <audio ref={ton} src={tonSrc} preload="auto" className="hidden" />}
 
       <div className="relative min-h-0 flex-1">
         {aktuell ? (

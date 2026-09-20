@@ -23,6 +23,7 @@ import {
   type RundownAudience,
   type RundownPreview,
   type RowSkipReason,
+  herunterladen,
 } from '@avplan/ui'
 // `SuiteSeed` kommt aus dem Bruecken-Eintrag und nicht aus dem Haupt-Eintrag:
 // dort ist es zuhause (`@avplan/ui/embed` re-exportiert `seed.ts`), und es
@@ -435,14 +436,7 @@ function RundownExports({ rundown, seed }: { rundown: Rundown; seed: SuiteSeed }
     const n = Number.parseInt(roh, 10)
     return Number.isFinite(n) && n >= 1 && n <= 16 ? n : alt
   }
-  const gib = (name: string, blob: Blob) => {
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = name
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+  const gib = (name: string, blob: Blob) => herunterladen(blob, name)
   const speichere = (basis: string, view: GearSheet) => {
     // Aus DERSELBEN Zeilen-Tabelle: `rundownViewCsv` baut sie sich intern
     // ebenfalls aus `rundownViewRows`. Zwei Ausgaben, ein Blatt.

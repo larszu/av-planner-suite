@@ -20,6 +20,7 @@ export type {
   SeedWriter,
   SuiteSeed,
 } from './seed'
+export { herunterladen, dateiName } from './herunterladen'
 export type { Identitaet } from './identitaet'
 export {
   IDENTITAETS_FARBEN,

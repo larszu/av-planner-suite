@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Icon, Menu, MenuItem, confirmDialog } from '@avplan/ui'
+import { Icon, Menu, MenuItem, confirmDialog, dateiName, herunterladen } from '@avplan/ui'
 import { useLanguage, useT, format, type Language, type TFunc } from '../i18n'
 import { BOARD_FORMAT_RATIO, EINBETT_GRENZE, type Board, type BoardCard, type BoardCardType, type BoardFormat } from '../data/project'
 import { BoardPlayer } from './BoardPlayer'
 import { KommentarFaden } from './KommentarFaden'
 import { holeVorschau } from './linkVorschauHost'
+import { besterTyp, exportiereFilm } from './filmExport'
+import { starteAufnahme, type LaufendeAufnahme } from './tonAufnahme'
+import { KameraDialog } from './KameraDialog'
 import { offeneJeObjekt, type Identitaet, type Kommentar } from '@avplan/ui/embed'
 import {
   applyTemplate,
@@ -240,6 +243,12 @@ export function BoardCanvas({
   const [fadenAn, setFadenAn] = useState<string | null>(null)
   const [vorschauLaeuft, setVorschauLaeuft] = useState<string | null>(null)
   const [vorschauMeldung, setVorschauMeldung] = useState<string | null>(null)
+  /** Laeuft gerade eine Tonaufnahme? Dann steht hier, womit man sie beendet. */
+  const [aufnahme, setAufnahme] = useState<LaufendeAufnahme | null>(null)
+  /** Steht der Sucher offen? Sicht und nicht Inhalt — steht deshalb nicht im Board. */
+  const [sucher, setSucher] = useState(false)
+  /** Anteil des laufenden Film-Exports, 0..1. `null` heisst: laeuft nicht. */
+  const [exportAnteil, setExportAnteil] = useState<number | null>(null)
 
   const mutate = useCallback((fn: (b: Board) => Board) => setRoot((r) => updateBoardAtPath(r, path, fn)), [path])
 
@@ -426,15 +435,77 @@ export function BoardCanvas({
     setVorschauMeldung(texte[r.grund] ?? texte['nicht-erreichbar']!)
   }, [patchCard, t, setVorschauLaeuft, setVorschauMeldung])
 
+  /**
+   * Vertonung aufnehmen — starten und beenden mit demselben Knopf.
+   *
+   * Die Aufnahme laeuft, bis jemand sie beendet, und nicht „bis der Film
+   * durch ist": wer eine Erklaerung spricht, braucht am Ende oft noch einen
+   * Satz, und ein Schnitt bei Sekunde neun naehme ihn weg.
+   */
+  const tonKnopf = useCallback(async () => {
+    if (aufnahme) {
+      const r = await aufnahme.stop()
+      setAufnahme(null)
+      if (!r.ok) return
+      if (r.groesse > EINBETT_GRENZE) {
+        // Dieselbe Grenze wie fuer jede Datei, und derselbe Grund: eine
+        // Aufnahme, die das Projekt unspeicherbar macht, ist keine Hilfe.
+        // Sie wird gar nicht erst uebernommen — ein halb eingebetteter Ton
+        // waere schlimmer als keiner.
+        setVorschauMeldung(t('board.ton.zuGross', 'Die Aufnahme ist zu lang für das Projekt. Nimm sie kürzer auf.'))
+        return
+      }
+      mutate((b) => ({ ...b, tonSrc: r.dataUrl, tonSekunden: r.sekunden }))
+      return
+    }
+    const a = await starteAufnahme()
+    if ('ok' in a) {
+      const texte: Record<string, string> = {
+        'kein-mikrofon': t('board.ton.keinMikro', 'Dieser Rechner bietet kein Mikrofon an.'),
+        abgelehnt: t('board.ton.abgelehnt', 'Ohne Mikrofon-Freigabe geht keine Aufnahme.'),
+        'kein-recorder': t('board.ton.keinRecorder', 'Dieser Browser nimmt keinen Ton auf.'),
+      }
+      setVorschauMeldung(texte[a.grund] ?? texte['kein-recorder']!)
+      return
+    }
+    setAufnahme(a)
+  }, [aufnahme, mutate, t, setVorschauMeldung])
+
+  /**
+   * Den Film als Datei.
+   *
+   * Er wird in ECHTZEIT aufgenommen — `MediaRecorder` stempelt jedes Bild
+   * mit seiner Ankunftszeit, und wer schneller einspeist, bekommt einen
+   * Film, der zu schnell laeuft. Deshalb steht der Fortschritt am Knopf:
+   * sonst wartet jemand auf einen Fehler.
+   */
+  const exportFilm = useCallback(async () => {
+    setExportAnteil(0)
+    const r = await exportiereFilm({
+      shots,
+      format: current.format,
+      tonSrc: current.tonSrc,
+      onFortschritt: setExportAnteil,
+    })
+    setExportAnteil(null)
+    if (!r.ok) {
+      const texte: Record<string, string> = {
+        'kein-recorder': t('board.film.keinRecorder', 'Dieser Browser nimmt kein Video auf.'),
+        'keine-einstellung': t('board.film.leer', 'Auf diesem Board ist keine Einstellung.'),
+        abgebrochen: t('board.film.abgebrochen', 'Abgebrochen.'),
+      }
+      setVorschauMeldung(texte[r.grund] ?? texte['kein-recorder']!)
+      return
+    }
+    // Die Endung sagt, was WIRKLICH in der Datei liegt. Ein `.mp4`, in dem
+    // WebM steckt, ist eine Datei, die der Empfaenger nicht oeffnen kann —
+    // deshalb steht sie erst hier, nach der Aufnahme.
+    herunterladen(r.blob, `${dateiName(title)}.${r.typ.endung}`)
+  }, [shots, current.format, current.tonSrc, title, t, setVorschauMeldung])
+
   const exportMarkdown = useCallback(() => {
     const md = boardToMarkdown(root, title)
-    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${title.toLowerCase().replace(/\s+/g, '-')}.md`
-    a.click()
-    URL.revokeObjectURL(url)
+    herunterladen(new Blob([md], { type: 'text/markdown;charset=utf-8' }), `${dateiName(title)}.md`)
   }, [root, title])
 
   const exportPrint = useCallback(() => { setDruckModus('doc'); setTimeout(() => window.print(), 0) }, [])
@@ -942,6 +1013,11 @@ export function BoardCanvas({
             <Icon name={CARD_META[ty].icon} size={15} /> <span className="text-[12px]">{CARD_META[ty].label}</span>
           </button>
         ))}
+        {/* Knipsen statt importieren. Derselbe Ablage-Weg wie jede Datei —
+            und damit dieselbe Prüfung gegen die Einbettungs-Grenze. */}
+        <button type="button" className="av-toolbar-btn av-focus" onClick={() => setSucher(true)} aria-label={t('board.toolbar.kamera', 'Foto aufnehmen')} title={t('board.toolbar.kamera', 'Foto aufnehmen')}>
+          <Icon name="camera" size={15} />
+        </button>
         <button type="button" className="av-toolbar-btn av-focus" onClick={() => fileInputRef.current?.click()} aria-label={t('board.toolbar.photoImport', 'Foto importieren')} title={t('board.toolbar.photoImport', 'Foto importieren')}>
           <Icon name="eye" size={15} /> <span className="text-[12px]">{t('board.toolbar.photo', 'Foto')}</span>
         </button>
@@ -989,6 +1065,27 @@ export function BoardCanvas({
                     zeit: formatLaufzeit(sequenceSeconds(shots)),
                   })
                 : t('board.play.buttonEmpty', 'Abspielen')}
+            </span>
+          </button>
+          {/* VERTONUNG. Ein Knopf, zwei Zustaende — aufnehmen und beenden.
+              Waehrend der Aufnahme traegt er die Farbe, die im Haus „Achtung"
+              heisst, damit niemand vergisst, dass das Mikrofon offen ist. */}
+          <button
+            type="button"
+            className="av-toolbar-btn av-focus"
+            onClick={() => void tonKnopf()}
+            style={aufnahme ? { color: 'var(--av-danger)' } : undefined}
+            aria-pressed={!!aufnahme}
+            aria-label={aufnahme ? t('board.ton.stop', 'Aufnahme beenden') : t('board.ton.start', 'Vertonung aufnehmen')}
+            title={aufnahme ? t('board.ton.stop', 'Aufnahme beenden') : t('board.ton.start', 'Vertonung aufnehmen')}
+          >
+            <Icon name="signal" size={15} />
+            <span className="text-[12px]">
+              {aufnahme
+                ? t('board.ton.stopKurz', 'Aufnahme beenden')
+                : current.tonSrc
+                  ? format(t('board.ton.vorhanden', 'Ton · {zeit}'), { zeit: formatLaufzeit(current.tonSekunden ?? 0) })
+                  : t('board.ton.startKurz', 'Vertonen')}
             </span>
           </button>
           <Menu button={menuButton(current.format ?? t('board.format.none', 'Format'), 'ruler')} align="right">
@@ -1043,6 +1140,19 @@ export function BoardCanvas({
                 <MenuItem icon={<Icon name="library" size={14} />} onClick={() => { exportMarkdown(); close() }}>{t('board.export.markdown', 'Als Markdown')}</MenuItem>
                 <MenuItem icon={<Icon name="external" size={14} />} onClick={() => { close(); exportPrint() }}>{t('board.export.pdf', 'Als PDF (Druck)')}</MenuItem>
                 <MenuItem icon={<Icon name="grid" size={14} />} onClick={() => { close(); exportSheet() }}>{t('board.export.sheet', 'Kontaktabzug (PDF)')}</MenuItem>
+                {/* Der Film als Datei. Die Endung steht im Eintrag, weil sie
+                    von diesem Browser abhaengt und nicht von uns. */}
+                <MenuItem
+                  icon={<Icon name="monitor" size={14} />}
+                  onClick={() => { close(); void exportFilm() }}
+                >
+                  {shots.length === 0
+                    ? t('board.export.filmLeer', 'Film — keine Einstellung')
+                    : format(t('board.export.film', 'Film als {endung} ({zeit})'), {
+                        endung: besterTyp()?.endung.toUpperCase() ?? '—',
+                        zeit: formatLaufzeit(sequenceSeconds(shots)),
+                      })}
+                </MenuItem>
               </>
             )}
           </Menu>
@@ -1367,6 +1477,17 @@ export function BoardCanvas({
         </aside>
       )}
 
+      {exportAnteil !== null && (
+        <div className="absolute bottom-3 left-1/2 z-[130] -translate-x-1/2 border border-av-border bg-av-surface-2 px-3 py-1.5 text-[12px] text-av-text">
+          {format(t('board.film.laeuft', 'Film wird aufgenommen … {prozent} %'), {
+            prozent: Math.round(exportAnteil * 100),
+          })}
+          <span className="ml-2 text-av-text-muted">
+            {t('board.film.echtzeit', 'läuft in Echtzeit — so lang wie der Film')}
+          </span>
+        </div>
+      )}
+
       {vorschauMeldung && (
         <div className="absolute bottom-3 left-1/2 z-[130] -translate-x-1/2 border border-av-border bg-av-surface-2 px-3 py-1.5 text-[12px] text-av-text">
           {vorschauMeldung}
@@ -1380,10 +1501,13 @@ export function BoardCanvas({
         </div>
       )}
 
+      {sucher && <KameraDialog onFoto={(f) => addDateiKarte(f)} onClose={() => setSucher(false)} />}
+
       {spielt && (
         <BoardPlayer
           shots={shots}
           boardFormat={current.format}
+          tonSrc={current.tonSrc}
           title={crumbs[crumbs.length - 1]?.title ?? title}
           onClose={() => setSpielt(false)}
         />
