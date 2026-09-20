@@ -124,6 +124,15 @@ export interface BoardCard {
   src?: string
   /** Für type 'image': Seitenverhältnis Breite/Höhe (für die Karten-Höhe). */
   ratio?: number
+  /**
+   * Standzeit dieser Einstellung in Sekunden, wenn das Board als Film läuft.
+   *
+   * Nur `image` und `look` tragen sie — eine Notiz ist keine Einstellung.
+   * FEHLT SIE, ist sie nicht null: dann gilt die Vorgabe des Boards. Eine
+   * hier gespeicherte Null hiesse „wird uebersprungen", und das ist eine
+   * andere Aussage als „hat noch niemand festgelegt".
+   */
+  durationS?: number
 }
 
 export interface BoardConnection {
@@ -135,6 +144,38 @@ export interface BoardConnection {
 export interface Board {
   cards: BoardCard[]
   connections: BoardConnection[]
+  /**
+   * Das Bildformat, in dem dieses Board gedacht ist.
+   *
+   * Es gehoert ans BOARD und nicht an die Karte: ein Storyboard hat EIN
+   * Format, und Einstellungen in drei Seitenverhaeltnissen nebeneinander
+   * sind kein Storyboard, sondern eine Sammlung. Die Bildgrenzen werden
+   * darueber gezeichnet, statt die Bilder zu beschneiden — was drumherum
+   * liegt, ist die Information, die beim Schneiden gebraucht wird.
+   *
+   * Fehlt es, zeichnet nichts eine Grenze. Kein Format ist nicht 16:9.
+   */
+  format?: BoardFormat
+  /** Vorgabe-Standzeit je Einstellung in Sekunden. Fehlt sie, gilt DEFAULT_SHOT_S. */
+  shotSeconds?: number
+}
+
+/**
+ * Die Bildformate, die dieses Haus dreht.
+ *
+ * Eine Aufzaehlung und kein freies Zahlenpaar: ein Format ist ein NAME, den
+ * am Set jemand ausspricht, und „2.39:1" laesst sich mit einem Bildwerfer
+ * abgleichen, `2.3866` nicht.
+ */
+export type BoardFormat = '16:9' | '2.39:1' | '2:1' | '4:3' | '1:1' | '9:16'
+
+export const BOARD_FORMAT_RATIO: Record<BoardFormat, number> = {
+  '16:9': 16 / 9,
+  '2.39:1': 2.39,
+  '2:1': 2,
+  '4:3': 4 / 3,
+  '1:1': 1,
+  '9:16': 9 / 16,
 }
 
 /** Angereicherte Show-Details fürs Übersichts-Dashboard. */

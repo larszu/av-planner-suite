@@ -2,10 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon, Menu, MenuItem, confirmDialog } from '@avplan/ui'
 import { useT, format, type TFunc } from '../i18n'
-import type { Board, BoardCard, BoardCardType } from '../data/project'
+import { BOARD_FORMAT_RATIO, type Board, type BoardCard, type BoardCardType, type BoardFormat } from '../data/project'
+import { BoardPlayer } from './BoardPlayer'
 import {
   applyTemplate,
   boardToMarkdown,
+  formatLaufzeit,
+  sequenceSeconds,
+  shotSequence,
+  type Shot,
   crumbTitles,
   getBoardAtPath,
   imRahmen,
@@ -147,6 +152,16 @@ export function BoardCanvas({
   const scrollRef = useRef<HTMLDivElement>(null)
   /** Karten, die Strg+C in die Hand genommen hat. Nicht die Zwischenablage des Systems. */
   const clipRef = useRef<BoardCard[]>([])
+  /** Läuft der Film gerade? Sicht und nicht Inhalt — steht deshalb nicht im Board. */
+  const [spielt, setSpielt] = useState(false)
+  /**
+   * Was der naechste Druck zeigt.
+   *
+   * Der Browser druckt, was im Dokument steht — also muss VOR dem Druck
+   * feststehen, welche der beiden Fassungen dort liegt. Deshalb ein
+   * Zustand und kein Parameter an `window.print()`.
+   */
+  const [druckModus, setDruckModus] = useState<'doc' | 'sheet'>('doc')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [connectFrom, setConnectFrom] = useState<string | null>(null)
   const [tempPoint, setTempPoint] = useState<Point | null>(null)
@@ -171,8 +186,25 @@ export function BoardCanvas({
   const cardById = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards])
   const layout = useMemo(() => layoutBoard(cards), [cards])
   const crumbs = useMemo(() => crumbTitles(root, path, title), [root, path, title])
+  // Die Schnittfolge wird ABGELESEN und nicht gefuehrt: wer eine Karte
+  // verschiebt, schneidet um, und es gibt keine zweite Liste, die danach
+  // nicht mehr stimmt (ADR-001).
+  const shots = useMemo(() => shotSequence(current, layout), [current, layout])
+  const shotById = useMemo(() => new Map(shots.map((sh) => [sh.card.id, sh])), [shots])
 
   const mutate = useCallback((fn: (b: Board) => Board) => setRoot((r) => updateBoardAtPath(r, path, fn)), [path])
+
+  /**
+   * Das Bildformat dieses Boards.
+   *
+   * „Ohne" ist eine echte Wahl und nicht der Ausgangszustand vor der
+   * richtigen: ein Moodboard hat kein Bildformat, und eine Grenze darueber zu
+   * zeichnen behauptete eine Entscheidung, die niemand getroffen hat.
+   */
+  const setzeFormat = useCallback(
+    (f: BoardFormat | undefined) => mutate((b) => (f ? { ...b, format: f } : { ...b, format: undefined })),
+    [mutate],
+  )
 
   // ─── DAS BOARD WANDERT INS PROJEKT ──────────────────────────────────────
   //
@@ -318,7 +350,15 @@ export function BoardCanvas({
     URL.revokeObjectURL(url)
   }, [root, title])
 
-  const exportPrint = useCallback(() => window.print(), [])
+  const exportPrint = useCallback(() => { setDruckModus('doc'); setTimeout(() => window.print(), 0) }, [])
+  /**
+   * Kontaktabzug drucken.
+   *
+   * Das `setTimeout` ist kein Zittern, sondern die Abfolge: `window.print()`
+   * haelt den Faden an und fotografiert das Dokument, wie es GERADE ist. Im
+   * selben Durchlauf gerufen, druckte es noch die alte Fassung.
+   */
+  const exportSheet = useCallback(() => { setDruckModus('sheet'); setTimeout(() => window.print(), 0) }, [])
 
   // ── Foto-Import (Upload / Drag&Drop / Einfügen) ──
   const addImageFile = useCallback((file: File, at?: Point, index = 0) => {
@@ -728,6 +768,42 @@ export function BoardCanvas({
         </div>
 
         <div className="ml-auto flex items-center gap-1">
+          {/* Das Board als Film. Der Knopf nennt die Laufzeit, weil die die
+              Frage ist, die man an ein Storyboard stellt. Ohne Einstellung
+              auf dem Board ist er aus — ein Abspielknopf, der auf ein
+              leeres Bild fuehrt, ist eine Sackgasse. */}
+          <button
+            type="button"
+            className="av-toolbar-btn av-focus"
+            onClick={() => setSpielt(true)}
+            disabled={shots.length === 0}
+            style={shots.length === 0 ? { opacity: 0.45 } : undefined}
+            aria-label={t('board.play.start', 'Als Film abspielen')}
+            title={t('board.play.start', 'Als Film abspielen')}
+          >
+            <Icon name="eye" size={15} />
+            <span className="text-[12px]">
+              {shots.length > 0
+                ? format(t('board.play.button', 'Abspielen · {zeit}'), {
+                    zeit: formatLaufzeit(sequenceSeconds(shots)),
+                  })
+                : t('board.play.buttonEmpty', 'Abspielen')}
+            </span>
+          </button>
+          <Menu button={menuButton(current.format ?? t('board.format.none', 'Format'), 'ruler')} align="right">
+            {(close) => (
+              <>
+                <MenuItem onClick={() => { setzeFormat(undefined); close() }}>
+                  {t('board.format.off', 'Ohne Bildgrenzen')}
+                </MenuItem>
+                {(Object.keys(BOARD_FORMAT_RATIO) as BoardFormat[]).map((f) => (
+                  <MenuItem key={f} onClick={() => { setzeFormat(f); close() }}>
+                    {f}
+                  </MenuItem>
+                ))}
+              </>
+            )}
+          </Menu>
           {/* Zoom. Die Zahl ist ein Knopf: sie setzt auf 100 % zurueck —
               dieselbe Stelle, an der sie steht, macht sie rueckgaengig. */}
           <button type="button" className="av-toolbar-btn av-focus" onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - 0.1))} aria-label={t('board.zoom.out', 'Verkleinern')} title={t('board.zoom.out', 'Verkleinern')}>
@@ -765,6 +841,7 @@ export function BoardCanvas({
               <>
                 <MenuItem icon={<Icon name="library" size={14} />} onClick={() => { exportMarkdown(); close() }}>{t('board.export.markdown', 'Als Markdown')}</MenuItem>
                 <MenuItem icon={<Icon name="external" size={14} />} onClick={() => { close(); exportPrint() }}>{t('board.export.pdf', 'Als PDF (Druck)')}</MenuItem>
+                <MenuItem icon={<Icon name="grid" size={14} />} onClick={() => { close(); exportSheet() }}>{t('board.export.sheet', 'Kontaktabzug (PDF)')}</MenuItem>
               </>
             )}
           </Menu>
@@ -932,6 +1009,7 @@ export function BoardCanvas({
                 key={card.id} card={card} rect={r} dim={!matchesQuery(card)}
                 selected={isSelected(card.id)} allein={selection.length === 1 && isSelected(card.id)}
                 editing={editingId === card.id}
+                shot={shotById.get(card.id)} boardFormat={current.format}
                 onHeaderPointerDown={(e) => onHeaderPointerDown(e, card)}
                 onHeaderPointerMove={onHeaderPointerMove}
                 onHeaderPointerUp={(e) => onHeaderPointerUp(e, card)}
@@ -956,9 +1034,32 @@ export function BoardCanvas({
         </div>
       </div>
 
-      <PrintDoc title={title} board={root} />
+      {spielt && (
+        <BoardPlayer
+          shots={shots}
+          boardFormat={current.format}
+          title={crumbs[crumbs.length - 1]?.title ?? title}
+          onClose={() => setSpielt(false)}
+        />
+      )}
+
+      <PrintDoc title={title} board={druckModus === 'sheet' ? current : root} mode={druckModus} format={current.format} />
     </div>
   )
+}
+
+/**
+ * Wo die Bildgrenze auf einer Karte liegt.
+ *
+ * Die Karte ist so hoch, wie ihr eigenes Seitenverhaeltnis es vorgibt; das
+ * Format des Boards ist ein anderes. Gerechnet wird deshalb der Ausschnitt,
+ * der bei GLEICHER BREITE in der Karte liegt — das ist die Grenze, die man
+ * beim Drehen einhalten muesste.
+ */
+function bildgrenze(rect: Rect, ratio: number): { top: number; bottom: number } {
+  const hoehe = rect.w / ratio
+  const rand = Math.max(0, (rect.h - hoehe) / 2)
+  return { top: rand, bottom: rand }
 }
 
 /* ── Druck-Dokument (per @media print sichtbar, rekursiv über Unterboards) ──*/
@@ -994,14 +1095,79 @@ function PrintBoard({ board, title, level }: { board: Board; title: string; leve
   )
 }
 
-function PrintDoc({ title, board }: { title: string; board: Board }) {
+/**
+ * Der Kontaktabzug: die Einstellungen als Raster, wie ein Storyboard
+ * gedruckt wird.
+ *
+ * Er steht NEBEN dem Dokument-Ausdruck und ersetzt ihn nicht: das Dokument
+ * ist das ganze Board mit Notizen, To-dos und Unterboards, der Kontaktabzug
+ * sind die Einstellungen in Schnittfolge. Wer das Board bespricht, braucht
+ * das eine; wer es dreht, das andere.
+ */
+function ContactSheet({ title, board, format: bildformat }: { title: string; board: Board; format?: BoardFormat }) {
+  const t = useT()
+  const shots = shotSequence(board)
+  return (
+    <section>
+      <h1>{title}</h1>
+      <p>
+        {format(t('board.sheet.head', '{n} Einstellungen · Laufzeit {zeit}{format}'), {
+          n: shots.length,
+          zeit: formatLaufzeit(sequenceSeconds(shots)),
+          format: bildformat ? ` · ${bildformat}` : '',
+        })}
+      </p>
+      <div className="board-sheet">
+        {shots.map((sh) => {
+          const c = sh.card
+          // Das Kaestchen bekommt das Seitenverhaeltnis der Karte; die
+          // gestrichelte Grenze darin ist das Format des Boards.
+          const kartenRatio = c.ratio ?? 16 / 9
+          const rand = bildformat
+            ? Math.max(0, (1 / kartenRatio - 1 / BOARD_FORMAT_RATIO[bildformat]) / 2 / (1 / kartenRatio)) * 100
+            : 0
+          return (
+            <figure key={c.id}>
+              <div className="shot-bild" style={{ aspectRatio: String(kartenRatio) }}>
+                {c.src ? (
+                  <img src={c.src} alt={c.title ?? ''} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', background: c.color ?? '#ccc' }} />
+                )}
+                {bildformat && rand > 0.5 && (
+                  <div className="shot-grenze" style={{ top: `${rand}%`, bottom: `${rand}%` }} />
+                )}
+              </div>
+              <figcaption>
+                <span className="shot-nr">{sh.nr}</span> {c.title ?? ''}
+                <br />
+                <span className="shot-zeit">
+                  {formatLaufzeit(sh.startS)} · {sh.durationS} s
+                </span>
+              </figcaption>
+            </figure>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+function PrintDoc({ title, board, mode, format: bildformat }: { title: string; board: Board; mode: 'doc' | 'sheet'; format?: BoardFormat }) {
   if (typeof document === 'undefined') return null
-  return createPortal(<div className="board-print"><PrintBoard board={board} title={title} level={1} /></div>, document.body)
+  return createPortal(
+    <div className="board-print">
+      {mode === 'sheet'
+        ? <ContactSheet title={title} board={board} format={bildformat} />
+        : <PrintBoard board={board} title={title} level={1} />}
+    </div>,
+    document.body,
+  )
 }
 
 /* ── Einzelne Karte ────────────────────────────────────────────────────────*/
 function BoardCardView({
-  card, rect, selected, allein, editing, dim,
+  card, rect, selected, allein, editing, dim, shot, boardFormat,
   onHeaderPointerDown, onHeaderPointerMove, onHeaderPointerUp,
   onStartEdit, onEndEdit, onOpen, onPatch, onDelete, onStartConnect,
   onResizePointerDown, onResizePointerMove, onResizePointerUp,
@@ -1018,6 +1184,9 @@ function BoardCardView({
    * Verdoppeln · Loeschen"), und das ist ein Ort statt zehn.
    */
   allein: boolean
+  /** Gesetzt, wenn diese Karte eine Einstellung der Schnittfolge ist. */
+  shot?: Shot
+  boardFormat?: BoardFormat
   onHeaderPointerDown: (e: React.PointerEvent) => void
   onHeaderPointerMove: (e: React.PointerEvent) => void
   onHeaderPointerUp: (e: React.PointerEvent) => void
@@ -1037,6 +1206,29 @@ function BoardCardView({
           {(card.type === 'color' || card.type === 'look') && SWATCHES.slice(0, 6).map((s) => (
             <button key={s} type="button" className="h-4 w-4 rounded-none border border-av-border" style={{ background: s }} onClick={() => onPatch({ color: s })} aria-label={format(t('board.swatch', 'Farbe {color}'), { color: s })} />
           ))}
+          {shot && (
+            /* Die Standzeit gehoert an die Einstellung und nicht in einen
+               Dialog: sie wird beim Ansehen des Bildes geaendert, nicht
+               danach. Leer heisst „Vorgabe des Boards" — deshalb steht hier
+               kein Pflichtwert und keine Null. */
+            <label className="flex items-center gap-1 px-1 text-[11px] text-av-text-muted">
+              <input
+                type="number"
+                min={0.2}
+                max={120}
+                step={0.5}
+                value={card.durationS ?? ''}
+                placeholder={String(shot.durationS)}
+                onChange={(e) => {
+                  const v = Number(e.target.value)
+                  onPatch({ durationS: e.target.value === '' || !Number.isFinite(v) || v <= 0 ? undefined : v })
+                }}
+                className="av-focus w-12 border border-av-border bg-av-surface-3 px-1 py-0.5 text-[11px] tabular-nums text-av-text"
+                aria-label={t('board.shot.duration', 'Standzeit in Sekunden')}
+              />
+              s
+            </label>
+          )}
           <button type="button" className="av-icon-btn" style={{ width: 24, height: 24 }} onClick={onDelete} aria-label={t('board.card.delete', 'Karte löschen')}><Icon name="close" size={14} /></button>
         </div>
       )}
@@ -1044,6 +1236,16 @@ function BoardCardView({
         <button type="button" className="absolute top-1/2 z-20 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-none border border-av-border bg-av-surface-2 text-av-accent" style={{ right: -10 }} onPointerDown={onStartConnect} aria-label={t('board.connect', 'Verbindung ziehen')}>
           <Icon name="nodes" size={11} />
         </button>
+      )}
+      {/* DIE NUMMER DER EINSTELLUNG steht auf der Karte und nicht nur im Film.
+          Ein Storyboard wird im Ausdruck besprochen („die Drei nach der
+          Totalen"), und eine Reihenfolge, die man nur im Abspielen sieht,
+          laesst sich nicht besprechen. */}
+      {shot && (
+        <div className="pointer-events-none absolute left-1 top-1 z-10 flex items-center gap-1 bg-av-surface-1/90 px-1.5 py-0.5 text-[11px] tabular-nums text-av-text">
+          <span className="font-semibold">{shot.nr}</span>
+          <span className="text-av-text-muted">{shot.durationS} s</span>
+        </div>
       )}
       <div
         className="h-full w-full overflow-hidden rounded-av-card"
@@ -1055,6 +1257,20 @@ function BoardCardView({
           ? <BoardTile card={card} selected={selected} onPatch={onPatch} onOpen={onOpen} />
           : <CardBody card={card} editing={editing} onEndEdit={onEndEdit} onPatch={onPatch} />}
       </div>
+      {/* Die Bildgrenze liegt UEBER dem Bild und schneidet es nicht weg: was
+          ausserhalb liegt, ist die Information, die beim Schneiden gebraucht
+          wird. */}
+      {shot && boardFormat && (
+        <div
+          className="pointer-events-none absolute z-10 border border-dashed"
+          style={{
+            borderColor: 'var(--av-accent)',
+            left: 0,
+            right: 0,
+            ...bildgrenze(rect, BOARD_FORMAT_RATIO[boardFormat]),
+          }}
+        />
+      )}
       {allein && card.type !== 'column' && (
         <div
           className="absolute z-20 h-3.5 w-3.5 cursor-nwse-resize rounded-sm border border-av-accent bg-av-surface-2"

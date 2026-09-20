@@ -1,4 +1,4 @@
-import type { Board, BoardCard, BoardConnection } from './project'
+import type { Board, BoardCard, BoardCardType, BoardConnection } from './project'
 
 /* Reine Board-Logik: Layout (inkl. Spalten), Vorlagen und Markdown-Export.
  * Bewusst ohne React, damit sie testbar bleibt. */
@@ -225,4 +225,105 @@ export function imRahmen(
       )
     })
     .map((c) => c.id)
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// DAS BOARD ALS FILM — die Schnittfolge.
+//
+// NUTZER-AUFTRAG 2026-09-20: das Board soll auch wie `recceboard` sein. Dort
+// ist ein Board keine Pinnwand, sondern eine FOLGE: die Einstellungen laufen
+// der Reihe nach als Film, jede mit ihrer Standzeit, und heraus geht ein
+// Kontaktabzug.
+//
+// Das Gegenteil von Milanote also — dort ist die Fläche frei, hier hat sie
+// eine Reihenfolge. Beides zugleich geht, wenn die Reihenfolge NICHT
+// zusätzlich verwaltet wird, sondern aus der Lage abgelesen: wer eine Karte
+// verschiebt, schneidet damit um, und es gibt keine zweite Liste, die
+// danach nicht mehr stimmt (ADR-001).
+//
+// ─── WIE DIE REIHENFOLGE ENTSTEHT ─────────────────────────────────────────
+//
+// Wie man liest: zeilenweise von oben, innerhalb einer Zeile von links. Eine
+// „Zeile" ist dabei ein BAND und keine Linie — zwei Bilder, die um zwölf
+// Pixel gegeneinander versetzt hängen, sind für das Auge nebeneinander und
+// müssen es auch für den Schnitt sein. `ZEILEN_BAND` ist die Höhe dieses
+// Bandes.
+//
+// Ohne das Band entschiede der Zufall des Ablegens: eine Karte, die zwei
+// Pixel höher sitzt, käme eine Einstellung früher, und niemand sähe warum.
+// ───────────────────────────────────────────────────────────────────────────
+
+/** Vorgabe-Standzeit einer Einstellung, wenn weder Karte noch Board etwas sagen. */
+export const DEFAULT_SHOT_S = 3
+
+/** Höhe des Bandes, in dem zwei Karten als „nebeneinander" gelten. */
+export const ZEILEN_BAND = 140
+
+/** Welche Kartenarten eine Einstellung sind. Eine Notiz ist keine. */
+export const SHOT_TYPES: readonly BoardCardType[] = ['image', 'look']
+
+export interface Shot {
+  card: BoardCard
+  /** Laufende Nummer ab 1 — die Zahl, die auf dem Kontaktabzug steht. */
+  nr: number
+  /** Standzeit in Sekunden: Karte, sonst Board, sonst Vorgabe. */
+  durationS: number
+  /** Beginn im fertigen Film, in Sekunden. */
+  startS: number
+}
+
+/**
+ * Die Einstellungen dieses Boards, in Schnittfolge.
+ *
+ * Karten IN einer Spalte zählen mit und stehen an der Stelle der Spalte —
+ * eine Spalte ist auf diesen Boards eine Sequenz, und sie zu überspringen
+ * hiesse, den halben Film wegzulassen. Gerechnet wird gegen das LAYOUT und
+ * nicht gegen `x`/`y`, weil ein Spalten-Mitglied seine eigene Lage gar nicht
+ * kennt.
+ */
+export function shotSequence(board: Board, layout?: ReadonlyMap<string, Rect>): Shot[] {
+  const lage = layout ?? layoutBoard(board.cards)
+  const vorgabe = board.shotSeconds && board.shotSeconds > 0 ? board.shotSeconds : DEFAULT_SHOT_S
+
+  const kandidaten = board.cards
+    .filter((c) => SHOT_TYPES.includes(c.type))
+    .map((c) => ({ card: c, r: lage.get(c.id) }))
+    .filter((e): e is { card: BoardCard; r: Rect } => !!e.r)
+
+  kandidaten.sort((a, b) => {
+    const zeileA = Math.floor(a.r.y / ZEILEN_BAND)
+    const zeileB = Math.floor(b.r.y / ZEILEN_BAND)
+    if (zeileA !== zeileB) return zeileA - zeileB
+    if (a.r.x !== b.r.x) return a.r.x - b.r.x
+    // Gleiche Zeile, gleiche Spalte: die obere zuerst. Ohne diesen letzten
+    // Vergleich haengt die Reihenfolge an der Reihenfolge im Array, und die
+    // aendert sich beim Verschieben einer ganz anderen Karte.
+    return a.r.y - b.r.y
+  })
+
+  let start = 0
+  return kandidaten.map((e, i) => {
+    const d = e.card.durationS && e.card.durationS > 0 ? e.card.durationS : vorgabe
+    const shot: Shot = { card: e.card, nr: i + 1, durationS: d, startS: start }
+    start += d
+    return shot
+  })
+}
+
+/** Gesamtlaufzeit in Sekunden. 0 heisst: keine Einstellung auf dem Board. */
+export const sequenceSeconds = (shots: readonly Shot[]): number =>
+  shots.reduce((n, s) => n + s.durationS, 0)
+
+/** „1:04" — Minuten und Sekunden, wie eine Laufzeit gelesen wird. */
+export function formatLaufzeit(sekunden: number): string {
+  const ganz = Math.max(0, Math.round(sekunden))
+  const m = Math.floor(ganz / 60)
+  const s = ganz % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+/** Welche Einstellung laeuft zur Zeit t? `null`, wenn der Film vorbei ist. */
+export function shotAt(shots: readonly Shot[], t: number): Shot | null {
+  for (const s of shots) if (t >= s.startS && t < s.startS + s.durationS) return s
+  return null
 }
