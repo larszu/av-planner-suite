@@ -1,6 +1,6 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react'
 import { Badge, Icon, type IconName } from '@avplan/ui'
-import { AMPEL_STUFEN, deckungsAmpel, zaehleAmpeln, type Ampel, type DeckungsZeile } from '@avplan/ui/embed'
+import { AMPEL_STUFEN, deckungsAmpel, szeneAusSeed, zaehleAmpeln, type Ampel, type DeckungsZeile } from '@avplan/ui/embed'
 import {
   DEPARTMENT_COLOR,
   DEPARTMENT_LABEL,
@@ -429,6 +429,41 @@ export function DeckungCard({ project, onNavigate }: { project: SuiteProject; on
         </p>
       )}
       <p className="mt-2 text-[10.5px] text-av-text-faint">{t('overview.deckung.source', 'Bedarf aus dem Plan, Deckung vom Lager-Modul')}</p>
+    </Card>
+  )
+}
+
+/* ── Show in 3D (suite#258) ────────────────────────────────────────────────*/
+// Lazy: three.js steht nur im Chunk des Dialogs, und der wird erst geladen,
+// wenn jemand ihn oeffnet — nicht bei jedem Start der Shell.
+const Szene3DDialog = lazy(() => import('./Szene3DDialog'))
+
+export function Raum3DCard({ project }: { project: SuiteProject }) {
+  const t = useT()
+  const [offen, setOffen] = useState(false)
+  // Aus dem Seed, derselben Rechnung, die alle Planer bekommen (ADR-001).
+  const szene = useMemo(() => szeneAusSeed(suiteToSeed(project, 0)), [project])
+  const zahl = (g: 'kamera' | 'licht' | 'signal') => szene.geraete.filter((x) => x.gewerk === g).length
+  return (
+    <Card title={t('overview.card.raum3d.title', 'Raum in 3D')} icon="modules">
+      <ul className="mb-3 flex flex-col gap-1 text-[12.5px] text-av-text-secondary">
+        <li>{format(t('overview.raum3d.cameras', '{n} Kameras platziert'), { n: zahl('kamera') })}</li>
+        <li>{format(t('overview.raum3d.lights', '{n} Leuchten platziert'), { n: zahl('licht') })}</li>
+        <li>{format(t('overview.raum3d.signal', '{n} Signalgeräte platziert, {k} Kabel'), { n: zahl('signal'), k: szene.kabel.length })}</li>
+      </ul>
+      <button
+        type="button"
+        onClick={() => setOffen(true)}
+        disabled={szene.geraete.length === 0 && !szene.raum}
+        className="av-focus rounded-av-control border border-av-border px-2.5 py-1 text-[12px] text-av-text hover:bg-av-surface-2 disabled:opacity-40"
+      >
+        {t('overview.raum3d.open', 'In 3D ansehen')}
+      </button>
+      {offen && (
+        <Suspense fallback={null}>
+          <Szene3DDialog szene={szene} onClose={() => setOffen(false)} />
+        </Suspense>
+      )}
     </Card>
   )
 }

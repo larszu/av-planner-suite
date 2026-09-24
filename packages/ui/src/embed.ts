@@ -73,6 +73,8 @@ export type { SeedConflict, SeedMerge, SeedVenueField } from './seedOwnership'
 export { SEED_VENUE_OWNER, acceptProposal, conflictFieldName, mergeSeedPatch } from './seedOwnership'
 export type { Ampel, DeckungsZeile } from './deckung'
 export { AMPEL_STUFEN, deckungsAmpel, zaehleAmpeln } from './deckung'
+export { hauptGewerk, szeneAusSeed } from './szene3d'
+export type { Punkt3D, Szene3D, Szene3DGeraet, Szene3DKabel } from './szene3d'
 
 export type ResolvedTheme = 'dark' | 'light'
 

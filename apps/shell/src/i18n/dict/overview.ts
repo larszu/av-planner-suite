@@ -39,6 +39,7 @@ export const overview: Record<string, string> = {
   'overview.widget.budget': 'Budget',
   'overview.widget.readiness': 'Equipment readiness',
   'overview.widget.deckung': 'Demand & coverage',
+  'overview.widget.raum3d': 'Show in 3D',
   'overview.widget.tasks': 'Tasks',
   'overview.widget.logistics': 'Logistics',
   'overview.widget.contacts': 'Contacts',
@@ -242,6 +243,18 @@ export const overview: Record<string, string> = {
   'overview.card.crew.gapTitle': 'No time window — missing: {felder}',
   'overview.card.crew.unchecked': '{n} without a time window (date, start, end) — nobody checks them for overlaps.',
   'overview.card.crew.source': 'Booking state and overlaps from @avplan/crew-core',
+
+  // Show in 3D (suite#258)
+  'overview.card.raum3d.title': 'Show in 3D',
+  'overview.raum3d.cameras': '{n} cameras placed',
+  'overview.raum3d.lights': '{n} fixtures placed',
+  'overview.raum3d.signal': '{n} signal devices placed, {k} cables',
+  'overview.raum3d.open': 'View in 3D',
+  'overview.raum3d.dialogTitle': 'Show in 3D',
+  'overview.raum3d.labels': 'Labels',
+  'overview.raum3d.footer':
+    '{geraete} devices, {kabel} cables — drag to orbit, scroll to zoom. Not placed: {offen} devices, {kabelOffen} cables.',
+  'overview.raum3d.noHeight': '{n} fixtures without a trim height stand on the floor — none is given.',
 
   // Demand & coverage — the inventory's answer (B-78, suite#260)
   'overview.card.deckung.title': 'Demand & coverage',

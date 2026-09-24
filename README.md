@@ -94,6 +94,11 @@ booking state (pencilled · on hold · confirmed · worked) and overlaps of the 
 `bookingConflicts`, for every entry with a date, start and end; entries without a time window
 are named, not silently passed.
 
+**Room in 3D** (overview card) puts every planner into one picture: the venue and stage, placed
+cameras, fixtures at their trim height, signal devices and the cables between them — straight
+from the shared project. Devices without a position are counted, not dropped at the origin. The
+per-floor building view lives in the cable planner (*3D* in its toolbar).
+
 Two people can work on the same board over their own network: one opens a window, the others
 join from a browser on the same network with nothing to install. Nothing travels over machines
 you do not own, and the window is gone the moment it is closed. Cards merge per card, the
