@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon, Menu, MenuItem, confirmDialog, dateiName, herunterladen } from '@avplan/ui'
 import { useLanguage, useT, format, type Language, type TFunc } from '../i18n'
-import { BOARD_FORMAT_RATIO, EINBETT_GRENZE, type Board, type BoardCard, type BoardCardType, type BoardFormat } from '../data/project'
+import { BOARD_FORMAT_RATIO, EINBETT_GRENZE, type Board, type BoardCard, type BoardCardType, type BoardFormat, type ObjektVerweis } from '../data/project'
+import { objektAnzeige, objektTitel, type HeimatModul, type PlanAusschnitt } from '../data/boardObjekt'
 import { BoardPlayer } from './BoardPlayer'
 import { KommentarFaden } from './KommentarFaden'
 import { holeVorschau } from './linkVorschauHost'
@@ -12,6 +13,7 @@ import { KameraDialog } from './KameraDialog'
 import { hoereAufSendungen, type Sendung } from './einwurfHost'
 import { useMitmachen } from './useMitmachen'
 import { MitmachZeiger } from './MitmachZeiger'
+import { ObjektKarte, ObjektWaehler } from './ObjektKarte'
 import { FLAECHE } from '@avplan/ui/embed'
 import { offeneJeObjekt, type Identitaet, type Kommentar } from '@avplan/ui/embed'
 import {
@@ -61,6 +63,7 @@ const cardMeta = (t: TFunc): Record<BoardCardType, { label: string; icon: Parame
   video: { label: t('board.type.video', 'Film'), icon: 'monitor' },
   audio: { label: t('board.type.audio', 'Ton'), icon: 'signal' },
   file: { label: t('board.type.file', 'Datei'), icon: 'library' },
+  object: { label: t('board.type.object', 'Plan-Objekt'), icon: 'nodes' },
 })
 
 const templates = (t: TFunc): { id: TemplateId; label: string }[] => [
@@ -100,6 +103,8 @@ export function BoardCanvas({
   onKommentarErledigt,
   onEinstellungen,
   onChange,
+  plan,
+  onZeigen,
 }: {
   seed: Board
   title?: string
@@ -142,6 +147,16 @@ export function BoardCanvas({
    * Arbeitsflaeche ohne Funktionen. Das war der Befund.
    */
   onChange?: (board: Board) => void
+  /**
+   * Geraete und Kabel des Plans, so wie die Shell sie an die Planer schickt.
+   *
+   * Objekt-Karten lesen daraus bei JEDEM Rendern (suite#259). Auf dem Board
+   * steht nur der Verweis — was die Karte zeigt, gehoert dem Plan. Fehlt er,
+   * ist kein Projekt offen; das ist nicht dasselbe wie ein leerer Plan.
+   */
+  plan?: PlanAusschnitt
+  /** Sprung in das Modul, das dieses Objekt fuehrt — derselbe Weg wie jeder Querverweis. */
+  onZeigen?: (modul: HeimatModul, id: string) => void
 }) {
   const t = useT()
   const title = titleProp ?? t('board.title', 'Kreativ-Board')
@@ -207,6 +222,11 @@ export function BoardCanvas({
   const [druckModus, setDruckModus] = useState<'doc' | 'sheet'>('doc')
   /** Rechtsklick auf die freie Flaeche: wo, und was dort hin soll. */
   const [einfuegenAn, setEinfuegenAn] = useState<{ x: number; y: number; sx: number; sy: number } | null>(null)
+  /**
+   * Der Auswahl-Dialog fuer eine Objekt-Karte — offen, und wenn ja, fuer
+   * welche Stelle. Ohne Stelle landet die Karte dort, wo jede neue landet.
+   */
+  const [waehler, setWaehler] = useState<{ at?: Point } | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [connectFrom, setConnectFrom] = useState<string | null>(null)
   const [tempPoint, setTempPoint] = useState<Point | null>(null)
@@ -430,10 +450,11 @@ export function BoardCanvas({
    * landet sie oben links und muss erst an ihren Platz gezogen werden — und
    * bis dahin steht sie in der Schnittfolge an der falschen.
    */
-  const addCard = useCallback((type: BoardCardType, at?: Point) => {
+  const addCard = useCallback((type: BoardCardType, at?: Point, ref?: ObjektVerweis) => {
     const n = cards.length
     const base: BoardCard = {
       id: nextId(), type,
+      ...(ref ? { ref } : {}),
       x: at ? Math.max(0, Math.round(at.x)) : 120 + (n % 6) * 28 + (boardRef.current?.parentElement?.scrollLeft ?? 0),
       y: at ? Math.max(0, Math.round(at.y)) : 120 + (n % 6) * 28 + (boardRef.current?.parentElement?.scrollTop ?? 0),
       w: type === 'color' ? 110 : type === 'look' ? 190 : type === 'column' ? 280 : type === 'board' ? 210 : 230,
@@ -556,9 +577,9 @@ export function BoardCanvas({
   }, [shots, current.format, current.tonSrc, title, t, setVorschauMeldung])
 
   const exportMarkdown = useCallback(() => {
-    const md = boardToMarkdown(root, title)
+    const md = boardToMarkdown(root, title, plan)
     herunterladen(new Blob([md], { type: 'text/markdown;charset=utf-8' }), `${dateiName(title)}.md`)
-  }, [root, title])
+  }, [root, title, plan])
 
   const exportPrint = useCallback(() => { setDruckModus('doc'); setTimeout(() => window.print(), 0) }, [])
   /**
@@ -763,7 +784,9 @@ export function BoardCanvas({
     return (
       (c.title ?? '').toLowerCase().includes(q) ||
       (c.text ?? '').toLowerCase().includes(q) ||
-      (c.items ?? []).some((i) => i.text.toLowerCase().includes(q))
+      (c.items ?? []).some((i) => i.text.toLowerCase().includes(q)) ||
+      // Eine Objekt-Karte heisst, wie das Objekt JETZT im Plan heisst.
+      (c.type === 'object' && (objektTitel(objektAnzeige(c, plan)) ?? '').toLowerCase().includes(q))
     )
   }
 
@@ -1118,6 +1141,12 @@ export function BoardCanvas({
             <Icon name={CARD_META[ty].icon} size={15} /> <span className="text-[12px]">{CARD_META[ty].label}</span>
           </button>
         ))}
+        {/* Ein Objekt des Plans. Kein Direkt-Einfuegen wie bei den anderen
+            Arten: eine Objekt-Karte ohne Objekt waere eine leere Huelle,
+            also kommt erst die Wahl, dann die Karte. */}
+        <button type="button" className="av-toolbar-btn av-focus" onClick={() => setWaehler({})} aria-label={format(t('board.add.item', '{label} hinzufügen'), { label: CARD_META.object.label })} title={CARD_META.object.label}>
+          <Icon name={CARD_META.object.icon} size={15} /> <span className="text-[12px]">{CARD_META.object.label}</span>
+        </button>
         {/* Knipsen statt importieren. Derselbe Ablage-Weg wie jede Datei —
             und damit dieselbe Prüfung gegen die Einbettungs-Grenze. */}
         <button type="button" className="av-toolbar-btn av-focus" onClick={() => setSucher(true)} aria-label={t('board.toolbar.kamera', 'Foto aufnehmen')} title={t('board.toolbar.kamera', 'Foto aufnehmen')}>
@@ -1495,6 +1524,7 @@ export function BoardCanvas({
                 selected={isSelected(card.id)} allein={selection.length === 1 && isSelected(card.id)}
                 editing={editingId === card.id}
                 shot={shotById.get(card.id)} boardFormat={current.format} crew={crew}
+                plan={plan} onZeigen={onZeigen}
                 offen={offeneKommentare.get(card.id) ?? 0} onFaden={() => { selectOnly(card.id); setFadenAn(card.id) }}
                 onVorschau={() => holeVorschauFuer(card)} vorschauLaeuft={vorschauLaeuft === card.id}
                 onHeaderPointerDown={(e) => onHeaderPointerDown(e, card)}
@@ -1529,7 +1559,7 @@ export function BoardCanvas({
           <div className="fixed inset-0 z-[190]" onPointerDown={() => setEinfuegenAn(null)} />
           <div
             className="fixed z-[200] min-w-[9rem] border border-av-border bg-av-surface-2 py-1 shadow-none"
-            style={{ left: Math.min(einfuegenAn.sx, window.innerWidth - 170), top: Math.min(einfuegenAn.sy, window.innerHeight - 320) }}
+            style={{ left: Math.min(einfuegenAn.sx, window.innerWidth - 170), top: Math.min(einfuegenAn.sy, window.innerHeight - 352) }}
             role="menu"
             aria-label={t('board.insert.here', 'Hier einfügen')}
           >
@@ -1547,8 +1577,24 @@ export function BoardCanvas({
                 <Icon name={CARD_META[ty].icon} size={14} /> {CARD_META[ty].label}
               </button>
             ))}
+            <button
+              type="button"
+              role="menuitem"
+              className="av-focus flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] text-av-text hover:bg-av-surface-3"
+              onClick={() => { setWaehler({ at: { x: einfuegenAn.x, y: einfuegenAn.y } }); setEinfuegenAn(null) }}
+            >
+              <Icon name={CARD_META.object.icon} size={14} /> {t('board.insert.object', 'Plan-Objekt …')}
+            </button>
           </div>
         </>
+      )}
+
+      {waehler && (
+        <ObjektWaehler
+          plan={plan}
+          onWahl={(ref) => { addCard('object', waehler.at, ref); setWaehler(null) }}
+          onClose={() => setWaehler(null)}
+        />
       )}
 
       {/* DER FADEN. Er liegt neben der Flaeche und nicht auf ihr: eine
@@ -1621,7 +1667,7 @@ export function BoardCanvas({
         />
       )}
 
-      <PrintDoc title={title} board={druckModus === 'sheet' ? current : root} mode={druckModus} format={current.format} />
+      <PrintDoc title={title} board={druckModus === 'sheet' ? current : root} mode={druckModus} format={current.format} plan={plan} />
     </div>
   )
 }
@@ -1641,7 +1687,7 @@ function bildgrenze(rect: Rect, ratio: number): { top: number; bottom: number } 
 }
 
 /* ── Druck-Dokument (per @media print sichtbar, rekursiv über Unterboards) ──*/
-function PrintBoard({ board, title, level }: { board: Board; title: string; level: number }) {
+function PrintBoard({ board, title, level, plan }: { board: Board; title: string; level: number; plan?: PlanAusschnitt }) {
   const t = useT()
   const H = `h${Math.min(6, level)}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
   const rendered = new Set<string>()
@@ -1655,7 +1701,18 @@ function PrintBoard({ board, title, level }: { board: Board; title: string; leve
       case 'look': return <p key={c.id}>{format(t('board.print.look', 'Look: {title}'), { title: c.title ?? '' })}</p>
       case 'image': return <div key={c.id}>{c.src ? <img src={c.src} alt={c.title ?? t('board.photoAlt', 'Foto')} style={{ maxWidth: 320, display: 'block', margin: '6px 0' }} /> : null}<em>{c.title}</em></div>
       case 'column': return null
-      case 'board': return <PrintBoard key={c.id} board={c.board ?? { cards: [], connections: [] }} title={format(t('board.print.subboardTitle', '{title} (Unterboard)'), { title: c.title ?? t('board.type.board', 'Unterboard') })} level={level + 1} />
+      case 'board': return <PrintBoard key={c.id} board={c.board ?? { cards: [], connections: [] }} title={format(t('board.print.subboardTitle', '{title} (Unterboard)'), { title: c.title ?? t('board.type.board', 'Unterboard') })} level={level + 1} plan={plan} />
+      case 'object': {
+        const a = objektAnzeige(c, plan)
+        const id = c.ref?.id ?? '—'
+        return (
+          <p key={c.id}>
+            {objektTitel(a) ?? (a.status === 'weg'
+              ? format(t('board.object.goneShort', 'Nicht mehr im Plan ({id})'), { id })
+              : format(t('board.object.noPlanShort', 'Plan-Objekt {id} (kein Plan geöffnet)'), { id }))}
+          </p>
+        )
+      }
     }
   }
   return (
@@ -1731,13 +1788,13 @@ function ContactSheet({ title, board, format: bildformat }: { title: string; boa
   )
 }
 
-function PrintDoc({ title, board, mode, format: bildformat }: { title: string; board: Board; mode: 'doc' | 'sheet'; format?: BoardFormat }) {
+function PrintDoc({ title, board, mode, format: bildformat, plan }: { title: string; board: Board; mode: 'doc' | 'sheet'; format?: BoardFormat; plan?: PlanAusschnitt }) {
   if (typeof document === 'undefined') return null
   return createPortal(
     <div className="board-print">
       {mode === 'sheet'
         ? <ContactSheet title={title} board={board} format={bildformat} />
-        : <PrintBoard board={board} title={title} level={1} />}
+        : <PrintBoard board={board} title={title} level={1} plan={plan} />}
     </div>,
     document.body,
   )
@@ -1745,7 +1802,7 @@ function PrintDoc({ title, board, mode, format: bildformat }: { title: string; b
 
 /* ── Einzelne Karte ────────────────────────────────────────────────────────*/
 function BoardCardView({
-  card, rect, selected, allein, editing, dim, shot, boardFormat, crew, offen, onFaden, onVorschau, vorschauLaeuft,
+  card, rect, selected, allein, editing, dim, shot, boardFormat, crew, plan, onZeigen, offen, onFaden, onVorschau, vorschauLaeuft,
   onHeaderPointerDown, onHeaderPointerMove, onHeaderPointerUp,
   onStartEdit, onEndEdit, onOpen, onPatch, onDelete, onStartConnect,
   onResizePointerDown, onResizePointerMove, onResizePointerUp,
@@ -1767,6 +1824,8 @@ function BoardCardView({
   boardFormat?: BoardFormat
   /** Die Crew dieses Projekts — die Namen, an die eine Aufgabe gehen kann. */
   crew: string[]
+  plan?: PlanAusschnitt
+  onZeigen?: (modul: HeimatModul, id: string) => void
   /** Offene Kommentare an DIESER Karte. 0 heisst: nichts anzeigen. */
   offen: number
   onFaden: () => void
@@ -1894,11 +1953,13 @@ function BoardCardView({
         className="h-full w-full overflow-hidden rounded-av-card"
         style={{ boxShadow: selected ? '0 0 0 2px var(--av-accent)' : undefined, cursor: 'grab' }}
         onPointerDown={onHeaderPointerDown} onPointerMove={onHeaderPointerMove} onPointerUp={onHeaderPointerUp}
-        onDoubleClick={() => { if (isBoard) onOpen(); else if (card.type !== 'color' && card.type !== 'todo') onStartEdit() }}
+        onDoubleClick={() => { if (isBoard) onOpen(); else if (card.type !== 'color' && card.type !== 'todo' && card.type !== 'object') onStartEdit() }}
       >
         {isBoard
           ? <BoardTile card={card} selected={selected} onPatch={onPatch} onOpen={onOpen} />
-          : <CardBody card={card} editing={editing} onEndEdit={onEndEdit} onPatch={onPatch} crew={crew} />}
+          : card.type === 'object'
+            ? <ObjektKarte anzeige={objektAnzeige(card, plan)} farbe={card.color} onZeigen={onZeigen} />
+            : <CardBody card={card} editing={editing} onEndEdit={onEndEdit} onPatch={onPatch} crew={crew} />}
       </div>
       {/* Die Bildgrenze liegt UEBER dem Bild und schneidet es nicht weg: was
           ausserhalb liegt, ist die Information, die beim Schneiden gebraucht

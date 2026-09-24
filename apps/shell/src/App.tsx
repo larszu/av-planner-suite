@@ -56,8 +56,7 @@ import { LibraryPanel } from './shell/LibraryPanel'
 import { PropertiesPanel } from './shell/PropertiesPanel'
 import { TabDeck } from './shell/TabDeck'
 import type { HeaderDraft } from './shell/dashboardEditors'
-import { imPlan } from '@avplan/ui/embed'
-import { geraetMit } from './data/project'
+import { geraetMit, heimatPlan } from './data/project'
 import { SeedConflictBar } from './shell/SeedConflictBar'
 import { SeedHandoffBar } from './shell/SeedHandoffBar'
 import { StatusBar } from './shell/StatusBar'
@@ -878,11 +877,10 @@ export function App() {
       if (!g) return undefined
       // Die Reihenfolge ist eine Aussage und keine Willkuer: ein Geraet kann
       // in mehreren Plaenen stehen, die Zeig-Bitte traegt aber genau EINE
-      // Art. Genannt wird die speziellste — wer eine Kamera sucht, sucht sie
-      // als Kamera und nicht als „irgendein Geraet mit Anschluessen".
-      if (imPlan(g, 'kamera')) return 'camera'
-      if (imPlan(g, 'licht')) return 'fixture'
-      return 'device'
+      // Art. Genannt wird die speziellste — und zwar dieselbe, in deren
+      // Modul eine Objekt-Karte des Boards springt (`heimatPlan`).
+      const plan = heimatPlan(g)
+      return plan === 'cameras' ? 'camera' : plan === 'licht' ? 'fixture' : 'device'
     },
     [project],
   )

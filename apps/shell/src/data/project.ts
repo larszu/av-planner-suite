@@ -117,6 +117,22 @@ export type BoardCardType =
   | 'audio'
   /** Alles andere: PDF, Textdokument, Tabelle, Zeichnung. */
   | 'file'
+  /** Ein Geraet oder Kabel DIESES Plans — die Karte traegt nur den Verweis. */
+  | 'object'
+
+/**
+ * Worauf eine Objekt-Karte zeigt: ein Geraet oder ein Kabel des Plans.
+ *
+ * NUR DER VERWEIS, sonst nichts (ADR-001). Name, Modell, Brennweite, Laenge
+ * werden bei jedem Rendern aus dem Seed gelesen. Eine Abschrift auf der Karte
+ * waere nach dem naechsten Umbenennen im Kameraplan die zweite Wahrheit — und
+ * die Karte zeigte eine Kamera, die es so nicht mehr gibt, ohne dass es
+ * jemand merkt.
+ */
+export interface ObjektVerweis {
+  art: 'geraet' | 'kabel'
+  id: string
+}
 
 /** Eine Karte auf dem Board (frei positioniert oder in einer Spalte). */
 export interface BoardCard {
@@ -191,6 +207,8 @@ export interface BoardCard {
    * andere Aussage als „hat noch niemand festgelegt".
    */
   durationS?: number
+  /** Fuer type 'object': das Geraet oder Kabel, auf das die Karte zeigt. */
+  ref?: ObjektVerweis
 }
 
 export interface BoardConnection {
@@ -894,3 +912,21 @@ export const signalGeraete = (p: SuiteProject): SuiteGeraet[] =>
 /** Ein Geraet zu seiner Id — oder `undefined`. */
 export const geraetMit = (p: SuiteProject, id: string | undefined): SuiteGeraet | undefined =>
   id ? p.geraete.find((g) => g.id === id) : undefined
+
+/**
+ * Der SPEZIELLSTE Plan, der ein Geraet fuehrt — dorthin zeigt ein Verweis.
+ *
+ * Ein Geraet steht in mehreren Plaenen (eine Kamera im Kameraplan UND im
+ * Signalplan), ein Sprung hat aber genau EIN Ziel. Genannt wird der
+ * speziellste: wer eine Kamera sucht, sucht sie als Kamera und nicht als
+ * „irgendein Geraet mit Anschluessen". Dieselbe Reihenfolge benutzt die
+ * Zeig-Bitte an den Planer (`revealKind` in `App.tsx`) — sie steht deshalb
+ * HIER, neben den Filtern, und nicht zweimal.
+ *
+ * Der Rueckgabewert ist eine Modul-Id (`ModuleId`), ohne den Typ zu
+ * importieren: die Datenschicht haengt nicht an der Modul-Registry.
+ */
+export const heimatPlan = (
+  g: Pick<SuiteGeraet, 'kategorie' | 'kamera' | 'licht'>,
+): 'cameras' | 'licht' | 'signal' =>
+  imPlan(g, 'kamera') ? 'cameras' : imPlan(g, 'licht') ? 'licht' : 'signal'

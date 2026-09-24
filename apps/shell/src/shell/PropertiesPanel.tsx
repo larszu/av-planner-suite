@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Button, Icon } from '@avplan/ui'
-import type { SuiteProject } from '../data/project'
+import type { BoardCardType, SuiteProject } from '../data/project'
 import type { ModuleDef, ModuleId } from '../modules/registry'
 import { useT, type TFunc } from '../i18n'
 import { RUNTIMES } from '../modules/runtimes'
@@ -50,7 +50,9 @@ const PHASE_DE: Record<string, string> = {
   teardown: 'Abbau',
 }
 
-const typeLabel = (t: TFunc): Record<string, string> => ({
+// Gegen `BoardCardType` getippt und nicht gegen `string`: so meldet der
+// Typecheck die naechste Kartenart, statt dass sie wieder roh im Panel steht.
+const typeLabel = (t: TFunc): Record<BoardCardType, string> => ({
   heading: t('panels.board.type.heading', 'Überschriften'),
   note: t('panels.board.type.note', 'Notizen'),
   link: t('panels.board.type.link', 'Links'),
@@ -67,6 +69,7 @@ const typeLabel = (t: TFunc): Record<string, string> => ({
   video: t('panels.board.type.video', 'Filme'),
   audio: t('panels.board.type.audio', 'Tonaufnahmen'),
   file: t('panels.board.type.file', 'Dateien'),
+  object: t('panels.board.type.object', 'Plan-Objekte'),
 })
 
 export function PropertiesPanel({
@@ -259,7 +262,7 @@ export function PropertiesPanel({
             <Field label={t('panels.field.cards', 'Karten')}>{board.cards.length}</Field>
             <Field label={t('panels.field.connections', 'Verbindungen')}>{board.connections.length}</Field>
             {Object.entries(byType).map(([type, n]) => (
-              <Field key={type} label={TYPE_LABEL[type] ?? type}>{n}</Field>
+              <Field key={type} label={TYPE_LABEL[type as BoardCardType] ?? type}>{n}</Field>
             ))}
           </Group>
           <Group title={t('panels.group.operation', 'Bedienung')} icon="wand" accent={accent}>
