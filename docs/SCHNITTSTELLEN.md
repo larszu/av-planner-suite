@@ -27,7 +27,8 @@ zu werden.
 | Marker | Was es trägt | Wo definiert |
 | --- | --- | --- |
 | `avplan` | das Show-Projekt (Kabel, Geräte, Locations) | `cable-planner/src/renderer/lib/avplan.ts`, `light-planner/src/core/avplan.ts`, `multicam-planner/src/utils/avplan.ts` |
-| `avplan-inventory` | der Bestand — **byte-gleich in mehreren Repos** | `inventory-planner/src/domain/lib/inventoryPortable.ts` |
+| `avplan-inventory` v8 | der Bestand — **byte-gleich in mehreren Repos**; v8 = `transport` + `stellplatz`, abgeglichen 2026-09-24 in allen Kopien | `inventory-planner/src/domain/lib/inventoryPortable.ts` |
+| `avplan-rack-belegung` v1 | was der Signal-Plan in ein Rack gebaut hat (HE von unten) — das Lager prüft es gegen das Rack-Case | `cable-planner/src/renderer/lib/rackBelegungFormat.ts` → `inventory-planner/src/lib/rackBelegungFormat.ts` (zeichengleich) |
 | `avplan-facility` v1 | die Gebäude-Auskunft | `larszu-facility-planner/src/domain/gebaeudeDatei.ts` |
 | `avplan-intercom` | die Intercom-Matrix | `Broadcast-intercom` |
 | `camera-list` | Kameras vom MultiCam- in den Cable-Planner | `multicam-planner/src/utils/cameraExport.ts` → `cable-planner/src/renderer/lib/multicamCameraImport.ts` |
