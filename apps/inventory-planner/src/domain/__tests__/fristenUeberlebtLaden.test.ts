@@ -133,7 +133,7 @@ describe('Die Fristen überleben Laden und Austausch (B-65)', () => {
   })
 
   it('7. das Format ist auf 7 gegangen, und ein neuerer Stand wird abgelehnt', () => {
-    expect(INVENTORY_FORMAT_VERSION).toBe(7)
+    expect(INVENTORY_FORMAT_VERSION).toBe(8)
     expect(
       parseInventory(
         JSON.stringify({ format: INVENTORY_FORMAT, version: INVENTORY_FORMAT_VERSION + 1 }),
