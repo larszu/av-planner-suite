@@ -11,6 +11,7 @@ export type WidgetId =
   | 'crew'
   | 'budget'
   | 'readiness'
+  | 'deckung'
   | 'tasks'
   | 'logistics'
   | 'contacts'
@@ -25,6 +26,9 @@ export const DEFAULT_CARD_ORDER: WidgetId[] = [
   'crew',
   'budget',
   'readiness',
+  // Neben der Pack-Bereitschaft: beide fragen das Lager, die eine nach dem
+  // Gepackten, die andere nach dem Vorhandenen (B-78).
+  'deckung',
   'tasks',
   'logistics',
   'contacts',
@@ -37,6 +41,7 @@ export const WIDGET_LABEL: Record<WidgetId, string> = {
   crew: 'Crew',
   budget: 'Budget',
   readiness: 'Equipment-Bereitschaft',
+  deckung: 'Bedarf & Deckung',
   tasks: 'Aufgaben',
   logistics: 'Logistik',
   contacts: 'Kontakte',

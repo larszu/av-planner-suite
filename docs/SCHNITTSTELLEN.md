@@ -60,7 +60,11 @@ neutrales Projektmodell an jeden eingebetteten Planer; der Planer schickt
   Wahrheit; ADR-006: der Plan rechnet seinen Bedarf selbst).
 - **`deckung` ist die Antwort des Lagers**, weitergereicht an alle anderen
   Planer, damit der Signal-Plan „3 von 4 vorhanden" zeigen kann, ohne das
-  Lager-Modell zu kennen.
+  Lager-Modell zu kennen. Was die Antwort je Bedarfszeile **heißt**, sagt
+  `deckungsAmpel` (`packages/ui/src/deckung.ts`) an einer Stelle: keine Zeile
+  oder kein `gedeckt` → `unbekannt` (nie `fehlt`), `gedeckt ≥ Menge` →
+  `verfuegbar`, teilweise → `subhire`, gezählte Null → `fehlt`. Die Shell
+  zeigt sie in der Übersicht („Bedarf & Deckung").
 - **`anschluesse` sind die Auskunft des Gebäudes** — geführt, nicht
   abgeleitet. Leer heisst „keine gemeldet" und nicht „das Haus hat keine
   Dosen".

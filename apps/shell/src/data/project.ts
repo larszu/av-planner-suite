@@ -7,6 +7,7 @@
  */
 
 import { imPlan } from '@avplan/ui/embed'
+import type { BookingState } from '@avplan/crew-core'
 import { CONTAINER_KINDS, type InventoryItem, type StorageNode } from '@avplan/inventory-core'
 
 export interface ProjectMeta {
@@ -28,13 +29,36 @@ export interface ScheduleItem {
   dept: Department | 'all'
 }
 
-/** Crew-Mitglied mit Gewerk, Call-Time und Status (Production Planner/Rentman). */
+/**
+ * Crew-Mitglied mit Gewerk, Call-Time und Buchungsstand.
+ *
+ * ─── DER BUCHUNGSSTAND KOMMT AUS `@avplan/crew-core` (suite#260) ───────────
+ *
+ * Hier stand bis 2026-09-24 `status: 'confirmed' | 'pending'` — eine eigene,
+ * gröbere Fassung dessen, was crew-core seit ADR-006 Schritt 2 führt. Zwei
+ * Vokabulare für dieselbe Frage („ist die Person gebucht?") sind die zweite
+ * Wahrheit; die Shell spricht deshalb jetzt das des Pakets. Alte Dateien
+ * heilt `healCrew` (`data/crew.ts`) beim Laden.
+ *
+ * ─── DATUM UND ENDE SIND OPTIONAL, UND DAS IST DIE AUSSAGE ────────────────
+ *
+ * `bookingConflicts` braucht ein Zeitfenster: Datum, Beginn, Ende. Die Crew-
+ * Liste der Shell kannte nur die Call-Time. Wo Datum oder Ende fehlen, hat
+ * der Eintrag KEIN Fenster — es wird nicht aus dem Show-Datum oder einer
+ * Schichtlänge geraten, und für diesen Eintrag prüft niemand Überschneidungen.
+ * Die Crew-Karte sagt das, statt „keine Konflikte" zu melden.
+ */
 export interface CrewMember {
   name: string
   role: string
   dept: Department
+  /** Beginn (HH:MM). Leer heisst: noch keine Call-Time. */
   call: string
-  status: 'confirmed' | 'pending'
+  booking: BookingState
+  /** Tag der Schicht als ISO-Datum (YYYY-MM-DD). */
+  date?: string
+  /** Ende (HH:MM). Liegt es vor dem Beginn, endet die Schicht am Folgetag. */
+  end?: string
 }
 
 /** Budgetzeile: geschätzt vs. tatsächlich pro Kategorie (Production Planner). */
@@ -654,12 +678,14 @@ export const PROJECT: SuiteProject = {
       { time: '19:30', title: 'Load-out', dept: 'all' },
     ],
     crew: [
-      { name: 'Lars Zumpe', role: 'Projektleitung', dept: 'prod', call: '08:00', status: 'confirmed' },
-      { name: 'M. Berg', role: 'Video-Engineer', dept: 'video', call: '08:00', status: 'confirmed' },
-      { name: 'S. Klein', role: 'Kameramann', dept: 'video', call: '12:00', status: 'confirmed' },
-      { name: 'T. Wolf', role: 'Lichttechnik', dept: 'light', call: '09:00', status: 'confirmed' },
-      { name: 'A. Roth', role: 'FOH / Ton', dept: 'audio', call: '10:00', status: 'pending' },
-      { name: 'J. Frei', role: 'Rigging', dept: 'light', call: '08:00', status: 'confirmed' },
+      { name: 'Lars Zumpe', role: 'Projektleitung', dept: 'prod', call: '08:00', end: '21:00', date: '2026-07-18', booking: 'confirmed' },
+      { name: 'M. Berg', role: 'Video-Engineer', dept: 'video', call: '08:00', end: '20:00', date: '2026-07-18', booking: 'confirmed' },
+      { name: 'S. Klein', role: 'Kameramann', dept: 'video', call: '12:00', end: '20:00', date: '2026-07-18', booking: 'confirmed' },
+      { name: 'T. Wolf', role: 'Lichttechnik', dept: 'light', call: '09:00', end: '21:00', date: '2026-07-18', booking: 'confirmed' },
+      // Ohne Datum und Ende: fuer diesen Eintrag prueft niemand
+      // Ueberschneidungen, und die Crew-Karte sagt genau das.
+      { name: 'A. Roth', role: 'FOH / Ton', dept: 'audio', call: '10:00', booking: 'pencil' },
+      { name: 'J. Frei', role: 'Rigging', dept: 'light', call: '08:00', end: '12:00', date: '2026-07-18', booking: 'confirmed' },
     ],
     budget: [
       { category: 'Video', estimatedEur: 8400, actualEur: 8120 },

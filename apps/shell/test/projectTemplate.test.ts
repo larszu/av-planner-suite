@@ -58,8 +58,8 @@ const gelaufeneShow = (): SuiteProject => ({
     ],
     billing: { taxType: 'net', vatRate: 19 },
     crew: [
-      { name: 'Ben', role: 'Bildregie', dept: 'video', call: '07:30', status: 'confirmed' },
-      { name: 'Cem', role: 'Licht', dept: 'light', call: '08:00', status: 'pending' },
+      { name: 'Ben', role: 'Bildregie', dept: 'video', call: '07:30', booking: 'confirmed', date: '2026-07-18', end: '18:00' },
+      { name: 'Cem', role: 'Licht', dept: 'light', call: '08:00', booking: 'pencil' },
     ],
     budget: [
       { category: 'Video', estimatedEur: 8000, actualEur: 8320 },
@@ -131,7 +131,11 @@ describe('was eine Vorlage NICHT mitnimmt', () => {
     const { project } = templateFromProject(gelaufeneShow())
     expect(project.show.crew.map((c) => c.name)).toEqual(['Ben', 'Cem'])
     expect(project.show.crew.map((c) => c.role)).toEqual(['Bildregie', 'Licht'])
-    expect(project.show.crew.every((c) => c.call === '' && c.status === 'pending')).toBe(true)
+    // Seit suite#260 fuehrt die Crew den Buchungsstand von crew-core; der
+    // Rueckfall der Vorlage ist `pencil`, und Datum und Ende gehen mit dem
+    // Termin.
+    expect(project.show.crew.every((c) => c.call === '' && c.booking === 'pencil')).toBe(true)
+    expect(project.show.crew.every((c) => c.date === undefined && c.end === undefined)).toBe(true)
   })
 
   it('nullt die Ist-Kosten und behaelt die Schaetzung', () => {
@@ -225,7 +229,7 @@ describe('die Weglass-Liste ist anzeigbar', () => {
         contacts: [],
         invoices: [],
         billing: undefined,
-        crew: [{ name: 'Ben', role: 'Bildregie', dept: 'video', call: '', status: 'pending' }],
+        crew: [{ name: 'Ben', role: 'Bildregie', dept: 'video', call: '', booking: 'pencil' }],
         budget: [{ category: 'Video', estimatedEur: 8000, actualEur: 0 }],
         tasks: [{ title: 'Strom anmelden', done: false }],
         logistics: { vehicles: [], loadIn: '', distanceKm: 0 },

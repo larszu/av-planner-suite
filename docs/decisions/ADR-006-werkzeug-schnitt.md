@@ -140,7 +140,7 @@ gemessen — am Import-Querschnitt des Cable-Planers, nicht geschätzt.
 | --- | --- | --- |
 | **Was kostet die Mannschaft?** | `labourCosts`, `labourFindings`, `entryCost`, `expenseTotals`, `formatHours`, `LABOUR_FINDING_LABEL` | `Analysis/CrewTab.tsx` |
 | **Was geht auf die Rechnung?** | `crewBilling`, `crewBillingTable`, `crewBillingCsv`, `crewBillingHandoff`, Typen `BillingPeriod`, `BillingRow`, `BillingExpenseRow`, `CrewBilling` | `Analysis/CrewTab.tsx` |
-| **Wann ist wer gebucht?** | `crewCalendar`, `bookingConflicts`, `CrewCalendarOptions` | `App.tsx` (ICS-Ausgabe) |
+| **Wann ist wer gebucht?** | `crewCalendar`, `bookingConflicts`, `CrewCalendarOptions` | `App.tsx` (ICS-Ausgabe); in der Suite-Shell `data/crew.ts` (Crew-Karte, seit `suite#260` — lesend) |
 | **Stimmt geplant gegen tatsächlich?** | `assessCosts`, `costComparisonTable`, `COST_FINDING_LABEL`, Typen `CostRow`, `CostTotals`, `CostFinding`, `AnchorState` | `Analysis/AnalysisDialog.tsx` |
 | **Was gehört beim Laden geheilt?** | `normaliseCrewPlan`, `normaliseCostPlan` | `store/projectStore.ts` |
 

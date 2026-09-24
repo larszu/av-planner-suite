@@ -63,6 +63,7 @@ import {
   type ShowDetails,
   type SuiteProject,
 } from './project'
+import { healCrew } from './crew'
 
 /** Dateiformat einer Vorlage — eigener `format`-Wert, damit eine Vorlage nicht
  *  aus Versehen als Projekt geoeffnet wird und umgekehrt. */
@@ -166,7 +167,7 @@ export function templateFromProject(project: SuiteProject): TemplateDerivation {
   note('date', show.dateLabel.trim() ? 1 : 0, show.dateLabel.trim() || undefined)
   note('phase', show.phase !== 'planning' ? 1 : 0, show.phase)
   note('progress', show.progress > 0 ? 1 : 0)
-  note('crewTimes', show.crew.filter((c) => c.call.trim() || c.status === 'confirmed').length)
+  note('crewTimes', show.crew.filter((c) => c.call.trim() || c.date || c.end || c.booking !== 'pencil').length)
   note('budgetActual', show.budget.filter((b) => b.actualEur !== 0).length)
   note('tasksDone', show.tasks.filter((t) => t.done).length)
   note('loadIn', show.logistics.loadIn.trim() ? 1 : 0, show.logistics.loadIn.trim() || undefined)
@@ -189,7 +190,9 @@ export function templateFromProject(project: SuiteProject): TemplateDerivation {
       phase: 'planning',
       progress: 0,
       contacts: [],
-      crew: show.crew.map((c) => ({ ...c, call: '', status: 'pending' })),
+      // Datum, Zeiten und Buchung gelten fuer DIESEN Termin. Zurueck bleibt
+      // die Besetzung — vorgemerkt, der schwaechste Stand, den crew-core kennt.
+      crew: show.crew.map(({ date, end, ...c }) => (void date, void end, { ...c, call: '', booking: 'pencil' as const })),
       budget: show.budget.map((b) => ({ ...b, actualEur: 0 })),
       tasks: show.tasks.map((t) => ({ ...t, done: false })),
       logistics: { ...show.logistics, loadIn: '' },
@@ -216,6 +219,9 @@ export function projectFromTemplate(template: SuiteTemplate, name: string): Suit
   return {
     ...p,
     meta: { ...p.meta, name: name.trim() || template.name, version: 1, saved: false },
+    // Schema-Heilung, kein zweiter Abzug: eine Vorlage von vor suite#260
+    // traegt die Crew noch mit `status` statt `booking`.
+    show: { ...p.show, crew: healCrew(p.show.crew) },
   }
 }
 

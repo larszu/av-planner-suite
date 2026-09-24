@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Badge, Icon, type IconName } from '@avplan/ui'
+import { AMPEL_STUFEN, deckungsAmpel, zaehleAmpeln, type Ampel, type DeckungsZeile } from '@avplan/ui/embed'
 import {
   DEPARTMENT_COLOR,
   DEPARTMENT_LABEL,
@@ -21,7 +22,11 @@ import {
   ScheduleEditor,
   TasksEditor,
 } from './dashboardEditors'
-import { useT, format } from '../i18n'
+import { useLanguage, useT, format, type TFunc } from '../i18n'
+import { crewBuchungen, nochOffen, type FensterLuecke } from '../data/crew'
+import { buchungsLabel } from './crewLabels'
+import { suiteToSeed } from '../data/seed'
+import type { ModuleId } from '../modules/registry'
 
 /** Dezente „Bearbeiten"-Schaltfläche im Karten-Kopf (nur wenn editierbar). */
 function EditButton({ onClick }: { onClick: () => void }) {
@@ -112,16 +117,39 @@ export function RunOfShowCard({ schedule, onChange }: { schedule: ScheduleItem[]
 }
 
 /* ── Crew / Team ───────────────────────────────────────────────────────────*/
+
+const lueckenLabel = (t: TFunc): Record<FensterLuecke, string> => ({
+  name: t('overview.crew.gap.name', 'Name'),
+  datum: t('overview.crew.gap.date', 'Datum'),
+  beginn: t('overview.crew.gap.start', 'Beginn'),
+  ende: t('overview.crew.gap.end', 'Ende'),
+})
+
 export function CrewCard({ crew, onChange }: { crew: CrewMember[]; onChange?: (next: CrewMember[]) => void }) {
   const t = useT()
+  const lang = useLanguage()
   const [editing, setEditing] = useState(false)
-  const pending = crew.filter((c) => c.status === 'pending').length
+  // Buchungsstand und Ueberschneidung kommen aus `@avplan/crew-core` — die
+  // Karte zeigt sie nur (suite#260).
+  const buchungen = useMemo(() => crewBuchungen(crew), [crew])
+  const pending = crew.filter((c) => nochOffen(c.booking)).length
+  const inKonflikt = buchungen.filter((b) => b.ueberschneidet.length > 0).length
+  const ohneFenster = buchungen.filter((b) => !b.fenster).length
+  const stand = buchungsLabel(t)
+  const luecke = lueckenLabel(t)
+  const tag = (iso: string) => {
+    const [y, m, d] = iso.split('-').map(Number)
+    return new Date(Date.UTC(y!, (m ?? 1) - 1, d ?? 1)).toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', {
+      day: 'numeric', month: 'short', timeZone: 'UTC',
+    })
+  }
   return (
     <Card
       title={t('overview.card.crew.title', 'Crew')}
       icon="raum"
       action={
         <span className="flex items-center gap-1.5">
+          {inKonflikt > 0 && <Badge tone="danger">{format(t('overview.card.crew.conflicts', '{n} überschneiden sich'), { n: inKonflikt })}</Badge>}
           {crew.length === 0 ? null : pending > 0 ? <Badge tone="warn">{format(t('overview.badge.open', '{n} offen'), { n: pending })}</Badge> : <Badge tone="ok">{t('overview.card.crew.complete', 'komplett')}</Badge>}
           {onChange && <EditButton onClick={() => setEditing(true)} />}
         </span>
@@ -132,18 +160,60 @@ export function CrewCard({ crew, onChange }: { crew: CrewMember[]; onChange?: (n
       )}
       {crew.length === 0 && <p className="text-[12.5px] text-av-text-muted">{t('overview.card.empty', 'Noch nichts eingetragen.')}</p>}
       <ul className="flex flex-col gap-1.5">
-        {crew.map((c) => (
-          <li key={c.name} className="flex items-center gap-2.5">
-            <span className="h-2 w-2 flex-none rounded-none" style={{ background: DEPARTMENT_COLOR[c.dept] }} />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] text-av-text">{c.name}</span>
-              <span className="block truncate text-[11px] text-av-text-muted">{c.role}</span>
-            </span>
-            <span className="av-num text-[12px] text-av-text-secondary">{c.call}</span>
-            {c.status === 'pending' && <Icon name="warning" size={13} style={{ color: 'var(--av-warn)' }} />}
-          </li>
-        ))}
+        {crew.map((c, i) => {
+          const b = buchungen[i]!
+          const andere = b.ueberschneidet.map((j) => crew[j]?.role || crew[j]?.name).filter(Boolean).join(', ')
+          return (
+            <li key={`${c.name}-${i}`} className="flex items-center gap-2.5">
+              <span className="h-2 w-2 flex-none rounded-none" style={{ background: DEPARTMENT_COLOR[c.dept] }} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] text-av-text">{c.name}</span>
+                <span className="block truncate text-[11px] text-av-text-muted">{c.role}</span>
+              </span>
+              <span className="flex flex-none flex-col items-end">
+                <span className="av-num text-[12px] text-av-text-secondary">
+                  {b.fenster ? `${c.call}–${c.end}` : c.call}
+                </span>
+                {b.fenster && <span className="av-num text-[10.5px] text-av-text-faint">{tag(b.fenster.date)}</span>}
+              </span>
+              <span
+                className="w-[4.8rem] flex-none text-right text-[11px]"
+                style={{ color: nochOffen(c.booking) ? 'var(--av-warn)' : 'var(--av-text-muted)' }}
+              >
+                {stand[c.booking]}
+              </span>
+              {b.ueberschneidet.length > 0 && (
+                <span
+                  className="flex-none"
+                  role="img"
+                  aria-label={format(t('overview.card.crew.overlapWith', 'Überschneidet sich mit: {andere}'), { andere })}
+                  title={format(t('overview.card.crew.overlapWith', 'Überschneidet sich mit: {andere}'), { andere })}
+                >
+                  <Icon name="warning" size={13} style={{ color: 'var(--av-danger)' }} />
+                </span>
+              )}
+              {!b.fenster && (
+                <span
+                  className="flex-none text-[10.5px] text-av-text-faint"
+                  title={format(t('overview.card.crew.gapTitle', 'Ohne Zeitfenster — es fehlt: {felder}'), {
+                    felder: b.fehlt.map((f) => luecke[f]).join(', '),
+                  })}
+                >
+                  —
+                </span>
+              )}
+            </li>
+          )
+        })}
       </ul>
+      {ohneFenster > 0 && (
+        // Keine Meldung „keine Konflikte" fuer Eintraege, die gar nicht
+        // geprueft werden koennen: das waere falsche Ruhe.
+        <p className="mt-2.5 text-[11px] text-av-text-muted">
+          {format(t('overview.card.crew.unchecked', '{n} ohne Zeitfenster (Datum, Beginn, Ende) — für sie prüft niemand Überschneidungen.'), { n: ohneFenster })}
+        </p>
+      )}
+      <p className="mt-2 text-[10.5px] text-av-text-faint">{t('overview.card.crew.source', 'Buchungsstand und Überschneidungen aus @avplan/crew-core')}</p>
     </Card>
   )
 }
@@ -225,6 +295,140 @@ export function ReadinessCard({ project }: { project: SuiteProject }) {
         </span>
       </div>
       <p className="mt-2 text-[10.5px] text-av-text-faint">{t('overview.card.readiness.source', 'Lager-Daten aus @avplan/inventory-core')}</p>
+    </Card>
+  )
+}
+
+/* ── Bedarf & Deckung (Antwort des Lagers, B-78) ───────────────────────────*/
+
+/**
+ * Die Farbe je Ampel. Statusfarben sind nach ADR-007 NUR fuer Meldungen da —
+ * genau das ist die Ampel. „Unbekannt" bekommt KEINE Statusfarbe: grau und
+ * hohl, weil es keine Meldung ueber den Bestand ist, sondern das Fehlen einer.
+ */
+const AMPEL_FARBE: Record<Ampel, string> = {
+  verfuegbar: 'var(--av-ok)',
+  subhire: 'var(--av-warn)',
+  fehlt: 'var(--av-danger)',
+  unbekannt: 'var(--av-text-faint)',
+}
+
+const ampelLabel = (t: TFunc): Record<Ampel, string> => ({
+  verfuegbar: t('overview.deckung.ampel.verfuegbar', 'aus eigenem Bestand'),
+  subhire: t('overview.deckung.ampel.subhire', 'teilweise — Rest zumieten'),
+  fehlt: t('overview.deckung.ampel.fehlt', 'nicht vorhanden'),
+  unbekannt: t('overview.deckung.ampel.unbekannt', 'unbekannt'),
+})
+
+function AmpelPunkt({ ampel }: { ampel: Ampel }) {
+  const farbe = AMPEL_FARBE[ampel]
+  return (
+    <span
+      className="h-2.5 w-2.5 flex-none rounded-none"
+      style={ampel === 'unbekannt' ? { border: `1.5px solid ${farbe}` } : { background: farbe }}
+      aria-hidden="true"
+    />
+  )
+}
+
+function DeckungsWert({ z }: { z: DeckungsZeile }) {
+  const t = useT()
+  if (z.ampel === 'unbekannt') {
+    return (
+      <span className="text-[11px] text-av-text-faint">
+        {z.unbekanntWeil === 'nicht-gezaehlt'
+          ? t('overview.deckung.uncounted', 'nicht gezählt')
+          : t('overview.deckung.noAnswer', 'keine Antwort')}
+      </span>
+    )
+  }
+  // Der gezaehlte Bestand steht, wie das Lager ihn meldet — auch wenn er
+  // groesser ist als der Bedarf. Auf die Menge gekappt saehe „1" aus wie
+  // „genau eines im Regal".
+  return (
+    <>
+      <span className="av-num text-[12px] text-av-text-secondary">
+        {format(t('overview.deckung.stock', 'Bestand {n}'), { n: z.gedeckt ?? 0 })}
+      </span>
+      {(z.fehlmenge ?? 0) > 0 && (
+        <span className="av-num text-[10.5px]" style={{ color: AMPEL_FARBE[z.ampel] }}>
+          {format(t('overview.deckung.short', 'Rest {n}'), { n: z.fehlmenge ?? 0 })}
+        </span>
+      )}
+    </>
+  )
+}
+
+export function DeckungCard({ project, onNavigate }: { project: SuiteProject; onNavigate?: (id: ModuleId) => void }) {
+  const t = useT()
+  // Der Bedarf wird HIER abgeleitet (ueber `suiteToSeed`, dieselbe Rechnung,
+  // die das Lager bekommt) und nirgends gefuehrt — ADR-001.
+  const zeilen = useMemo(() => {
+    const seed = suiteToSeed(project, 0)
+    return deckungsAmpel(seed.bedarf, seed.deckung)
+  }, [project])
+  const n = zaehleAmpeln(zeilen)
+  const label = ampelLabel(t)
+  const ohneAntwort = zeilen.filter((z) => z.unbekanntWeil === 'keine-antwort').length
+  return (
+    <Card
+      title={t('overview.card.deckung.title', 'Bedarf & Deckung')}
+      icon="rack"
+      action={
+        <span className="flex items-center gap-1.5">
+          {n.fehlt > 0 && <Badge tone="danger">{format(t('overview.deckung.badge.fehlt', 'fehlt {n}'), { n: n.fehlt })}</Badge>}
+          {n.subhire > 0 && <Badge tone="warn">{format(t('overview.deckung.badge.subhire', 'zumieten {n}'), { n: n.subhire })}</Badge>}
+          {zeilen.length > 0 && n.fehlt === 0 && n.subhire === 0 && n.unbekannt === 0 && (
+            <Badge tone="ok">{t('overview.deckung.badge.ok', 'gedeckt')}</Badge>
+          )}
+        </span>
+      }
+    >
+      {zeilen.length === 0 && (
+        <p className="text-[12.5px] text-av-text-muted">{t('overview.deckung.empty', 'Der Plan braucht noch kein Gerät.')}</p>
+      )}
+      <ul className="flex flex-col gap-1.5">
+        {zeilen.map((z) => (
+          <li key={z.bedarf.key} className="flex items-center gap-2.5" title={label[z.ampel]}>
+            <AmpelPunkt ampel={z.ampel} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13px] text-av-text">
+                {z.bedarf.label}
+                {z.bedarf.modellUnbekannt && (
+                  <span className="ml-1.5 text-[11px] text-av-text-faint">{t('overview.deckung.noModel', '(ohne Modell)')}</span>
+                )}
+              </span>
+              {z.antwortFuer !== undefined && (
+                <span className="block text-[10.5px] text-av-text-faint">
+                  {format(t('overview.deckung.stale', 'Antwort galt {n} Stück'), { n: z.antwortFuer })}
+                </span>
+              )}
+            </span>
+            <span className="av-num flex-none text-[11px] text-av-text-muted">×{z.bedarf.quantity}</span>
+            <span className="flex w-[5.5rem] flex-none flex-col items-end text-right"><DeckungsWert z={z} /></span>
+          </li>
+        ))}
+      </ul>
+      {zeilen.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-av-border-muted pt-2" aria-label={t('overview.deckung.legend', 'Legende')}>
+          {AMPEL_STUFEN.map((a) => (
+            <li key={a} className="flex items-center gap-1.5 text-[11px] text-av-text-muted">
+              <AmpelPunkt ampel={a} /> {label[a]}
+            </li>
+          ))}
+        </ul>
+      )}
+      {ohneAntwort > 0 && (
+        <p className="mt-2 flex flex-wrap items-center gap-x-2 text-[11px] text-av-text-muted">
+          {format(t('overview.deckung.askLager', 'Ohne Antwort des Lagers: {n}. Es antwortet, solange es geöffnet ist.'), { n: ohneAntwort })}
+          {onNavigate && (
+            <button type="button" className="av-focus text-av-accent hover:underline" onClick={() => onNavigate('lager')}>
+              {t('overview.deckung.openLager', 'Lager öffnen')}
+            </button>
+          )}
+        </p>
+      )}
+      <p className="mt-2 text-[10.5px] text-av-text-faint">{t('overview.deckung.source', 'Bedarf aus dem Plan, Deckung vom Lager-Modul')}</p>
     </Card>
   )
 }

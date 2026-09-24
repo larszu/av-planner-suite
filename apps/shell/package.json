@@ -33,6 +33,7 @@
     "dist:app": "electron-builder --config electron-builder.js"
   },
   "devDependencies": {
+    "@avplan/crew-core": "*",
     "@avplan/inventory-core": "*",
     "@avplan/ui": "*",
     "@eslint/js": "^10.0.1",
