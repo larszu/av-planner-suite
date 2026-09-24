@@ -500,6 +500,32 @@ export interface VideohubRouting {
   salvos: VideohubSalvo[]
 }
 
+/**
+ * #910 — Objektiv und Einstellung einer Kamera, aus dem MultiCam-Plan
+ * (`camera-list` v2). Jedes Feld optional: was der Kameraplan nicht sagt,
+ * steht hier nicht — eine fehlende Brennweite ist keine Brennweite von 0.
+ */
+export interface KameraOptik {
+  objektivHersteller?: string
+  objektivModell?: string
+  /** Zoombereich des Objektivs in mm (bei Festbrennweite min = max). */
+  brennweiteMinMm?: number
+  brennweiteMaxMm?: number
+  /** Mount des Objektivs laut Katalog. */
+  objektivMount?: string
+  /** Aktiver Mount am Kamerakoerper (kann per Adapter vom Objektiv abweichen). */
+  kameraMount?: string
+  /** Eingestellte Brennweite in mm. */
+  brennweiteMm?: number
+  /** Eingeschalteter Extender-Faktor (z. B. 2); fehlt, wenn keiner. */
+  extender?: number
+  /** Hoehe der Kamera ueber Boden in m, wenn der Kameraplan sie kennt. */
+  hoeheM?: number
+  /** Horizontaler Bildwinkel in Grad, wenn der Kameraplan ihn gerechnet hat
+   *  (in der Suite ueber den Seed). */
+  bildwinkelGrad?: number
+}
+
 export interface EquipmentItem {
   id: string
   name: string
@@ -705,6 +731,10 @@ export interface EquipmentItem {
    * steht nur, DASS sie benutzt wird.
    */
   hausKlinkeId?: string
+  /** #910 — Optik der Kamera. In der Suite aus der Kamera-Gruppe des Seeds
+   *  (`kamera.lens/focalMm/hfovDeg`) — der Kameraplan fuehrt sie, dieser Plan
+   *  zeigt sie nur (siehe `fachdaten.ts`, GETEILT). */
+  optik?: KameraOptik
   dmxProfil?: import('../lib/dmx').DmxProfil
   /** Welcher Modus gefahren wird (Id aus `dmxProfil.modi`). */
   dmxModusId?: string

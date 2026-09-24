@@ -173,6 +173,9 @@ export const INSTANCE_FIELDS = [
   'hausKlinkeId',
   'id',
 
+  // #910 — wie DIESE Kamera eingestellt ist (Objektiv, Brennweite).
+  'optik',
+
   // Wo dieses Exemplar steht
   'x',
   'y',

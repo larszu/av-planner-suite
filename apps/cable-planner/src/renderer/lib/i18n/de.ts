@@ -3764,6 +3764,16 @@ export const de: Dict = {
   'props.aiPorts.summary': '{groups} Gruppe(n) / {ports} Ports vorgeschlagen:',
   'props.cameraControls.noSource':
     'Zu diesem Modell liegt keine Fähigkeits-Aussage vor. „Nicht belegt" heißt nicht „geht nicht" — es heißt, dass niemand es nachgesehen hat.',
+  'props.optik.bodyMount': 'Mount am Körper',
+  'props.optik.extender': 'Extender',
+  'props.optik.focal': 'Eingestellte Brennweite',
+  'props.optik.fov': 'Horizontaler Bildwinkel',
+  'props.optik.height': 'Höhe',
+  'props.optik.lens': 'Objektiv',
+  'props.optik.lensMount': 'Mount des Objektivs',
+  'props.optik.range': 'Brennweitenbereich',
+  'props.optik.sourceSuite': 'Im Kameraplan gesetzt; folgt jeder Änderung dort.',
+  'props.optik.titleSuite': 'Optik (Kameraplan)',
   'props.cameraControls.title': 'Steuerbare Funktionen',
   'props.deviceConfigs.assignExisting': '+ Vorhandene Konfiguration zuordnen…',
   'props.deviceConfigs.hint':

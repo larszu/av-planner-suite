@@ -215,6 +215,11 @@ Seeing a device is not the same as writing to it. Ownership moves from *per list
 group*: focal length belongs to the camera plan, the DMX address to the lighting plan, the ports
 to the signal plan. Nothing a planner does not own can be overwritten by it.
 
+What one plan owns, the others **show**: a camera placed in the camera plan appears in the signal
+plan with its lens, set focal length and horizontal field of view on the node and under *Optics* in
+its properties — read from the camera group on every seed, so a lens change arrives there, and
+never sent back from the signal plan as its own.
+
 ### One type, one identity
 
 The device knows its **type**: `typId` carries the catalogue identity (ADR-012) through the seed,

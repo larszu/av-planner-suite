@@ -1,3 +1,4 @@
+import { optikKurz } from '../../lib/kameraOptik'
 import { Handle, Position, useUpdateNodeInternals, type NodeProps } from 'reactflow'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Headphones, Lock, Check } from 'lucide-react'
@@ -339,11 +340,14 @@ export const EquipmentNode = ({ id, data, selected }: NodeProps<EquipmentNodeDat
   // Ports auf Dot-Reihen landen.
   const EXTRA_HEADER_LINE = GRID_SIZE
   const beltpackLine = greengoUser ? EXTRA_HEADER_LINE : 0
+  // #910 — die Optik einer Kamera steht als eigene Header-Zeile.
+  const optikZeile = optikKurz(data.optik)
+  const optikLine = optikZeile ? EXTRA_HEADER_LINE : 0
   const headerHeight = (
     data.ipAddress
       ? (data.subtitle ? HEADER_HEIGHT_WITH_IP + EXTRA_HEADER_LINE : HEADER_HEIGHT_WITH_IP)
       : (data.subtitle ? HEADER_HEIGHT + EXTRA_HEADER_LINE : HEADER_HEIGHT)
-  ) + beltpackLine
+  ) + beltpackLine + optikLine
   const inputPlacement = new Map<string, { side: 'left' | 'right'; slot: number }>()
   const outputPlacement = new Map<string, { side: 'left' | 'right'; slot: number }>()
   const sideCounts: Record<'left' | 'right', number> = { left: 0, right: 0 }
@@ -811,6 +815,14 @@ export const EquipmentNode = ({ id, data, selected }: NodeProps<EquipmentNodeDat
         <div style={{ fontSize: 11, color: tokens.subtext, lineHeight: '14px' }}>{data.category}</div>
         {data.subtitle && (
           <div style={{ fontSize: 11, color: tokens.subtext, lineHeight: '14px', fontStyle: 'italic' }}>{data.subtitle}</div>
+        )}
+        {optikZeile && (
+          <div
+            style={{ fontSize: 10, color: tokens.subtext, lineHeight: `${EXTRA_HEADER_LINE}px`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+            title={optikZeile}
+          >
+            {optikZeile}
+          </div>
         )}
         {greengoUser && (
           <div
