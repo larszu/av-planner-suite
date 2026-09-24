@@ -5,7 +5,8 @@ hat der Eigentümer benannt: **Milanote** (freie Fläche, vielseitige Elemente)
 und **recceboard** (das Board ist eine Schnittfolge und läuft als Film).
 
 Code: `apps/shell/src/shell/BoardCanvas.tsx`, `BoardPlayer.tsx`,
-`apps/shell/src/data/board.ts`. Tests: `apps/shell/test/board*.test.ts`.
+`ObjektKarte.tsx`, `apps/shell/src/data/board.ts`, `boardObjekt.ts`. Tests:
+`apps/shell/test/board*.test.ts`.
 
 ## Die eine Regel
 
@@ -29,16 +30,17 @@ zweite Wahrheit, und sie stimmte genau bis zum ersten Zug.
 | Mehrere | ziehen, löschen, verdoppeln, Pfeiltasten — als Ganzes, um denselben Versatz |
 | Raster | Fangen am gezeichneten Punktraster, Alt legt frei ab |
 | Tastatur | Strg+D verdoppeln, Strg+C/V kopieren, Entf löschen, Esc abwählen, Strg+Z/Y (Projekt-Historie) |
-| Einfügen | Rechtsklick auf die freie Fläche legt die Karte **genau dorthin** |
+| Einfügen | Rechtsklick auf die freie Fläche legt die Karte **genau dorthin** — auch ein Plan-Objekt |
 | Tauschen | eine Karte auf eine andere ziehen tauscht die Plätze — und damit die Schnittfolge |
 
 ## Die Karten
 
 Überschrift · Notiz · Link · To-do · Farbe · Look · Spalte · Unterboard ·
-**Bild · Film · Ton · Datei**
+**Plan-Objekt** · **Bild · Film · Ton · Datei**
 
 Die letzten vier entstehen, indem man eine Datei auf die Fläche zieht (oder
 einfügt). Welche Art es wird, sagt der **MIME-Typ** und nicht die Endung.
+Das Plan-Objekt entsteht über einen Auswahl-Dialog (siehe unten).
 
 Jede Karte außer Spalte und Unterboard kann eine **Farbe** tragen — als
 Lasur, nicht als Fläche: eine Notiz in vollem Orange trägt keinen lesbaren
@@ -67,6 +69,51 @@ Beides ist Absicht. Ein 400-MB-Mitschnitt im Projekt macht es unspeicherbar,
 und zwar erst beim Speichern — lange nachdem jemand ihn abgelegt hat. Eine
 verschluckte Datei wäre die andere schlechte Antwort: wer sie ablegt, hat
 eine Absicht, und die gehört aufs Board.
+
+### Objekt-Karten — ein Gerät oder Kabel des Plans
+
+Bis `suite#259` war das Board eine Insel: eine Notiz „CAM 3 als Beauty-Shot
+mit 135 mm" stand neben dem Plan und nicht an ihm, und nach dem nächsten
+Objektivwechsel stimmte sie nicht mehr, ohne dass man es ihr ansah.
+
+**Die Karte trägt nur den Verweis** — `ref: { art: 'geraet' | 'kabel', id }`,
+sonst nichts (ADR-001). Was sie zeigt, rechnet `objektAnzeige` bei jedem
+Rendern aus dem Seed, den die Shell ohnehin an die Planer schickt:
+
+| Objekt | steht auf der Karte |
+|---|---|
+| Kamera | Name, Modell · Kategorie, Objektiv · Brennweite · Bildwinkel |
+| Leuchte | Name, Modell · Kategorie, Zweck · DMX-Kanal (mit Universum, wo geführt) |
+| anderes Gerät | Name, Modell · Kategorie, die Zeile vom Knoten („40× 12G-SDI In") |
+| Kabel | Bezeichnung, von → nach (die **Namen** der Geräte), Typ · Länge |
+
+- **Anlegen:** Werkzeugleiste „Plan-Objekt" oder Rechtsklick auf die freie
+  Fläche → „Plan-Objekt …". Der Dialog bietet nur an, was im Plan steht —
+  durchsuchbar über Name, Modell, Kategorie, Kabeltyp und die Namen der Enden;
+  Enter nimmt den ersten Treffer. Ein freies Id-Feld gibt es nicht: es wäre
+  der Weg zu einer Karte, die von Anfang an auf nichts zeigt.
+- **Springen:** der Knopf auf der Karte („Im Kamera-Plan zeigen") geht über
+  denselben Weg wie jeder Querverweis (`goToModule`, B-18) in das Modul, das
+  das Objekt **am speziellsten** führt: Kamera vor Licht vor Signal, Kabel
+  immer Signal. Die Regel steht einmal, als `heimatPlan` in `data/project.ts`,
+  und dieselbe benutzt die Zeig-Bitte an den Planer.
+- **Verschwunden:** steht das Objekt nicht mehr im Plan, bleibt die Karte
+  stehen und sagt „Objekt nicht mehr im Plan" samt der Id, auf die sie
+  zuletzt zeigte. Eine leere Karte sähe aus wie eine, die noch lädt; eine
+  still gelöschte nähme dem Board die Stelle, an der jemand über genau dieses
+  Objekt nachgedacht hat. Ein Kabel, dessen **Ende** fehlt, zeigt dort die Id
+  mit „(nicht im Plan)".
+- **Kein Plan geöffnet** ist etwas anderes als „nicht mehr im Plan": ohne
+  Projekt (Notizzettel-Betrieb) sagt die Karte „Kein Plan geöffnet" und
+  worauf sie zeigt — sie behauptet keinen Verlust, den niemand festgestellt
+  hat. Ein leerer Plan ist dagegen ein Plan, und dort fehlt das Objekt.
+- **Beim Mitmachen** fährt nur das Board durch die Sitzung, nicht der Plan:
+  wer dazukommt, sieht eine Objekt-Karte gegen den Plan aufgelöst, den **er**
+  geöffnet hat.
+- Gesucht wird nur in der Liste, die der Verweis nennt — eine Geräte-Id, die
+  zufällig auch ein Kabel heißt, ist nicht dieses Kabel (ADR-002).
+- Suche, Markdown und Druck lesen denselben Stand: die Karte heißt dort, wie
+  das Objekt **jetzt** im Plan heißt.
 
 ## Verbindungen
 

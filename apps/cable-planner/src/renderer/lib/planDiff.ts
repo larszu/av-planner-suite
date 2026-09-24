@@ -227,6 +227,8 @@ export const EQUIPMENT_FIELD_CLASS: Record<string, FieldClass> = {
   // sein, und die Last verteilt sich anders. Am Aussehen des Plans aendert
   // sich dabei nichts — genau deshalb waere `cosmetic` hier gefaehrlich.
   hausPunktId: 'substantive',
+  // Objektiv und Brennweite bestimmen, was die Kamera zeigt — und was gepackt wird.
+  optik: 'substantive',
   hausKlinkeId: 'substantive',
   // B-46 — die erklaerten Merkmale. Ebenfalls `substantive`: ob die Quelle den
   // Alternate-Mode kann, entscheidet ueber einen Befund am Adapter. Wer das

@@ -82,6 +82,23 @@ extension in [`tools/web-clipper/`](tools/web-clipper/) — see [`docs/board.md`
 The clipper's inbox listens on `127.0.0.1` only, is opened by hand in the settings, and carries
 a secret that is new on every start.
 
+A board card can also point at a **device or cable of the plan**. It stores only that
+reference and reads name, model, lens, DMX channel or cable ends live from the project on every
+render; a button on the card jumps to the module that owns the object. If the object leaves the
+plan, the card says so instead of going blank.
+
+The overview dashboard shows the inventory's answer as a **coverage light** per demand line
+(own stock · partly, sub-hire the rest · not in stock · unknown). "Unknown" — no answer, or
+nobody counted — is never shown as "missing". The **crew** card speaks `@avplan/crew-core`:
+booking state (pencilled · on hold · confirmed · worked) and overlaps of the same person from
+`bookingConflicts`, for every entry with a date, start and end; entries without a time window
+are named, not silently passed.
+
+**Room in 3D** (overview card) puts every planner into one picture: the venue and stage, placed
+cameras, fixtures at their trim height, signal devices and the cables between them — straight
+from the shared project. Devices without a position are counted, not dropped at the origin. The
+per-floor building view lives in the cable planner (*3D* in its toolbar).
+
 Two people can work on the same board over their own network: one opens a window, the others
 join from a browser on the same network with nothing to install. Nothing travels over machines
 you do not own, and the window is gone the moment it is closed. Cards merge per card, the
@@ -106,10 +123,10 @@ exchange format with the MultiCam Planner. **React · three.js · Electron.**
 
 | Package | What it provides |
 | --- | --- |
-| **@avplan/ui** | Design system: theme tokens (Dark/Light + per-module accents), accessible primitives (Button, Modal, Menu, Badge, Tabs, Kbd), `ModuleRail`, `CommandPalette`, theme-aware imperative dialogs, and the `embed` bridge (postMessage theme/settings/history sync for embedded planners). |
+| **@avplan/ui** | Design system: theme tokens (Dark/Light + per-module accents), accessible primitives (Button, Modal, Menu, Badge, Tabs, Kbd), `ModuleRail`, `CommandPalette`, theme-aware imperative dialogs, and the `embed` bridge (postMessage theme/settings/history sync for embedded planners). Also the `suite-seed` and `deckungsAmpel`, the one mapping from the inventory's answer to a coverage light that every planner can use. |
 | **@avplan/inventory-core** | Shared inventory domain model + the portable `avplan-inventory` wire format (`serializeInventory`/`parseInventory`/`resolveInventoryCode`). The wire contract is frozen by a test — deliberate format changes require bumping `INVENTORY_FORMAT_VERSION`. |
 | **@avplan/onboarding-core** | Suite-wide onboarding: `WelcomeDialog` + `TourDialog` + `createOnboardingState` (seen-flags with injectable storage and legacy-key migration) + de/en strings. All apps render the same dialog look. |
-| **@avplan/crew-core** | **Crew & Geld** (ADR-006): rates, hours, bookings, expenses, receipts. It knows no plan model -- measured, not asserted: `plan-grenze-check` refuses any import out of the package and any identifier that belongs to the plan. That the cut was clean is itself a measurement: the domain had no imports at all, because it never hung on the cable graph. Step 2 of the three ADR-006 prescribes; the own repo (step 3) waits until a second operator *writes* the domain instead of only reading it. |
+| **@avplan/crew-core** | **Crew & Geld** (ADR-006): rates, hours, bookings, expenses, receipts. It knows no plan model -- measured, not asserted: `plan-grenze-check` refuses any import out of the package and any identifier that belongs to the plan. That the cut was clean is itself a measurement: the domain had no imports at all, because it never hung on the cable graph. Step 2 of the three ADR-006 prescribes; the own repo (step 3) waits until a second operator *writes* the domain instead of only reading it. The shell's crew card is a second *reader* (booking states, `bookingConflicts`). |
 | **@avplan/device-catalog** | **One** device-type catalogue for every planner (ADR-002, ADR-011, ADR-012): the identity of a model — id, manufacturer, model, category, data sheet. 1751 types, merged from the cabling planner's 19 catalogues (467), the camera list (377), the lens list (835) and the lighting fixture library (84). Each entry also carries `refs`: what each source calls that type in its own list, so a planner finds *its* entry from a shared id without comparing names. The trade-specific facts stay with the planner that understands them; a package that carried ports would drag half the cable graph with it. Merging **reports** disagreements instead of silently picking, and `katalog:parity` keeps the generated types tied to their source. |
 | **@avplan/lexware-core** | Neutral billing model (`BillingDoc`) mapped to Lexware Office (lexoffice) **quotation/invoice** payloads — net/gross/§19 tax, discounts, totals — plus a REST client with injectable `fetch` and line-item derivation from inventory and budget. |
 
@@ -197,6 +214,11 @@ is not “nowhere”.
 Seeing a device is not the same as writing to it. Ownership moves from *per list* to *per field
 group*: focal length belongs to the camera plan, the DMX address to the lighting plan, the ports
 to the signal plan. Nothing a planner does not own can be overwritten by it.
+
+What one plan owns, the others **show**: a camera placed in the camera plan appears in the signal
+plan with its lens, set focal length and horizontal field of view on the node and under *Optics* in
+its properties — read from the camera group on every seed, so a lens change arrives there, and
+never sent back from the signal plan as its own.
 
 ### One type, one identity
 

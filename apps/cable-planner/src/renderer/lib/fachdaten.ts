@@ -39,6 +39,10 @@ export const GETEILT = [
   'deviceTypeId',
   'x',
   'y',
+  // #910 — die Optik fuehrt der KAMERAPLAN (Gruppe `kamera` im Protokoll).
+  // Im Signal-Fach stuende sie als zweite Wahrheit und liefe beim ersten
+  // Objektivwechsel gegen die Angabe des Kameraplans.
+  'optik',
 ] as const satisfies readonly (keyof EquipmentItem)[];
 
 type Geteilt = (typeof GETEILT)[number];

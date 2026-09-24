@@ -47,7 +47,8 @@ export function TabDeck({
   project: SuiteProject | null
   selectedId: string | null
   onSelect: (id: string) => void
-  onNavigate: (id: ModuleId) => void
+  /** Modulwechsel, wahlweise mit dem Objekt, das dort gezeigt werden soll. */
+  onNavigate: (id: ModuleId, target?: string) => void
   onAssign: () => void
   /** Show-Details des Dashboards ändern (persistiert via Shell). */
   onUpdateShow?: (updater: (show: ShowDetails) => ShowDetails) => void
@@ -136,6 +137,13 @@ export function TabDeck({
             // Ohne Projekt gibt es nichts, worin das Board leben koennte —
             // dann bleibt es der Notizzettel, der es vorher ueberall war.
             onChange={project && onUpdateShow ? (board) => onUpdateShow((s) => ({ ...s, board })) : undefined}
+            // Derselbe Seed, den die Planer bekommen: eine Objekt-Karte
+            // zeigt, was der Plan JETZT sagt, und springt ueber denselben
+            // Weg wie jeder Querverweis (B-18) in ihr Modul. Ohne Projekt
+            // KEIN Plan — nicht ein leerer, sonst hiesse jede Karte
+            // „nicht mehr im Plan".
+            plan={project ? seed : undefined}
+            onZeigen={project ? (modul, id) => onNavigate(modul, id) : undefined}
           />
         </div>
       ) : (

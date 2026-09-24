@@ -8,6 +8,7 @@
 
 import { herunterladen } from '@avplan/ui'
 import { PROJECT, emptyBoard, type SuiteGeraet, type SuiteProject } from './project'
+import { healCrew } from './crew'
 
 const PERSIST_KEY = 'avplan.project'
 const FILE_VERSION = 1
@@ -71,7 +72,9 @@ export function parseProject(text: string): SuiteProject {
     meta: { ...base.meta, ...p.meta, saved: true },
     hall: { ...base.hall, ...(p.hall ?? {}) },
     stage: { ...base.stage, ...(p.stage ?? {}) },
-    show: { ...base.show, ...(p.show ?? {}) },
+    // Die Crew wird GEHEILT und nicht nur uebernommen: Dateien vor
+    // suite#260 tragen `status` statt `booking` (siehe `healCrew`).
+    show: { ...base.show, ...(p.show ?? {}), crew: healCrew(p.show?.crew) },
     inventory: { ...base.inventory, ...(p.inventory ?? {}) },
   } as SuiteProject
 }

@@ -1,4 +1,5 @@
 import type { Board, BoardCard, BoardCardType, BoardConnection } from './project'
+import { objektAnzeige, type PlanAusschnitt } from './boardObjekt'
 
 /* Reine Board-Logik: Layout (inkl. Spalten), Vorlagen und Markdown-Export.
  * Bewusst ohne React, damit sie testbar bleibt. */
@@ -26,6 +27,10 @@ export function cardHeight(card: BoardCard): number {
     case 'video': return Math.round(card.w / (card.ratio && card.ratio > 0 ? card.ratio : 16 / 9)) + 58
     case 'audio': return 84
     case 'file': return 92
+    // Fest und nicht nach Inhalt: die Karte zeigt LIVE-Daten, und eine Hoehe,
+    // die mit der Brennweite wuechse, schnitte die Karte darunter um, sobald
+    // im Kameraplan jemand das Objektiv tauscht.
+    case 'object': return 118
   }
 }
 
@@ -137,7 +142,7 @@ export function applyTemplate(id: TemplateId, gen: () => string): TemplateResult
 
 /* ── Markdown-Export ───────────────────────────────────────────────────────*/
 
-function cardMarkdown(c: BoardCard): string {
+function cardMarkdown(c: BoardCard, plan?: PlanAusschnitt): string {
   switch (c.type) {
     case 'heading': return `## ${c.text ?? ''}`
     case 'note': return c.text ?? ''
@@ -155,19 +160,28 @@ function cardMarkdown(c: BoardCard): string {
     case 'image': return `- Bild: ${c.title ?? 'Foto'}`
     case 'column': return ''
     case 'board': return ''
+    // Auch im Export steht, was der Plan JETZT sagt — und nicht, was beim
+    // Anlegen der Karte galt. Ohne Plan bleibt nur der Verweis.
+    case 'object': {
+      const a = objektAnzeige(c, plan)
+      if (a.status === 'ohne-plan') return `- Plan-Objekt ${c.ref?.id ?? '—'} (kein Plan geöffnet)`
+      if (a.status === 'weg') return `- Objekt nicht mehr im Plan (${c.ref?.id ?? '—'})`
+      if (a.art === 'geraet') return `- ${a.name}${a.model ? ` (${a.model})` : ''}`
+      return `- ${a.label} · ${a.type} · ${a.von.name ?? a.von.id} → ${a.nach.name ?? a.nach.id}`
+    }
   }
 }
 
 const hashes = (n: number) => '#'.repeat(Math.min(6, n))
 
 /** Ein Board-Abschnitt inkl. Spalten und rekursiver Unterboards. */
-function boardSection(board: Board, title: string, level: number): string[] {
+function boardSection(board: Board, title: string, level: number, plan?: PlanAusschnitt): string[] {
   const lines: string[] = [`${hashes(level)} ${title}`, '']
   const rendered = new Set<string>()
   for (const col of board.cards.filter((c) => c.type === 'column')) {
     lines.push(`${hashes(level + 1)} ${col.title ?? 'Spalte'}`, '')
     for (const m of board.cards.filter((c) => c.columnId === col.id)) {
-      lines.push(cardMarkdown(m), '')
+      lines.push(cardMarkdown(m, plan), '')
       rendered.add(m.id)
     }
     rendered.add(col.id)
@@ -175,17 +189,20 @@ function boardSection(board: Board, title: string, level: number): string[] {
   const free = board.cards.filter((c) => !rendered.has(c.id) && c.type !== 'column' && !c.columnId)
   for (const c of free) {
     if (c.type === 'board') {
-      lines.push(...boardSection(c.board ?? EMPTY, `${c.title ?? 'Unterboard'} (Unterboard)`, level + 1))
+      lines.push(...boardSection(c.board ?? EMPTY, `${c.title ?? 'Unterboard'} (Unterboard)`, level + 1, plan))
     } else {
-      lines.push(cardMarkdown(c), '')
+      lines.push(cardMarkdown(c, plan), '')
     }
   }
   return lines
 }
 
-/** Wandelt ein Board (inkl. verschachtelter Unterboards) in ein Markdown-Dokument. */
-export function boardToMarkdown(board: Board, title = 'Kreativ-Board'): string {
-  return `${boardSection(board, title, 1).join('\n').trim()}\n`
+/**
+ * Wandelt ein Board (inkl. verschachtelter Unterboards) in ein Markdown-Dokument.
+ * `plan` loest Objekt-Karten auf; fehlt er, steht dort nur ihr Verweis.
+ */
+export function boardToMarkdown(board: Board, title = 'Kreativ-Board', plan?: PlanAusschnitt): string {
+  return `${boardSection(board, title, 1, plan).join('\n').trim()}\n`
 }
 
 /**

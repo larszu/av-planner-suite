@@ -7,6 +7,7 @@
  */
 
 import { imPlan } from '@avplan/ui/embed'
+import type { BookingState } from '@avplan/crew-core'
 import { CONTAINER_KINDS, type InventoryItem, type StorageNode } from '@avplan/inventory-core'
 
 export interface ProjectMeta {
@@ -28,13 +29,36 @@ export interface ScheduleItem {
   dept: Department | 'all'
 }
 
-/** Crew-Mitglied mit Gewerk, Call-Time und Status (Production Planner/Rentman). */
+/**
+ * Crew-Mitglied mit Gewerk, Call-Time und Buchungsstand.
+ *
+ * ─── DER BUCHUNGSSTAND KOMMT AUS `@avplan/crew-core` (suite#260) ───────────
+ *
+ * Hier stand bis 2026-09-24 `status: 'confirmed' | 'pending'` — eine eigene,
+ * gröbere Fassung dessen, was crew-core seit ADR-006 Schritt 2 führt. Zwei
+ * Vokabulare für dieselbe Frage („ist die Person gebucht?") sind die zweite
+ * Wahrheit; die Shell spricht deshalb jetzt das des Pakets. Alte Dateien
+ * heilt `healCrew` (`data/crew.ts`) beim Laden.
+ *
+ * ─── DATUM UND ENDE SIND OPTIONAL, UND DAS IST DIE AUSSAGE ────────────────
+ *
+ * `bookingConflicts` braucht ein Zeitfenster: Datum, Beginn, Ende. Die Crew-
+ * Liste der Shell kannte nur die Call-Time. Wo Datum oder Ende fehlen, hat
+ * der Eintrag KEIN Fenster — es wird nicht aus dem Show-Datum oder einer
+ * Schichtlänge geraten, und für diesen Eintrag prüft niemand Überschneidungen.
+ * Die Crew-Karte sagt das, statt „keine Konflikte" zu melden.
+ */
 export interface CrewMember {
   name: string
   role: string
   dept: Department
+  /** Beginn (HH:MM). Leer heisst: noch keine Call-Time. */
   call: string
-  status: 'confirmed' | 'pending'
+  booking: BookingState
+  /** Tag der Schicht als ISO-Datum (YYYY-MM-DD). */
+  date?: string
+  /** Ende (HH:MM). Liegt es vor dem Beginn, endet die Schicht am Folgetag. */
+  end?: string
 }
 
 /** Budgetzeile: geschätzt vs. tatsächlich pro Kategorie (Production Planner). */
@@ -117,6 +141,22 @@ export type BoardCardType =
   | 'audio'
   /** Alles andere: PDF, Textdokument, Tabelle, Zeichnung. */
   | 'file'
+  /** Ein Geraet oder Kabel DIESES Plans — die Karte traegt nur den Verweis. */
+  | 'object'
+
+/**
+ * Worauf eine Objekt-Karte zeigt: ein Geraet oder ein Kabel des Plans.
+ *
+ * NUR DER VERWEIS, sonst nichts (ADR-001). Name, Modell, Brennweite, Laenge
+ * werden bei jedem Rendern aus dem Seed gelesen. Eine Abschrift auf der Karte
+ * waere nach dem naechsten Umbenennen im Kameraplan die zweite Wahrheit — und
+ * die Karte zeigte eine Kamera, die es so nicht mehr gibt, ohne dass es
+ * jemand merkt.
+ */
+export interface ObjektVerweis {
+  art: 'geraet' | 'kabel'
+  id: string
+}
 
 /** Eine Karte auf dem Board (frei positioniert oder in einer Spalte). */
 export interface BoardCard {
@@ -191,6 +231,8 @@ export interface BoardCard {
    * andere Aussage als „hat noch niemand festgelegt".
    */
   durationS?: number
+  /** Fuer type 'object': das Geraet oder Kabel, auf das die Karte zeigt. */
+  ref?: ObjektVerweis
 }
 
 export interface BoardConnection {
@@ -636,12 +678,14 @@ export const PROJECT: SuiteProject = {
       { time: '19:30', title: 'Load-out', dept: 'all' },
     ],
     crew: [
-      { name: 'Lars Zumpe', role: 'Projektleitung', dept: 'prod', call: '08:00', status: 'confirmed' },
-      { name: 'M. Berg', role: 'Video-Engineer', dept: 'video', call: '08:00', status: 'confirmed' },
-      { name: 'S. Klein', role: 'Kameramann', dept: 'video', call: '12:00', status: 'confirmed' },
-      { name: 'T. Wolf', role: 'Lichttechnik', dept: 'light', call: '09:00', status: 'confirmed' },
-      { name: 'A. Roth', role: 'FOH / Ton', dept: 'audio', call: '10:00', status: 'pending' },
-      { name: 'J. Frei', role: 'Rigging', dept: 'light', call: '08:00', status: 'confirmed' },
+      { name: 'Lars Zumpe', role: 'Projektleitung', dept: 'prod', call: '08:00', end: '21:00', date: '2026-07-18', booking: 'confirmed' },
+      { name: 'M. Berg', role: 'Video-Engineer', dept: 'video', call: '08:00', end: '20:00', date: '2026-07-18', booking: 'confirmed' },
+      { name: 'S. Klein', role: 'Kameramann', dept: 'video', call: '12:00', end: '20:00', date: '2026-07-18', booking: 'confirmed' },
+      { name: 'T. Wolf', role: 'Lichttechnik', dept: 'light', call: '09:00', end: '21:00', date: '2026-07-18', booking: 'confirmed' },
+      // Ohne Datum und Ende: fuer diesen Eintrag prueft niemand
+      // Ueberschneidungen, und die Crew-Karte sagt genau das.
+      { name: 'A. Roth', role: 'FOH / Ton', dept: 'audio', call: '10:00', booking: 'pencil' },
+      { name: 'J. Frei', role: 'Rigging', dept: 'light', call: '08:00', end: '12:00', date: '2026-07-18', booking: 'confirmed' },
     ],
     budget: [
       { category: 'Video', estimatedEur: 8400, actualEur: 8120 },
@@ -894,3 +938,21 @@ export const signalGeraete = (p: SuiteProject): SuiteGeraet[] =>
 /** Ein Geraet zu seiner Id — oder `undefined`. */
 export const geraetMit = (p: SuiteProject, id: string | undefined): SuiteGeraet | undefined =>
   id ? p.geraete.find((g) => g.id === id) : undefined
+
+/**
+ * Der SPEZIELLSTE Plan, der ein Geraet fuehrt — dorthin zeigt ein Verweis.
+ *
+ * Ein Geraet steht in mehreren Plaenen (eine Kamera im Kameraplan UND im
+ * Signalplan), ein Sprung hat aber genau EIN Ziel. Genannt wird der
+ * speziellste: wer eine Kamera sucht, sucht sie als Kamera und nicht als
+ * „irgendein Geraet mit Anschluessen". Dieselbe Reihenfolge benutzt die
+ * Zeig-Bitte an den Planer (`revealKind` in `App.tsx`) — sie steht deshalb
+ * HIER, neben den Filtern, und nicht zweimal.
+ *
+ * Der Rueckgabewert ist eine Modul-Id (`ModuleId`), ohne den Typ zu
+ * importieren: die Datenschicht haengt nicht an der Modul-Registry.
+ */
+export const heimatPlan = (
+  g: Pick<SuiteGeraet, 'kategorie' | 'kamera' | 'licht'>,
+): 'cameras' | 'licht' | 'signal' =>
+  imPlan(g, 'kamera') ? 'cameras' : imPlan(g, 'licht') ? 'licht' : 'signal'

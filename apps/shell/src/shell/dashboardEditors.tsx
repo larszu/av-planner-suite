@@ -27,6 +27,8 @@ import {
   type Customer,
 } from '../data/customerStore'
 import { useT, type TFunc } from '../i18n'
+import { BUCHUNGSSTAENDE } from '../data/crew'
+import { buchungsLabel } from './crewLabels'
 
 const fieldCls =
   'av-focus rounded-av-control border border-av-border bg-av-surface-3 px-2 py-1 text-[12.5px] text-av-text'
@@ -350,24 +352,36 @@ export function CrewEditor({
   const patch = (i: number, p: Partial<CrewMember>) =>
     setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...p } : r)))
   const dOpts = deptOptions(t).filter((o) => o.value !== 'all') as { value: Department; label: string }[]
-  const sOpts: { value: CrewMember['status']; label: string }[] = [
-    { value: 'confirmed', label: t('overview.editor.crew.confirmed', 'bestätigt') },
-    { value: 'pending', label: t('overview.editor.crew.pending', 'offen') },
-  ]
+  const stand = buchungsLabel(t)
+  // Die vier Staende von `@avplan/crew-core`, in seiner Reihenfolge.
+  const sOpts: { value: CrewMember['booking']; label: string }[] = BUCHUNGSSTAENDE.map((b) => ({ value: b, label: stand[b] }))
   return (
     <EditorShell open={open} title={t('overview.editor.crew.title', 'Crew bearbeiten')} onClose={onClose} onSave={() => onSave(rows)}>
       <div className="flex flex-col gap-2">
         {rows.map((r, i) => (
-          <div key={i} className="flex items-center gap-2">
+          // Zwei Zeilen je Person: Datum und Ende kamen dazu (suite#260), und
+          // eine Zeile mit sieben Feldern ragte aus dem Dialog.
+          <div key={i} className="flex flex-wrap items-center gap-2 border-b border-av-border-muted pb-2">
             <TextField value={r.name} onChange={(v) => patch(i, { name: v })} ariaLabel={t('overview.editor.crew.name', 'Name')} placeholder={t('overview.editor.crew.namePh', 'Name')} className="w-36" />
-            <TextField value={r.role} onChange={(v) => patch(i, { role: v })} ariaLabel={t('overview.editor.crew.role', 'Funktion')} placeholder={t('overview.editor.crew.rolePh', 'Funktion')} className="flex-1" />
+            <TextField value={r.role} onChange={(v) => patch(i, { role: v })} ariaLabel={t('overview.editor.crew.role', 'Funktion')} placeholder={t('overview.editor.crew.rolePh', 'Funktion')} className="min-w-[8rem] flex-1" />
             <SelectField value={r.dept} onChange={(v) => patch(i, { dept: v })} options={dOpts} ariaLabel={t('overview.editor.crew.dept', 'Gewerk')} className="w-24" />
-            <TextField value={r.call} onChange={(v) => patch(i, { call: v })} ariaLabel={t('overview.editor.crew.call', 'Call-Time')} placeholder="08:00" className="w-20" />
-            <SelectField value={r.status} onChange={(v) => patch(i, { status: v })} options={sOpts} ariaLabel={t('overview.editor.crew.status', 'Status')} className="w-24" />
             <RowTools index={i} total={rows.length} onMove={(f, d) => setRows((rs) => moveItem(rs, f, d))} onRemove={(idx) => setRows((rs) => rs.filter((_, k) => k !== idx))} removeLabel={t('overview.editor.crew.remove', 'Person entfernen')} />
+            <input
+              type="date"
+              aria-label={t('overview.editor.crew.date', 'Datum')}
+              className={`${fieldCls} w-36`}
+              value={r.date ?? ''}
+              onChange={(e) => patch(i, { date: e.target.value || undefined })}
+            />
+            <TextField value={r.call} onChange={(v) => patch(i, { call: v })} ariaLabel={t('overview.editor.crew.call', 'Call-Time')} placeholder="08:00" className="w-20" />
+            <TextField value={r.end ?? ''} onChange={(v) => patch(i, { end: v.trim() ? v : undefined })} ariaLabel={t('overview.editor.crew.end', 'Ende')} placeholder="20:00" className="w-20" />
+            <SelectField value={r.booking} onChange={(v) => patch(i, { booking: v })} options={sOpts} ariaLabel={t('overview.editor.crew.booking', 'Buchung')} className="w-32" />
           </div>
         ))}
-        <AddRowButton label={t('overview.editor.crew.add', 'Person hinzufügen')} onClick={() => setRows((rs) => [...rs, { name: '', role: '', dept: 'video', call: '', status: 'pending' }])} />
+        <p className="text-[11px] text-av-text-muted">
+          {t('overview.editor.crew.windowHint', 'Mit Datum, Beginn und Ende prüft die Crew-Karte Überschneidungen derselben Person. Ein Ende vor dem Beginn liegt am Folgetag.')}
+        </p>
+        <AddRowButton label={t('overview.editor.crew.add', 'Person hinzufügen')} onClick={() => setRows((rs) => [...rs, { name: '', role: '', dept: 'video', call: '', booking: 'pencil' }])} />
       </div>
     </EditorShell>
   )

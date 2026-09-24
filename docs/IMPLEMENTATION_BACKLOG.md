@@ -2229,6 +2229,15 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
 * **Guards.** `packages/crew-core/test/grenze.test.ts` (3),
   `packages/crew-core/scripts/plan-grenze-check.mjs` (hängt an `npm test` des Pakets).
 
+* **Nachtrag 2026-09-24 (`suite#260`): die Shell ist ein zweiter LESER.** Ihre Crew-Karte
+  führt den Buchungsstand von crew-core (`show.crew[].booking` statt des früheren
+  `status: confirmed | pending`; alte Dateien heilt `healCrew`) und fragt
+  `bookingConflicts` nach Überschneidungen derselben Person — für jeden Eintrag mit Datum,
+  Beginn und Ende; einer ohne Zeitfenster wird genannt und nicht als konfliktfrei gezählt.
+  Das ist Lesen, nicht Schreiben: die Shell hält ihre Liste selbst und bildet sie nur ab
+  (`apps/shell/src/data/crew.ts`). Die Bedingung für Schritt 3 ist damit weiterhin nicht
+  erfüllt.
+
 ---
 
 ### B-83 · Ein selbst angelegtes Gerät verschwand — und eines von Hand kam nie an
@@ -2601,9 +2610,17 @@ entfernte Probe-Zeile, ein zusätzlicher Eintrag in der Attributliste.
   es hier geht, und beim Bau des Lagers weiter auf das Gebäude gezeigt — eine
   Ausnahme wäre die falsche Antwort gewesen.
 * **Was NICHT gebaut ist** und als eigener Punkt offen bleibt:
-  * Der Plan zeigt die Deckung noch nirgends an. Die Zahl kommt in der Shell
-    an (`SuiteProject.deckung`) und steht im Seed für alle Planer bereit; eine
-    Anzeige „3 von 4 vorhanden" am Gerät gibt es noch nicht.
+  * ~~Der Plan zeigt die Deckung noch nirgends an.~~ **Angezeigt seit
+    2026-09-24** (`suite#260`): die Übersicht der Shell führt die Karte
+    „Bedarf & Deckung" mit einer Ampel je Bedarfszeile und Legende. Die
+    Abbildung steht einmal, als `deckungsAmpel` in `packages/ui/src/deckung.ts`,
+    damit die Planer sie übernehmen statt nachrechnen: keine Antwort und
+    „nicht gezählt" sind beide `unbekannt` und nie `fehlt`; `subhire` heißt
+    „der eigene Bestand deckt einen Teil" — eine gebuchte Zumiete meldet
+    `SeedDeckung` nicht, also behauptet die Ampel keine. Am Gerät im
+    Signal-Plan („3 von 4") steht sie weiterhin nicht; das ist Arbeit in den
+    vendorten Planern. Guards: `packages/ui/test/deckungsAmpel.test.ts`,
+    `apps/shell/test/deckungAnzeige.test.ts`.
   * Dasselbe für die Anschlusspunkte: sie kommen an, aber die Stromplanung des
     `cable-planner` liest sie noch nicht.
   * Die vier Geräte-Repos (tally-pi, pi-media-station, sony-camera-bridge,

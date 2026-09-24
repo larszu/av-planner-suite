@@ -33,11 +33,24 @@
 //      angelegt, sondern als ausgelassen gemeldet — sichtbar, nicht still.
 // ───────────────────────────────────────────────────────────────────────────
 import { imSignalplan, type SeedCable, type SeedGeraet, type SuiteSeed } from '@avplan/ui/embed'
-import type { ConnectorType, EquipmentItem, EquipmentTemplate, Port } from '../types/equipment'
+import type { ConnectorType, EquipmentItem, EquipmentTemplate, KameraOptik, Port } from '../types/equipment'
 import type { Cable, CableType } from '../types/cable'
 import type { SignalStandard } from '../types/cableSpec'
 import { listDeviceTypes, resolveDeviceType } from './deviceTypeRegistry'
 import { fachAus, fachVon, GEWERK, type SignalFach } from './fachdaten'
+
+/**
+ * #910 — die Kamera-Gruppe des Seeds als Optik am Geraet, oder `undefined`.
+ * Nur, was der Kameraplan nennt: eine fehlende Brennweite ist keine von 0.
+ */
+export function optikAusSeed(k: SeedGeraet['kamera']): KameraOptik | undefined {
+  if (!k) return undefined
+  const o: KameraOptik = {}
+  if (typeof k.lens === 'string' && k.lens.trim()) o.objektivModell = k.lens.trim()
+  if (typeof k.focalMm === 'number' && Number.isFinite(k.focalMm) && k.focalMm > 0) o.brennweiteMm = k.focalMm
+  if (typeof k.hfovDeg === 'number' && Number.isFinite(k.hfovDeg) && k.hfovDeg > 0) o.bildwinkelGrad = k.hfovDeg
+  return Object.keys(o).length > 0 ? o : undefined
+}
 
 /** Belegtext fuer alles, was aus dem Seed statt aus einem Datenblatt stammt. */
 export const SEED_BELEG = 'dem Suite-Projekt der Shell — nicht aus einem Datenblatt'
@@ -209,6 +222,10 @@ export function seedToCable(seed: SuiteSeed, vorhandene: EquipmentItem[] = []): 
       ...(d.sub ? { subtitle: d.sub } : {}),
       x: Math.round((d.nx ?? (i % 4) * 0.25) * CANVAS_W),
       y: Math.round((d.ny ?? Math.floor(i / 4) * 0.25) * CANVAS_H),
+      // #910 — Objektiv, Brennweite, Bildwinkel aus dem Kameraplan. Immer
+      // gesetzt (auch `undefined`), damit ein entferntes Objektiv am
+      // vorhandenen Geraet nicht stehen bleibt.
+      optik: optikAusSeed(d.kamera),
     }
 
     // Bekanntes Geraet: der Seed setzt, was er NENNT — Name, Untertitel, Lage.
