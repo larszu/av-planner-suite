@@ -29,6 +29,7 @@ describe('szeneAusSeed', () => {
   it('erfindet nichts: ohne Lage nicht gezeichnet, ohne Haenge-Hoehe am Boden und so markiert', () => {
     const s = szeneAusSeed({ venue, geraete, cables: [] })
     expect(s.nichtPlatziert).toBe(1)
+    expect(s.nichtPlatziertSignal).toBe(0)
     expect(s.geraete.some((x) => x.id === 'lose')).toBe(false)
     expect(s.geraete.find((x) => x.id === 'par2')).toMatchObject({ pos: { y: 0 }, hoeheBekannt: false })
   })
@@ -51,5 +52,17 @@ describe('hauptGewerk', () => {
     expect(hauptGewerk({ kategorie: 'Lights', kamera: {} })).toBe('kamera')
     expect(hauptGewerk({ kategorie: 'Lights' })).toBe('licht')
     expect(hauptGewerk({})).toBe('signal')
+  })
+})
+
+describe('Signalgeraete ohne Lage', () => {
+  it('werden eigens gezaehlt — ihr Weg in den Raum fuehrt ueber den Signalplan', () => {
+    const s = szeneAusSeed({
+      venue,
+      geraete: [g('hub', { kategorie: 'Video Router' }), g('sw', {}), g('lose', { kategorie: 'Cameras' })],
+      cables: [],
+    })
+    expect(s.nichtPlatziert).toBe(3)
+    expect(s.nichtPlatziertSignal).toBe(2)
   })
 })

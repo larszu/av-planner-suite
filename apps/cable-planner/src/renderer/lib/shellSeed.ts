@@ -38,6 +38,8 @@ import type { Cable, CableType } from '../types/cable'
 import type { SignalStandard } from '../types/cableSpec'
 import { listDeviceTypes, resolveDeviceType } from './deviceTypeRegistry'
 import { fachAus, fachVon, GEWERK, type SignalFach } from './fachdaten'
+import type { Grundriss } from '../types/grundriss'
+import { meterJePixel } from './grundriss/massstab'
 
 /**
  * #910 — die Kamera-Gruppe des Seeds als Optik am Geraet, oder `undefined`.
@@ -415,10 +417,48 @@ export function seedToCable(seed: SuiteSeed, vorhandene: EquipmentItem[] = []): 
 const kategorieAus = (e: EquipmentItem): string | undefined =>
   resolveDeviceType(e.deviceTypeId)?.template.category ?? (e.category?.trim() || undefined)
 
+/**
+ * Die Lage eines Geraets im Raum (Meter, Raum-Koordinaten des Seeds) — nur,
+ * wenn der Signalplan sie WEISS.
+ *
+ * Das ist der Fall, wenn das Geraet auf einem Hallenplan mit Zwei-Punkt-
+ * Massstab liegt. Dann ist der Knoten keine Stelle im Diagramm mehr, sondern
+ * eine auf dem Plan: seine Mitte, vom Bildursprung aus gemessen, plus der
+ * Versatz des Bildes im Raum (`fremdVersatzM`, 0, wenn der Plan hier geladen
+ * wurde — dieselbe Annahme, mit der `venueAusGrundriss` ihn an die
+ * Nachbar-Apps weitergibt, sonst saehen Kameraplan und 3D den Plan an zwei
+ * verschiedenen Stellen).
+ *
+ * KEINE Lage (`undefined`, also „keine Aussage"):
+ *   - ohne Hallenplan oder ohne Massstab — die Diagramm-Lage ist keine Stelle
+ *     im Raum, und eine erfundene waere in „Raum in 3D" nicht von einer
+ *     gemessenen zu unterscheiden;
+ *   - mit Vier-Punkt-Massstab — er gilt fuer ein Rechteck auf dem Bild, und
+ *     wo dessen Ecke im Raum liegt, sagt er nicht;
+ *   - neben dem Plan — ein Mischer, den jemand rechts neben die Halle legt,
+ *     steht in der Regie und nicht am Hallenrand.
+ */
+export function raumLageAusPlan(
+  e: Pick<EquipmentItem, 'x' | 'y' | 'width' | 'height'>,
+  grundriss: Grundriss | undefined,
+): { x: number; y: number } | undefined {
+  if (!grundriss?.kalibrierung) return undefined
+  const mJePx = meterJePixel(grundriss.kalibrierung)
+  if (mJePx == null) return undefined
+  const mx = e.x + (Number.isFinite(e.width) ? e.width : 0) / 2
+  const my = e.y + (Number.isFinite(e.height) ? e.height : 0) / 2
+  const g = grundriss
+  if (mx < g.x || my < g.y || mx > g.x + g.width || my > g.y + g.height) return undefined
+  const versatz = g.fremdVersatzM ?? { x: 0, y: 0 }
+  const cm = (n: number) => Math.round(n * 100) / 100
+  return { x: cm(versatz.x + (mx - g.x) * mJePx), y: cm(versatz.y + (my - g.y) * mJePx) }
+}
+
 /** Rueckweg: das native Modell als Seed-Domaene „signal". */
 export function cableToSeedPatch(project: {
   equipment?: EquipmentItem[]
   cables?: Cable[]
+  grundriss?: Grundriss
 }): { geraete: SeedGeraet[]; cables: SeedCable[] } {
   const equipment = project.equipment ?? []
   return {
@@ -433,6 +473,10 @@ export function cableToSeedPatch(project: {
       // daraus auf — mit dem Instanznamen koennte er es nicht.
       const modell = resolveDeviceType(e.deviceTypeId)?.template.name
       const kategorie = kategorieAus(e)
+      // Die Lage im Raum geht mit, wenn der Plan sie weiss. Ob sie einzieht,
+      // entscheidet die Shell (`nurEigenes`): bei einer Kamera oder Leuchte
+      // gilt die Stelle aus deren Plan.
+      const lage = raumLageAusPlan(e, project.grundriss)
       return {
         id: e.id,
         name: e.name,
@@ -451,6 +495,7 @@ export function cableToSeedPatch(project: {
         fachdaten: { [GEWERK]: fachAus(e) },
         nx: Math.min(1, Math.max(0, e.x / CANVAS_W)),
         ny: Math.min(1, Math.max(0, e.y / CANVAS_H)),
+        ...(lage ? { x: lage.x, y: lage.y } : {}),
       }
     }),
     cables: (project.cables ?? []).map((c) => ({

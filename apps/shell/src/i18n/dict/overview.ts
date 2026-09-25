@@ -251,6 +251,8 @@ export const overview: Record<string, string> = {
   'overview.raum3d.signal': '{n} signal devices placed, {k} cables',
   'overview.raum3d.open': 'View in 3D',
   'overview.raum3d.dialogTitle': 'Show in 3D',
+  'overview.raum3d.signalOhneLage':
+    '{n} signal devices have no position in the room — they appear once they sit on the scaled floor plan in the signal plan.',
   'overview.raum3d.labels': 'Labels',
   'overview.raum3d.footer':
     '{geraete} devices, {kabel} cables — drag to orbit, scroll to zoom. Not placed: {offen} devices, {kabelOffen} cables.',
