@@ -65,6 +65,12 @@ export const MODEL_FIELDS = [
   'isConverter',
   'isDistributionAmp',
   'isPatchPanel',
+  // #879 — die Frontplatte: Art, Setz-Raster, Streifenhoehe. MODELL und
+  // nicht Exemplar, und zwar aus demselben Grund wie `inputs`/`outputs`
+  // darueber: die LAGE jedes Steckers steht in den Ports, und die stehen
+  // schon im Modell. Beides zu trennen hiesse, eine in die Bibliothek
+  // gelegte Wanddose ohne ihre Bohrungen wiederzubekommen.
+  'frontplatte',
   // B-46 — die Adapter-Angaben. MODELL und nicht Exemplar: ein
   // „Micro-HDMI auf HDMI, einweg, passiv" ist in jedem Plan derselbe. Die
   // Angaben ins Exemplar zu legen hiesse, sie bei jedem Herausziehen aus
@@ -173,7 +179,12 @@ export const INSTANCE_FIELDS = [
   'hausKlinkeId',
   'id',
 
-  // #910 — wie DIESE Kamera eingestellt ist (Objektiv, Brennweite).
+  // #909/#910 — die Kamera aus dem MultiCam-Plan: WELCHE es dort ist und wie
+  // DIESES Exemplar eingestellt ist (Objektiv, Brennweite). Ein anderes
+  // Exemplar desselben Modells steht mit anderem Objektiv an anderer Stelle.
+  'multicamId',
+  'multicamProjectId',
+  'multicamRemoved',
   'optik',
 
   // Wo dieses Exemplar steht

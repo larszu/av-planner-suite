@@ -348,10 +348,9 @@ export type ControlPath =
   | 'dji-osmo' | 'dji-ronin'
   // Ein B4-OBJEKTIV, keine Kamera: das ESP32-S3-Interface aus
   // `packages/firmware-b4` der sony-camera-bridge, im 12-poligen
-  // Hirose-Kabel zwischen Kamera und Optik. Es steht hier, weil man es
-  // aufbaut und also plant -- und weil es die Frage beantwortet, die
-  // sonst in der Probe kommt: ob sich die Blende dieser Position vom
-  // Pult aus stellen laesst.
+  // Hirose-Kabel zwischen Kamera und Optik. Es steht hier, weil man es aufbaut und also plant --
+  // und weil es die Frage beantwortet, die sonst in der Probe kommt:
+  // ob sich die Blende dieser Position vom Pult aus stellen laesst.
   | 'b4-lens'
   | 'none';
 
@@ -862,6 +861,12 @@ export interface ProjectFile {
   appVersion: string;
   projectVersion: number; // auto-incremented on changes
   savedAt: string; // ISO date
+  /**
+   * Stabile Projekt-Id (cable-planner#908), siehe `utils/projectId.ts`.
+   * Optional nur, weil aeltere Dateien sie nicht tragen — beim Laden wird sie
+   * dann einmal vergeben und ab dem naechsten Speichern mitgeschrieben.
+   */
+  projectId?: string;
   venue: Venue;
   cameras: VenueCamera[];
   persons: ReferencePerson[];
@@ -907,4 +912,11 @@ export interface ProjectFile {
    * modelliert (Pose, Blickrichtung), je Personen-Id.
    */
   personForeign?: Record<string, import('../utils/venueExchange').ForeignPersonFields>;
+  /**
+   * Eigene Kameras und Optiken, die platzierte Kameras BENUTZEN
+   * (larszu/cable-planner#917) — siehe `utils/projectLibrary.ts`. Beim Laden
+   * in die eigene Bibliothek aufgenommen, soweit sie dort fehlen.
+   */
+  customCameras?: Camera[];
+  customLenses?: Lens[];
 }

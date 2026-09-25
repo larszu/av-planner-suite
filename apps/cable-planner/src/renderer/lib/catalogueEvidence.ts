@@ -45,6 +45,7 @@ import { BLACKMAGIC_CATALOG } from './blackmagicCatalog'
 import { BROADCAST_TOOLS_CATALOG } from './broadcastToolsCatalog'
 import { CAMERA_CATALOG } from './cameraCatalog'
 import { GREENGO_CATALOG } from './greengoCatalog'
+import { LED_PROCESSOR_CATALOG } from './ledProcessorCatalog'
 import { LYNX_CATALOG } from './lynxCatalog'
 import { MEDIA_STATION_CATALOG } from './mediaStationCatalog'
 import { MIC_CATALOG } from './micCatalog'
@@ -55,10 +56,18 @@ import { SWITCHER_CATALOG } from './switcherCatalog'
 import { UBIQUITI_CATALOG } from './ubiquitiCatalog'
 import { WIRELESS_AUDIO_CATALOG } from './wirelessAudioCatalog'
 
-/** Das Wenige, das diese Rechnung von einem Katalog-Eintrag braucht. */
-interface EvidenceEntry {
+/**
+ * Das Wenige, das diese Rechnung von einem Katalog-Eintrag braucht.
+ *
+ * `category` steht hier, obwohl die Beleg-Rechnung sie nicht liest:
+ * `katalogLuecken` zaehlt damit gegen die Zielbereiche aus #878 und liest
+ * dafuer DIESELBE `CATALOGUES`-Liste. Eine zweite Liste daneben koennte
+ * abweichen — dann stuende in der Luecken-Messung ein anderer Katalog als in
+ * der Beleg-Messung, und beide saehen richtig aus.
+ */
+export interface EvidenceEntry {
   deviceTypeId: string
-  template: Pick<EquipmentTemplate, 'name' | 'manufacturerUrl'>
+  template: Pick<EquipmentTemplate, 'name' | 'category' | 'manufacturerUrl'>
 }
 
 /**
@@ -83,6 +92,7 @@ export const CATALOGUES: ReadonlyArray<{ name: string; entries: readonly Evidenc
   { name: 'broadcastTools', entries: BROADCAST_TOOLS_CATALOG },
   { name: 'camera', entries: CAMERA_CATALOG },
   { name: 'greengo', entries: GREENGO_CATALOG },
+  { name: 'ledProcessor', entries: LED_PROCESSOR_CATALOG },
   { name: 'lynx', entries: LYNX_CATALOG },
   { name: 'mediaStation', entries: MEDIA_STATION_CATALOG },
   { name: 'mic', entries: MIC_CATALOG },

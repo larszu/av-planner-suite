@@ -36,13 +36,14 @@ describe('Der Katalog der Suite', () => {
     )
   })
 
-  it('und die 12 gemeinsamen sind genau die mit gewachsener Id', () => {
-    // Befund A in einer Zahl: von 377 Kameramodellen der Suite haben ZWÖLF im
+  it('und die 16 gemeinsamen sind genau die mit gewachsener Id', () => {
+    // Befund A in einer Zahl: von 377 Kameramodellen der Suite hatten ZWÖLF im
     // Cable-Planer eine Identität — neun von Hand gepflegt, drei vom Wächter
-    // „kein Modell steht unter zwei Ids" nachgezogen. Die übrigen 365 gab es
-    // dort nicht.
+    // „kein Modell steht unter zwei Ids" nachgezogen. Vier Blackmagic-Modelle
+    // kamen am 2026-09-25 von Hand dazu (multicam#148). Die übrigen 361 gab
+    // es dort nicht.
     const gemeinsam = mehrfachGefuehrt(alleTypen())
-    expect(gemeinsam).toHaveLength(12)
+    expect(gemeinsam).toHaveLength(16)
     for (const t of gemeinsam) {
       expect(t.quellen).toEqual(['cable', 'multicam'])
       expect(istAbgeleitet(t.id)).toBe(false)
@@ -63,17 +64,25 @@ describe('Der Katalog der Suite', () => {
     // Auflösungen, und ADR-005 Regel 2 entscheidet sie ohne Befund — die
     // höhere gewinnt. Ein Befundhaufen aus Nicht-Befunden ist die Sorte
     // Meldung, die nach dem dritten Mal niemand mehr liest.
-    expect(befunde).toHaveLength(11)
+    //
+    // Am 2026-09-25 sind es NEUNZEHN: die vier von Hand zugeordneten
+    // Blackmagic-Modelle (multicam#148) und die zwei, die mit ihnen erstmals
+    // unter derselben Id stehen, bringen acht dazu — und auch die sind echt.
+    // Genau deshalb waren sie dem Katalog-Abzug entgangen: die Namen weichen
+    // ab, und welcher gilt, entscheidet ein Mensch.
+    expect(befunde).toHaveLength(19)
 
-    // Siebenmal nennen die Kataloge verschiedene Herstellerseiten für dasselbe
-    // Gerät (US gegen Europa/Asien). Das ist keine Schreibweise, das ist die
-    // Frage, welche Seite gilt — und die beantwortet ein Mensch.
-    expect(befunde.filter((b) => b.feld === 'datenblattUrl')).toHaveLength(7)
+    // Elfmal nennen die Kataloge verschiedene Herstellerseiten für dasselbe
+    // Gerät (US gegen Europa/Asien, Produktseite gegen Datenblatt-Seite).
+    // Das ist keine Schreibweise, das ist die Frage, welche Seite gilt — und
+    // die beantwortet ein Mensch.
+    expect(befunde.filter((b) => b.feld === 'datenblattUrl')).toHaveLength(11)
 
-    // Viermal heisst dasselbe Modell wirklich verschieden („Canon EOS C70"
-    // gegen „C70", „PXW-FS7 Mk II" gegen „PXW-FS7 II"). Kein reines
-    // Hersteller-Präfix — deshalb wird hier NICHT automatisch aufgelöst.
-    expect(befunde.filter((b) => b.feld === 'modell')).toHaveLength(4)
+    // Achtmal heisst dasselbe Modell wirklich verschieden („Canon EOS C70"
+    // gegen „C70", „PXW-FS7 Mk II" gegen „PXW-FS7 II", „Pocket Cinema Camera
+    // 4K" gegen „Pocket Cinema 4K"). Kein reines Hersteller-Präfix — deshalb
+    // wird hier NICHT automatisch aufgelöst.
+    expect(befunde.filter((b) => b.feld === 'modell')).toHaveLength(8)
 
     // Und jeder Befund nennt beide Werte und beide Quellen, sonst wäre er
     // nicht bearbeitbar.

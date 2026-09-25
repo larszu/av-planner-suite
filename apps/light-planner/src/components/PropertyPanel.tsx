@@ -1047,7 +1047,7 @@ const PropertyPanel: React.FC<Props> = ({
           <span className="prop-section-title">{t('prop.actions', 'Actions')}</span>
           <p className="prop-hint">
             {t('prop.multiMove', 'Move: drag one of the selected fixtures.')}<br />
-            {t('prop.multiRotate', 'Rotate: use the toolbar buttons to rotate around a person.')}
+            {t('prop.multiRotate', 'Rotate: use the rotate buttons in the action bar above the plan to turn the selection around a person.')}
           </p>
           {multiFixtures.length > 0 && (
             <div className="reflectance-presets">

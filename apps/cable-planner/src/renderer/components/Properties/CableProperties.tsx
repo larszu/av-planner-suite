@@ -5,6 +5,8 @@ import { cableCatalog } from '../../types/cableSpec'
 import { useUiStore } from '../../store/uiStore'
 import { useModule } from '../../store/settingsStore'
 import { cableTypePatchFromPorts } from '../../lib/cableInheritance'
+import { adapterVorschlag } from '../../lib/adapterVorschlag'
+import { FotoListe } from './sections/FotoSection'
 import type { Cable } from '../../types/cable'
 import { LEITER_ROLLEN, type LeiterRolle } from '../../types/conductor'
 import type { EquipmentItem, Port } from '../../types/equipment'
@@ -16,12 +18,19 @@ import { STANDARD_LAYERS, LAYER_STYLES } from '../../lib/cableLayers'
 import { netKeyOf, netPeerCount } from '../../lib/offPageNet'
 import { sourceDestLabel } from '../../lib/cableLabel'
 import { cableTouches } from '../../lib/portOccupancy'
+import { kabelEnden, ortText } from '../../lib/kabelOrt'
+import { SignalwegSection } from './SignalwegSection'
+import { HausStreckeSection } from './HausStreckeSection'
+import type { Floor, LocationFrame } from '../../types/location'
 import {
   INSTALL_STATUSES,
   INSTALL_STATUS_LABEL,
   type InstallStatus,
   type CableTestResult,
 } from '../../types/lifecycle'
+
+const EMPTY_LOCATIONS: LocationFrame[] = []
+const EMPTY_FLOORS: Floor[] = []
 
 export const CableProperties = () => {
   const t = useTranslation()
@@ -30,7 +39,10 @@ export const CableProperties = () => {
   const equipment = useProjectStore((state) => state.project.equipment)
   const cables = useProjectStore((state) => state.project.cables)
   const updateCable = useProjectStore((state) => state.updateCable)
+  const adapterEinsetzen = useProjectStore((state) => state.adapterEinsetzen)
   const anschlussListe = useProjectStore((state) => state.project.anschlussListe)
+  const locations = useProjectStore((state) => state.project.locations ?? EMPTY_LOCATIONS)
+  const floors = useProjectStore((state) => state.project.floors ?? EMPTY_FLOORS)
   const deleteCable = useProjectStore((state) => state.deleteCable)
   const setCableInstallStatus = useProjectStore((state) => state.setCableInstallStatus)
   const setCableTestResult = useProjectStore((state) => state.setCableTestResult)
@@ -143,6 +155,52 @@ export const CableProperties = () => {
           <Icon icon={Pencil} size="xs" /> {t('cable.action.setTypeStandard', 'Set cable type / standard')}
         </button>
       )}
+      {(() => {
+        // ── #876 — was zwischen diese beiden Anschlüsse gehört ───────────
+        //
+        // Der Vorschlag steht HIER und nicht nur im Anlege-Dialog: die
+        // meisten unpassenden Verbindungen entstehen nicht beim Ziehen,
+        // sondern später — ein Gerät wird getauscht, ein Port umgesteckt.
+        // Ein Hinweis, den es nur einmal beim Anlegen gibt, ist dann weg.
+        //
+        // Der KONVERTER bekommt keinen Knopf. Er hat einen Hersteller, eine
+        // Bandbreite und einen Preis, und keine dieser Angaben steht im
+        // Plan; ihn einzusetzen wäre eine Behauptung über ein Gerät, das
+        // niemand gewählt hat.
+        const vorschlag = adapterVorschlag(fromPort, toPort)
+        if (vorschlag.art === 'keiner') return null
+        const satz =
+          vorschlag.art === 'geschlechtswandler'
+            ? t('adapter.suggest.gender', 'Both ends are the same gender — a gender changer goes in between.')
+            : vorschlag.art === 'adapter'
+              ? t('adapter.suggest.adapter', 'These connectors do not mate directly — an adapter goes in between.')
+              : t(
+                  'adapter.suggest.converter',
+                  'These are different signal families. That takes a converter — a device with power and a bandwidth limit, and one you pick yourself.',
+                )
+        return (
+          <div className="flex items-center gap-2 border border-sky-700/50 bg-sky-950/30 px-2 py-1 text-cp-xs text-sky-200">
+            <span className="flex-1 leading-snug">{satz}</span>
+            {vorschlag.spec && (
+              <button
+                type="button"
+                onClick={() => adapterEinsetzen(cable.id, vorschlag.spec!)}
+                className="shrink-0 bg-sky-700/50 px-1.5 py-0.5 font-medium hover:bg-sky-600/60"
+                title={t('adapter.insert.title', 'Insert it into this run — one undo step removes it again')}
+              >
+                {t('adapter.insert', 'Insert')}
+              </button>
+            )}
+          </div>
+        )
+      })()}
+      {/* #884 — Fotos an diesem Lauf. „So lag das Kabel" ist eine Aussage,
+          für die es kein Feld gibt und nie eines geben wird. */}
+      <div className="border-t border-cp-border-muted pt-2">
+        <span className="mb-1 block text-cp-text-secondary">{t('foto.section', 'Photos')}</span>
+        <FotoListe ziel={{ cableId: cable.id }} />
+      </div>
+
       {(() => {
         // v7.9.125 — Kabel-Typ vs. Port-Connector-Mismatch.
         // Greift nur wenn beide Ports existieren und das Kabel
@@ -319,6 +377,64 @@ export const CableProperties = () => {
                 className="w-full border border-cp-border bg-cp-surface-1 p-1.5"
               />
             </label>
+            {/* #885 — die belegte Faser, je Ende. Die Auswahl erscheint nur,
+                wo die Buchse ueberhaupt aufgeteilt ist: an einer LC-Duplex
+                gibt es nichts zu waehlen, und ein leeres Menue dort waere
+                eine Frage ohne Antwortmoeglichkeit. */}
+            {(fromPort?.fasern?.length ?? 0) > 0 && (
+              <label className="block">
+                <span className="mb-1 block text-cp-text-secondary">
+                  {t('fibre.strandFrom', 'Fibre A')}
+                </span>
+                <select
+                  value={cable.faserVon ?? ''}
+                  onChange={(e) =>
+                    updateCable(cable.id, {
+                      faserVon: e.target.value ? Number(e.target.value) : undefined,
+                    })
+                  }
+                  className="w-full border border-cp-border bg-cp-surface-1 p-1.5"
+                >
+                  <option value="">{t('fibre.strandNone', '— not stated —')}</option>
+                  {[...(fromPort?.fasern ?? [])]
+                    .sort((a, b) => a.position - b.position)
+                    .map((f) => (
+                      <option key={f.id} value={f.position}>
+                        {f.rolle === 'unbestimmt'
+                          ? String(f.position)
+                          : `${f.position} ${f.rolle.toUpperCase()}`}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            )}
+            {(toPort?.fasern?.length ?? 0) > 0 && (
+              <label className="block">
+                <span className="mb-1 block text-cp-text-secondary">
+                  {t('fibre.strandTo', 'Fibre B')}
+                </span>
+                <select
+                  value={cable.faserNach ?? ''}
+                  onChange={(e) =>
+                    updateCable(cable.id, {
+                      faserNach: e.target.value ? Number(e.target.value) : undefined,
+                    })
+                  }
+                  className="w-full border border-cp-border bg-cp-surface-1 p-1.5"
+                >
+                  <option value="">{t('fibre.strandNone', '— not stated —')}</option>
+                  {[...(toPort?.fasern ?? [])]
+                    .sort((a, b) => a.position - b.position)
+                    .map((f) => (
+                      <option key={f.id} value={f.position}>
+                        {f.rolle === 'unbestimmt'
+                          ? String(f.position)
+                          : `${f.position} ${f.rolle.toUpperCase()}`}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            )}
           </div>
           {/* Mess-/Test-Ergebnis */}
           <div className="border border-cp-border-muted bg-cp-surface-1/40 p-1.5">
@@ -643,6 +759,9 @@ export const CableProperties = () => {
         )}
       </div>
 
+      <SignalwegSection cable={cable} />
+      <HausStreckeSection cable={cable} />
+
       {/* Endpoint editor — inline accordion (open by default) so users can
           re-route a cable from the properties panel without opening a dialog. */}
       <details open className="border border-cp-border bg-cp-surface-3/50">
@@ -655,6 +774,20 @@ export const CableProperties = () => {
             <span className="mx-1 text-cp-text-faint">→</span>
             {toDev?.name ?? '?'} · {toPort?.name ?? cable.toPortId}
           </span>
+          {/* #912 — wo die Enden sitzen: Etage · Raum, aus der Lage im Rahmen. */}
+          {(() => {
+            const { von, nach } = kabelEnden(cable, { equipment, locations, floors })
+            const a = ortText(von)
+            const b = ortText(nach)
+            if (!a && !b) return null
+            return (
+              <span className="mt-0.5 block text-cp-text-muted">
+                {a || t('cable.location.none', 'no room')}
+                <span className="mx-1 text-cp-text-faint">→</span>
+                {b || t('cable.location.none', 'no room')}
+              </span>
+            )
+          })()}
         </summary>
         <div className="border-t border-cp-border p-2">
           <div className="grid grid-cols-2 gap-2">

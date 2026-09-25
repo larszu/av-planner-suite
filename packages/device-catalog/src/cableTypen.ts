@@ -14,7 +14,7 @@
 // ───────────────────────────────────────────────────────────────────────────
 import type { TypEingabe } from './typ'
 
-/** 467 Geraetemodelle aus den Katalogen des Cable-Planers. */
+/** 469 Geraetemodelle aus den Katalogen des Cable-Planers. */
 export const CABLE_TYPEN: readonly TypEingabe[] = [
   { id: "ca069939-edff-479f-acc1-56650a5a1e8e", modell: "AJA KUMO 1616-12G", kategorie: "Video Router", datenblattUrl: "https://www.aja.com/products/kumo-1616-12g" },
   { id: "2a3eed49-cc33-45be-ae0f-c5e6c89e818d", modell: "AJA KUMO 3232-12G", kategorie: "Video Router", datenblattUrl: "https://www.aja.com/products/kumo-3232-12g" },
@@ -113,6 +113,8 @@ export const CABLE_TYPEN: readonly TypEingabe[] = [
   { id: "44b2c619-ff85-43bf-aef5-4b7e246c1b1d", modell: "GreenGo XTBB", kategorie: "Intercom" },
   { id: "da0967cd-057c-415f-95fd-5d353b072a8f", modell: "GreenGo XTBD", kategorie: "Intercom" },
   { id: "63bec60d-8447-4062-9ea0-1cf79b5bb493", modell: "GreenGo Antenna X", kategorie: "Intercom", datenblattUrl: "https://www.greengocom.com/products/waa" },
+  { id: "0f2b9d41-6c8a-4d7e-9b13-5a4c8e2f7d60", modell: "Brompton Tessera SX40", kategorie: "LED Processing", datenblattUrl: "https://www.bromptontech.com/wp-content/uploads/2025/07/Brompton-SX40-Data-Sheet-Feb2025-EN.pdf" },
+  { id: "7c4e1a86-3f52-4b9d-8e07-2d6b5f1c9a34", modell: "NovaStar MX40 Pro", kategorie: "LED Processing", datenblattUrl: "https://oss.novastar.tech/uploads/2024/08/MX40-Pro-LED-Display-Controller-Specifications-V1.4.1.pdf" },
   { id: "ba941ff8-e5b0-41e7-a82b-a305042fe471", modell: "Lynx Technik yellobrik CDH 1813", kategorie: "Converter", datenblattUrl: "https://lynx-technik.com/p/cdh-1813/" },
   { id: "58869e00-5679-49ce-a783-4f95485974e3", modell: "Lynx Technik yellobrik CHD 1802", kategorie: "Converter", datenblattUrl: "https://lynx-technik.com/p/chd-1802/" },
   { id: "e8379cf4-705f-4cdb-86cb-370464448e3b", modell: "Lynx Technik yellobrik OTX 1812", kategorie: "Converter", datenblattUrl: "https://lynx-technik.com/p/otx-1812/" },

@@ -122,7 +122,7 @@ export const de: Dict = {
   'adern.norm.newName': 'Neue Farbnorm',
   'adern.tab.anschluss': 'Anschlüsse (Bündel)',
   'adern.tab.normen': 'Farbnormen',
-  'adern.title': 'Adern, Farbnormen und Anschlüsse',
+  'adern.title': 'Adern, Farbnormen, Anschlüsse und Faser-Polarität',
   'aiPlan.generate': 'Generieren',
   'aiPlan.generating': 'Generiere…',
   'aiPlan.insert': 'In den Plan einfügen',
@@ -432,6 +432,7 @@ export const de: Dict = {
   'analysis.sheet.unreadable':
     'Kein Dokument-Code und kein Stand — acht Zeichen vom Fuß des Blatts oder der ganze Code',
   'analysis.switchPorts.conflict': 'Kabel sagt: {name}',
+  'analysis.switchPorts.via': 'über {panels}',
   'analysis.switchPorts.count': '{n} Switches',
   'analysis.switchPorts.descHint':
     'Herstellerneutraler Text zum Einfügen. Der Plan schickt nichts an den Switch — lies, was du einfügst.',
@@ -557,7 +558,15 @@ export const de: Dict = {
   'app.menu.file.importAvplan': 'Gesamtprojekt importieren (.avplan)…',
   'app.menu.file.importAvplanError': 'Import fehlgeschlagen — keine gültige .avplan-Datei.',
   'app.menu.file.importCameras': 'MultiCam-Kameras importieren…',
-  'app.menu.file.importCamerasDone': 'MultiCam-Kamera(s) als Equipment importiert.',
+  'app.menu.file.importCamerasSummary': 'MultiCam-Kameras: {neu} neu, {aktualisiert} aktualisiert, {unveraendert} unverändert.',
+  'app.menu.file.importCamerasRemoved':
+    'Nicht mehr im MultiCam-Plan — markiert, nicht gelöscht, weil Kabel daran hängen können: {names}',
+  'app.menu.file.importCamerasModelChanged':
+    'Modell in MultiCam geändert — Ports und Kabel bleiben; den Körper in den Eigenschaften über „Anderes Gerät wählen…“ tauschen: {names}',
+  'app.menu.file.avplanCamerasUnreadable':
+    'Das Projekt ist geöffnet, aber die MultiCam-Kameraliste in dieser Datei ließ sich nicht lesen — die Kameras wurden nicht übernommen.',
+  'app.menu.file.avplanCamerasAsk':
+    'Diese Datei enthält die Kameras des MultiCam-Plans. In den Signalplan übernehmen?',
   'app.menu.file.importCamerasError':
     'Kamera-Import fehlgeschlagen — keine gültige MultiCam-Kameraliste.',
   'app.menu.file.importGraphml': 'yEd / GraphML importieren…',
@@ -937,6 +946,14 @@ export const de: Dict = {
   'bom.cable.col.diff': 'Differenz',
   'bom.cable.col.length': 'Länge (m)',
   'bom.cable.col.paths': 'Wege',
+  // #875 — „Stückelung" ist der Werkstattbegriff: ein Lauf wird gestückelt,
+  // nicht „aufgeteilt". „Kupplung" ebenso — es ist das Ding, das zwischen
+  // zwei Trommeln steckt.
+  'bom.cable.col.split': 'Stückelung',
+  // Zählneutral: „1 Kupplungen" stand da, und das liest sich wie ein Fehler
+  // an einer Stelle, an der jemand einer Zahl glauben soll.
+  'bom.cable.couplers': 'Kupplungen je Lauf: {n} · Überlänge {m} m',
+  'bom.cable.short': 'Bestand reicht nicht — {what}',
   'bom.cable.col.planned': 'Rentman geplant',
   'bom.cable.col.totalM': 'Gesamt (m)',
   'bom.cable.col.type': 'Typ',
@@ -1030,6 +1047,19 @@ export const de: Dict = {
   'cable.field.channelLabel': 'Kanal / Channel',
   'cable.field.channelPlaceholder': 'z.B. 36, 6, 149',
   'cable.field.color': 'Farbe',
+  'signalweg.branch': 'Zweig {n} von {total}',
+  'signalweg.buttonTitle': 'Die ganze Kette, in der dieses Kabel liegt, hervorheben und den Rest abdunkeln (Esc beendet)',
+  'signalweg.hide': 'Signalweg ausblenden',
+  'signalweg.onlyThis': 'Dieses Kabel gehört zu keiner längeren Kette.',
+  'signalweg.show': 'Signalweg zeigen',
+  'signalweg.through.adapter': 'Adapter',
+  'signalweg.through.converter': 'Wandler',
+  'signalweg.through.da': 'Verteilverstärker',
+  'signalweg.through.mixer': 'Mischer',
+  'signalweg.through.panel': 'Patchfeld / Blende',
+  'signalweg.through.router': 'Kreuzschiene',
+  'signalweg.tieLine': 'Hausstrecke',
+  'cable.location.none': 'kein Raum',
   'cable.field.connection': 'Verbindung',
   'cable.field.connectorType': 'Stecker-Typ',
   'cable.field.dashed': 'Dashed',
@@ -1397,6 +1427,13 @@ export const de: Dict = {
     'ACHTUNG: Auf diesem Weg liegen Geräte mit verschiedenen Zielen — eines davon ist die Anlage.',
   'canvas.hubSwitch.warningSimulator':
     'Ziel ist ein Prüfstand, keine Anlage. Der Emulator quittiert wie ein Mischer, aber hinter dem geschalteten Ausgang liegt kein Signal — die Probe zeigt, dass der Befehl richtig gebaut ist, und nichts darüber hinaus. Der Beleg hält fest, dass es der Prüfstand war.',
+  'canvas.rooms.button': 'Räume',
+  'canvas.rooms.buttonHidden': 'Räume ({n} ausgeblendet)',
+  'canvas.rooms.noFloor': 'Ohne Etage',
+  'canvas.rooms.showAll': 'Alle zeigen',
+  'canvas.rooms.title': 'Etagen und Räume ein- oder ausblenden',
+  'canvas.signalweg.chip': 'Signalweg: {kabel} Kabel, {geraete} Geräte',
+  'canvas.signalweg.clearTitle': 'Signalweg-Ansicht beenden (Esc)',
   'canvas.layerChips.addCustom': 'Custom-Layer anlegen…',
   'canvas.layerChips.chipTitle': '{label} — {count} Kabel · {state}',
   'canvas.layerChips.customLayerPrompt': 'Custom-Layer anlegen (z.B. "intercom", "lighting")',
@@ -2005,6 +2042,10 @@ export const de: Dict = {
   'docs.exports': 'Listen & Übergabe-Dokumente',
   'docs.handover': 'Übergabe-Dokument',
   'docs.handover.hint': 'Betreiber-Übersicht: Umfang, Status, BOM, Assets (Markdown)',
+  'docs.signalPaths': 'Signalwege',
+  'docs.signalPaths.hint': 'Jede Kette von der Quelle bis zum Ziel, mit Etage und Raum an jeder Station (CSV)',
+  'docs.houseRuns': 'Hausstrecken-Belegung',
+  'docs.houseRuns.hint': 'Je Ader jeder Hausstrecke: welches Kabel sie benutzt, welche frei sind (CSV)',
   'docs.ids.none': 'Alle Elemente haben bereits eine ID.',
   'docs.job.intro':
     'Nächstes Jahr wird dieselbe Veranstaltung aus dieser Datei geplant. Trägt sie den Plan von vor dem Aufbau, wird jede Änderung vor Ort ein zweites Mal gefunden.',
@@ -2169,6 +2210,9 @@ export const de: Dict = {
   'export.bom.csv.diff': 'Differenz',
   'export.bom.csv.lengthM': 'Länge (m)',
   'export.bom.csv.paths': 'Wege',
+  'export.bom.csv.split': 'Stückelung',
+  'export.bom.csv.couplers': 'Kupplungen',
+  'export.bom.csv.short': 'Fehlbestand',
   'export.bom.csv.rentmanName': 'Rentman-Name',
   'export.bom.csv.rentmanPlanned': 'Rentman geplant',
   'export.bom.csv.totalM': 'Gesamt (m)',
@@ -2384,6 +2428,8 @@ export const de: Dict = {
   // ausserhalb von React laufen und keinen Hook haben. Das Tausch-Werkzeug
   // kannte nur `t(` und `translate(` und ist an ihnen vorbeigelaufen;
   // gefunden hat sie ein Test, der auf den englischen Fehlertext prueft.
+  'flags.patchPanelByPlate':
+    'Diese Frontplatte leitet Position für Position durch (Buchse n hinten auf Buchse n vorn), deshalb folgt ihr der Signalweg. Abwählen, wenn nicht — etwa bei einer Stagebox mit eingebautem Wandler.',
   'flags.patchPanelTitle':
     'Patchfeld: Buchse n hinten liegt auf Buchse n vorn. Der Signalweg und die Patchliste folgen dem Durchgang, statt an der Blende anzuhalten. Setzt gleich viele Ein- und Ausgänge voraus.',
   'flags.subtitle': 'kompakt · Farbe · gepackt',
@@ -2913,6 +2959,18 @@ export const de: Dict = {
   'library.create.savePlaceTitle': 'Speichern und gleich auf dem Canvas platzieren',
   'library.create.saveTitle': 'In die Bibliothek speichern (zur Wiederverwendung)',
   'library.create.title': 'Eigenes Gerät anlegen',
+  // #858 — Vorlage als Ausgangspunkt und der EINE Ausfüllen-Knopf.
+  'library.create.preset': 'Von einem vorhandenen Gerät ausgehen (optional)',
+  'library.create.preset.placeholder': 'In der Bibliothek suchen — Name oder Kategorie',
+  'library.create.preset.noHit': 'Kein Gerät in der Bibliothek passt dazu.',
+  'library.create.preset.ports': '{cat} · {in} Ein / {out} Aus',
+  'library.create.preset.suffix': '(Kopie)',
+  'library.create.preset.taken': 'Felder aus „{name}" übernommen. Passe an, was abweicht.',
+  'library.create.fill': 'Ausfüllen',
+  'library.create.fill.busy': 'Wird ausgefüllt …',
+  'library.create.fill.title': 'Die Port-Gruppen aus der in den Einstellungen gewählten Quelle ausfüllen',
+  'library.create.fill.fromWeb': 'aus einer Web-Suche — ohne API-Schlüssel',
+  'library.create.fill.fromAi': 'aus dem KI-Modell — braucht einen API-Schlüssel',
   'library.duplicate.title': 'Gerät existiert bereits',
   'library.empty.body':
     'Kein Treffer für „{q}". Versuche einen anderen Suchbegriff oder lösche das Suchfeld.',
@@ -3002,6 +3060,7 @@ export const de: Dict = {
   'library.newCategoryPlaceholder': 'Kategoriename…',
   'library.origin.ai': 'KI-Vorschlag aus Name und Kategorie — kein Datenblatt',
   'library.origin.web': 'Aus {source} abgeleitet (Stecker im Text gezählt): „{snippet}"',
+  'library.origin.preset': 'Vom Bibliothek-Eintrag „{name}" abgeschrieben',
   'library.renameCategory': 'Kategorie umbenennen',
   'library.rentman.accountAll': 'Alle Rentman-Equipments (Account-Katalog)',
   'library.rentman.accountTitle':
@@ -3116,6 +3175,13 @@ export const de: Dict = {
   'library.tabs.racks.exportAria': 'Exportieren',
   'library.tabs.racks.exportTitle': 'Als Datei exportieren (Kopie in den Downloads-Ordner)',
   'library.tabs.racks.new': '+ Neues Rack',
+  'library.tabs.racks.warehouse': 'Fürs Lager',
+  'library.tabs.racks.warehouseTitle':
+    'Was in jedem Rack sitzt, als Datei für den Inventory Planner sichern — der prüft es gegen das Rack-Case',
+  'library.tabs.racks.warehouseNone': 'Noch kein Rack-Layout zum Übergeben.',
+  'library.tabs.racks.warehouseDone': '{racks} Racks übergeben.',
+  'library.tabs.racks.warehouseSkipped':
+    '{racks} Racks übergeben. {skipped} Geräte sitzen ausserhalb ihres Racks und wurden weggelassen statt verschoben.',
   'library.tabs.racks.subtitle': 'Rack-Slots in HE, als platzierbare Gruppe gespeichert',
   'library.tabs.racks.title': '2D Rack Builder',
   'library.template.editTitle': 'Vorlage bearbeiten (Name, Kategorie)',
@@ -3162,10 +3228,46 @@ export const de: Dict = {
   'location.confirm.deleteFrame': 'Rahmen "{name}" löschen?',
   'location.confirm.deleteFrameBody': 'Geräte darin bleiben auf dem Canvas.',
   'location.field.color': 'Farbe',
+  'gebaeude3d.assumed':
+    'Keine Höhe angegeben für: {floors}. Mit der Geschosshöhe gestapelt — eine Annahme, keine Messung.',
+  'gebaeude3d.button': '3D',
+  'gebaeude3d.empty': 'Noch keine Räume. Rahmen auf dem Canvas zeichnen und ihnen eine Etage geben — jeder Rahmen wird hier ein Raum.',
+  'gebaeude3d.footer':
+    '{rooms} Räume · {devices} Geräte · {cables} Kabel · {links} Raumverbindungen — ziehen zum Drehen, scrollen zum Zoomen',
+  'gebaeude3d.labels': 'Beschriftung',
+  'gebaeude3d.mode': 'Anzeigen',
+  'gebaeude3d.modeCables': 'Einzelne Kabel',
+  'gebaeude3d.noRiser':
+    'Kabel zwischen Etagen sind als Luftlinie gezeichnet. Einen Rahmen als Steigschacht markieren (Rahmen-Eigenschaften), dann laufen sie durch ihn.',
+  'gebaeude3d.modeRooms': 'Raumverbindungen',
+  'gebaeude3d.open': 'Räume nach Etage in 3D zeigen, mit den Verbindungen dazwischen',
+  'gebaeude3d.storey': 'Geschosshöhe (m)',
+  'gebaeude3d.storeyTitle': 'Gilt nur für Etagen ohne Höhe in der Etagenliste',
+  'gebaeude3d.title': 'Gebäude 3D',
+  'floors.add': 'Etage hinzufügen…',
+  'floors.down': 'Nach unten',
+  'floors.fromBuilding': 'Etagen aus der Gebäude-Auskunft übernehmen ({n})',
+  'floors.fromBuildingTitle':
+    'Ergänzt die Etagen, die die Gebäude-Auskunft nennt, und trägt fehlende Höhen nach. Hier schon gesetzte Höhen bleiben.',
+  'floors.heightLabel': 'Höhe von {name} in Metern',
+  'floors.heightPlaceholder': 'm',
+  'floors.hint':
+    'Von unten nach oben. Die Höhe ist die Fußbodenhöhe über dem Bezugspunkt in Metern; die 3D-Ansicht stapelt die Räume danach.',
+  'floors.nameTaken': 'Eine Etage „{name}“ gibt es schon.',
+  'floors.newPrompt': 'Name der neuen Etage (z. B. „3. OG“)',
+  'floors.remove': 'Etage entfernen',
+  'floors.removeConfirm': 'Etage „{name}“ entfernen? {n} Rahmen darauf haben dann keine Etage mehr.',
+  'floors.renamePrompt': 'Neuer Name dieser Etage',
+  'floors.renameTitle': 'Umbenennen — alle Rahmen dieser Etage ziehen mit',
+  'floors.title': 'Etagen ({n})',
+  'floors.up': 'Nach oben',
+  'location.field.floorNone': '— keine —',
   'location.field.floor': 'Stockwerk',
-  'location.field.floorPlaceholder': 'z.B. EG, 1.OG',
   'location.field.height': 'Höhe',
   'location.field.name': 'Name',
+  'location.field.riser': 'Steigschacht / senkrechte Trasse',
+  'location.field.riserTitle':
+    'In der 3D-Gebäudeansicht geht dieser Rahmen durch alle Etagen, und Kabel zwischen Etagen werden durch ihn gezeichnet statt als Luftlinie.',
   'location.field.notes': 'Notizen',
   'location.field.width': 'Breite',
   'location.tip':
@@ -3264,7 +3366,7 @@ export const de: Dict = {
   'mobile.dialog.security.token':
     'Jeder Schreibweg verlangt das Token aus dem QR-Code. Passwörter und Schlüssel werden aus dem Projekt entfernt, bevor es das Gerät verlässt.',
   'mobile.dialog.security.writeBack':
-    'Ob das Handy zurückschreiben darf, entscheidet die Einstellung darüber. Steht sie auf „Häkchen und Kabel zurückschicken“, kann jeder mit dem QR-Code den Plan ändern.',
+    'Ob das Handy zurückschreiben darf, entscheidet die Einstellung darüber. Steht sie auf „Häkchen, Kabel und Fotos zurückschicken“, kann jeder mit dem QR-Code den Plan ändern.',
   'mobile.dialog.securityHeading': 'Hinweise zur Sicherheit',
   'mobile.dialog.startServer': 'LAN-Server starten',
   'mobile.dialog.starting': 'Starte…',
@@ -3272,12 +3374,205 @@ export const de: Dict = {
   'mobile.dialog.stopped': 'Server ist gestoppt. Klicke unten, um den LAN-Server zu starten.',
   'mobile.dialog.withheldTitle': 'Nicht freigegeben',
   'mobile.dialog.writeMode': 'Rückmeldungen vom Handy',
-  'mobile.dialog.writeMode.contribute': 'Häkchen und Kabel zurückschicken',
+  'mobile.dialog.writeMode.contribute': 'Häkchen, Kabel und Fotos zurückschicken',
   'mobile.dialog.writeMode.contributeHint':
-    'Häkchen, neu angelegte Kabel und Feld-Rückmeldungen gehen zurück ins Projekt. Wer den QR-Code hat, kann den Plan ändern.',
+    'Häkchen, neu angelegte Kabel, Feld-Rückmeldungen und Fotos gehen zurück ins Projekt. Wer den QR-Code hat, kann den Plan ändern.',
   'mobile.dialog.writeMode.read': 'Nur lesen',
   'mobile.dialog.writeMode.readHint':
     'Die Schreibwege sind geschlossen — das Handy bekommt auf jeden Schreibversuch eine Absage. Den Plan ändert die Person am Rechner.',
+  'statusbar.fotos.label': 'Fotos {mb} MB',
+  'statusbar.fotos.title':
+    '{n} Fotos tragen {mb} MB in diesem Plan. Die Datei öffnet weiterhin, nur wird sie zum Verschicken per Mail unhandlich.',
+  'packet.sheet.pull-liste': 'Zug-Liste',
+  'packet.sheet.termination-liste': 'Auflege-Liste',
+  'packet.sheet.kabel-schedule': 'Kabel-Schedule',
+  'packet.sheet.asset-register': 'Geräte-Register',
+  'packet.sheet.crew-netz': 'Netz-Merkblatt',
+  'packet.sheet.spektrum-plan': 'Spektrum-Plan',
+  'packet.sheet.ausspielung': 'Ausspielung',
+  'packet.sheet.tally-karte': 'Tally-Karte',
+  'packet.sheet.post-uebergabe': 'Übergabe an die Post',
+  'packet.sheet.frontplatten': 'Frontplatten',
+  'packet.sheet.signalwege': 'Signalwege',
+  'packet.sheet.hausstrecken': 'Hausstrecken-Belegung',
+  'app.loadReport.ausschnitt': 'Ausschnittmaß, das keine positive Zahl ist',
+  'app.loadReport.frontplatte': 'Frontplatte mit unbekannter Art',
+  'app.loadReport.mcpLog': 'MCP-Nachweiszeile ohne Zeitpunkt',
+  'mcp.hint':
+    'Lässt Claude diesen Plan fragen: Geräte, Ports, Signalwege, Kabel und was der Plan-Check sagt. Es wird nur GELESEN — über diesen Weg lässt sich nichts am Plan ändern. Der Server hört nur auf 127.0.0.1 und verlangt das Paarungs-Token unten.',
+  'mcp.desktopOnly': 'Der lokale Server braucht die Desktop-App.',
+  'mcp.start': 'Server starten',
+  'mcp.stop': 'Server stoppen',
+  'mcp.running': 'Hört auf {url}',
+  'mcp.stopped': 'Aus',
+  'mcp.connected': 'ein Client fragt gerade',
+  'mcp.showToken': 'Paarungs-Token zeigen',
+  'mcp.newToken': 'Neues Token',
+  'mcp.tokenHint':
+    'Das Token liegt im Schlüsselbund des Betriebssystems, nicht in der Einstellungsdatei. Ein neues Token gilt nach einem Neustart des Servers, und jeder Client muss es neu erfahren.',
+  'mcp.setup': 'In Claude Code eintragen',
+  'mcp.write': 'Claude darf den Plan auch ändern',
+  'mcp.writeHint':
+    'Kabel anlegen und entfernen, Kabel-Angaben setzen, Geräte umbenennen — über dieselben Store-Aktionen wie die Leinwand. Jeder Aufruf ist EIN Undo-Schritt und hinterlässt eine Zeile unter „Was Claude geändert hat". Schaltbefehle an Geräte (Videohub, ATEM) werden nie angeboten. Gilt ab dem nächsten Start des Servers.',
+  'mcp.trace': 'Was Claude geändert hat',
+  'mcp.copy': 'Kopieren',
+  'statusbar.mcp.title':
+    'Der lokale MCP-Server läuft — Claude kann diesen Plan LESEN. Klick öffnet den Schalter und das Token.',
+  'statusbar.mcp.on': 'MCP',
+  'statusbar.mcp.asking': 'MCP · fragt',
+  'led.outlet': 'Gespeist aus (Anschlusspunkt des Hauses)',
+  'led.outletNone': 'nicht angegeben',
+  'led.outletTitle':
+    'Die Dauerleistung geht in die Last an diesem Punkt; die Spitze bekommt einen eigenen Befund — die Sicherung wird nach der Spitze gewählt.',
+  'check.haus.wandPunktFehlt':
+    '{name} hängt an einem Anschlusspunkt, den die Auskunft vom {stand} nicht mehr führt.',
+  'check.haus.wandOhneLeistung':
+    '{name} trägt an seinem Panel-Typ keine Leistungsangabe — seine Last steht NICHT in der Summe an {punkt}. Die Zahl steht im Datenblatt; dieses Programm rät sie nicht.',
+  'check.haus.wandSpitze':
+    '{name} zieht im Weissbild {spitze} W; {punkt} ist mit {grenze} W Dauerleistung angegeben. Die Sicherung wird nach der Spitze gewählt, nicht nach dem Mittel.',
+  'check.haus.klinkeMehrdeutig':
+    '{name} benutzt die DALI-Adresse {adresse}, und die Auskunft des Hauses sagt nicht, welche Art das ist. Kurzadresse, Gruppe und Broadcast sind drei verschiedene Dinge — das Letzte ist der ganze Bus, Notlicht eingeschlossen.',
+  'faceplate.title': 'Frontplatten-Editor',
+  'faceplate.hint':
+    'Die Stecker hier SIND die Ports dieses Geräts und keine Zeichnung davon: was du verschiebst, ist dieselbe Lage, die die Rack-Ansicht liest. Die Millimeter kommen aus dem Gerätemaß; der Beschriftungsstreifen druckt 1:1.',
+  'faceplate.device': 'Gerät',
+  'faceplate.kind': 'Art',
+  'faceplate.kindNone': 'keine Frontplatte',
+  'faceplate.kind.wall': 'Wandanschlussfeld',
+  'faceplate.kind.stagebox': 'Stagebox',
+  'faceplate.kind.panel': 'Rack-Blende',
+  'faceplate.kind.other': 'Sonstige',
+  'faceplate.width': 'Breite (mm)',
+  'faceplate.height': 'Höhe (mm)',
+  'faceplate.grid': 'Raster (mm)',
+  'faceplate.gridTitle':
+    'Hilft beim Setzen. 0 heißt frei — eine gekaufte Platte, deren Löcher schon gebohrt sind, hat kein Raster.',
+  'faceplate.side': 'Auf der Platte',
+  'faceplate.sideTitle':
+    'Ein durchleitendes Feld hat eine Vorder- und eine Rückseite: Position n vorne ist Position n hinten. Auf der Platte sitzt nur eine Seite.',
+  'faceplate.sideInputs': 'Eingänge ({n})',
+  'faceplate.sideOutputs': 'Ausgänge ({n})',
+  'faceplate.strip': 'Streifen (mm)',
+  'faceplate.stripTitle': 'Höhe des Beschriftungsstreifen-Halters. Leer heißt: kein Streifen.',
+  'faceplate.print': '1:1 drucken',
+  'faceplate.noSize':
+    'Dieses Gerät hat noch kein Maß in Millimetern. Trage Breite und Höhe ein — ohne sie gibt es keine Platte, auf der etwas sitzen könnte, und ein geratenes Maß wäre das, nach dem jemand bohrt.',
+  'faceplate.connector': 'Stecker',
+  'faceplate.position': 'Lage (mm)',
+  'faceplate.cutout': 'Ausschnitt (mm)',
+  'faceplate.cutoutPlaceholder': 'nicht angegeben',
+  'faceplate.cutoutTitle':
+    'Aus dem Dokument des Herstellers. Ohne die Angabe wird dieser Stecker nicht gegen die anderen geprüft — und der Befund sagt das.',
+  'faceplate.place': 'setzen',
+  'faceplate.outside': '{port} sitzt außerhalb der Platte — dort lässt sich nicht bohren.',
+  'faceplate.overlap':
+    '{a} und {b} überschneiden sich um {mm} mm — die beiden Löcher laufen ineinander.',
+  'faceplate.unplaced': '{n} Stecker haben noch keine Lage auf der Platte: {ports}.',
+  'faceplate.cutoutUnknown':
+    '{n} Stecker tragen kein Ausschnittmaß — sie wurden NICHT gegeneinander geprüft. Das Maß steht im Dokument des Herstellers; dieses Programm rät es nicht.',
+  'app.menu.tools.faceplate': 'Frontplatten-Editor…',
+  'app.menu.tools.faceplate.note':
+    'Wandanschlussfelder, Stageboxen: die Stecker in Millimetern setzen und den Streifen 1:1 drucken',
+  'bericht.title': 'Berichts-Editor',
+  'bericht.hint':
+    'Die Tabelle unten IST der Inhalt der CSV-Datei und des gedruckten Blatts — keine Vorschau darauf. Spalten, Gruppierung, Sortierung und Filter werden einmal angewandt, und alle drei lesen dasselbe Ergebnis.',
+  'bericht.list': 'Liste',
+  'bericht.groupBy': 'Gruppieren nach',
+  'bericht.groupNone': 'nicht gruppiert',
+  'bericht.groupEmpty': 'nicht angegeben',
+  'bericht.count': '{rows} von {total} Zeilen · {cols} Spalten',
+  'bericht.csv': 'CSV',
+  'bericht.print': 'Drucken',
+  'bericht.column': 'Spalte',
+  'bericht.order': 'Reihenfolge',
+  'bericht.sort': 'Sortieren',
+  'bericht.sortTitle':
+    'Durchklicken: aufsteigend, absteigend, aus. Mehrere Spalten sortieren in der Reihenfolge, in der sie eingeschaltet wurden — und eine ausgeblendete Spalte sortiert mit.',
+  'bericht.asc': 'aufsteigend',
+  'bericht.desc': 'absteigend',
+  'bericht.sortOff': 'aus',
+  'bericht.filter': 'Filter',
+  'bericht.filterPlaceholder': 'enthält…',
+  'bericht.up': 'Nach oben',
+  'bericht.down': 'Nach unten',
+  'bericht.emptyList': 'Diese Liste hat in diesem Projekt noch keine Zeilen.',
+  'bericht.emptyFilter': 'Keine Zeile passt zu den Filtern.',
+  'bericht.templateName': 'Als Vorlage speichern',
+  'bericht.templatePlaceholder': 'z.B. Ziehliste ohne Raum',
+  'bericht.saveProject': 'mit diesem Projekt',
+  'bericht.saveGlobal': 'für alle Projekte',
+  'bericht.scopeProject': 'Projekt',
+  'bericht.scopeGlobal': 'global',
+  'bericht.confirmDelete': 'Berichts-Vorlage löschen?',
+  'bericht.confirmDeleteBody':
+    'Die Listen bleiben, wie sie sind; nur diese gespeicherte Ansicht geht.',
+  'app.menu.tools.bericht': 'Berichts-Editor…',
+  'app.menu.tools.bericht.note':
+    'Spalten, Gruppierung, Sortierung und Filter für jede Liste — als Vorlage gespeichert',
+  'fibre.breakout': 'Breakout',
+  'fibre.template2': 'DUO (2)',
+  'fibre.template4': 'QUAD (4)',
+  'fibre.noneHint':
+    'Nicht aufgeteilt. Eine Buchse, die mehrere Fasern führt (opticalCON DUO/QUAD, MPO), listet sie hier — danach sagt jedes Kabel, welche es belegt.',
+  'fibre.positionTitle': 'Lage in der Buchse, 1-basiert',
+  'fibre.roleTitle':
+    'Was diese Faser führt. „nicht angegeben" ist ein eigener Zustand — er gilt nie als geprüft.',
+  'fibre.role.tx': 'TX (sendend)',
+  'fibre.role.rx': 'RX (empfangend)',
+  'fibre.role.unstated': 'nicht angegeben',
+  'fibre.connectorPlaceholder': 'Stecker (LC)',
+  'fibre.connectorTitle':
+    'Der Steckverbinder DIESER Faser am Breakout-Schwanz — aussen opticalCON, innen LC.',
+  'fibre.notePlaceholder': 'Notiz',
+  'fibre.remove': 'Faser entfernen',
+  'fibre.add': 'Faser hinzufügen',
+  'fibre.strandFrom': 'Faser A',
+  'fibre.strandTo': 'Faser B',
+  'fibre.strandNone': '— nicht angegeben —',
+  'fibre.method.newName': 'Neue Polaritäts-Methode',
+  'fibre.method.name': 'Name der Methode',
+  'fibre.method.add': 'Polaritäts-Methode eintragen',
+  'fibre.method.confirmDelete': 'Polaritäts-Methode löschen?',
+  'fibre.method.confirmDeleteBody':
+    'War sie die gewählte, ist die Faser-Richtung danach wieder ungeprüft.',
+  'fibre.method.herkuntPlaceholder':
+    'Woher kommt diese Methode? Norm, Ausgabe, Seite — oder „Hausunterlage, festgelegt von …"',
+  'fibre.method.herkunftMissing':
+    'Ohne Herkunft wird diese Methode beim nächsten Laden verworfen — sie beurteilte sonst jede Faser, ohne dass jemand nachlesen kann, ob sie hier gilt.',
+  'fibre.method.crosses':
+    'Diese Methode kreuzt die Fasern: TX des einen Endes trifft RX des anderen.',
+  'fibre.method.chosen': 'Diese Methode gilt für dieses Projekt.',
+  'fibre.method.hint':
+    'Eingebaut ist keine Methode, aus demselben Grund wie oben: TIA-568 kennt die Methoden A, B und C, und sie unterscheiden sich darin, WO die Fasern gekreuzt werden — im Trunk, im Patchkabel oder an beiden Enden unterschiedlich. Welche gilt, steht in der Unterlage dieser Anlage. Trage sie hier ein, mit ihrer Herkunft.',
+  'fibre.method.empty':
+    'Noch keine Methode eingetragen. Bis eine gewählt ist, bleibt die Faser-Richtung ungeprüft — der Plan-Check sagt das, statt sie stillschweigend als richtig zu zeigen.',
+  'fibre.strandDuplicate':
+    '{port}: Faser {n} trägt mehr als ein Kabel ({cables}). Im Rack trägt sie eines.',
+  'fibre.strandUnknown':
+    '{port}: „{cables}" liegt auf Faser {n}, die diese Buchse nicht hat.',
+  'fibre.strandsUnused':
+    '{port}: {belegt} von {total} Fasern sind gepatcht — {frei} nicht. Geplant oder vergessen?',
+  'fibre.noPolarityMethod':
+    '{cable}: keine Polaritäts-Methode gewählt — die Faser-Richtung ist ungeprüft. Welche Methode für diese Anlage gilt, steht nicht im Programm.',
+  'fibre.roleUnstated':
+    '{cable}: mindestens ein Ende sagt nicht, ob es sendet oder empfängt — die Polarität lässt sich nicht prüfen.',
+  'fibre.polarityTwisted':
+    '{cable}: {a} trifft {b}, die Methode „{norm}" erwartet es andersherum. Da geht kein Licht durch.',
+  'check.fibreNoPolarityMethod':
+    '{n} Faser-Strecken tragen eine Faser-Nummer, aber es ist keine Polaritäts-Methode gewählt — ihre Richtung ist ungeprüft. Welche Methode für diese Anlage gilt, steht nicht im Programm.',
+  'patchList.col.fibre': 'Faser',
+  'adern.tab.polaritaet': 'Faser-Polarität',
+  'foto.section': 'Fotos',
+  'foto.projectSection': 'Fotos des Projekts',
+  'foto.none': 'Noch keine Fotos. Ein Foto beantwortet Fragen, für die es kein Feld gibt.',
+  'foto.add': 'Foto hinzufügen…',
+  'foto.working': 'Rechne klein…',
+  'foto.full': 'In voller Grösse öffnen',
+  'foto.missing': 'Bild nicht geladen',
+  'foto.note': 'Notiz',
+  'foto.remove': 'Foto entfernen',
+  'foto.fromPhone': 'vom Handy',
+  'foto.fromPlanner': 'vom Planer',
   'modeEditor.addPort': 'Port',
   'modeEditor.createBtn': 'Modus anlegen',
   'modeEditor.descLabel': 'Beschreibung (optional)',
@@ -3774,6 +4069,10 @@ export const de: Dict = {
   'props.optik.range': 'Brennweitenbereich',
   'props.optik.sourceSuite': 'Im Kameraplan gesetzt; folgt jeder Änderung dort.',
   'props.optik.titleSuite': 'Optik (Kameraplan)',
+  'props.optik.removed':
+    'Diese Kamera steht nicht mehr im MultiCam-Plan. Sie bleibt hier, weil Kabel daran hängen können — selbst löschen, wenn sie weg ist.',
+  'props.optik.source': 'Im MultiCam-Planer gesetzt; der nächste Kamera-Import aktualisiert es.',
+  'props.optik.title': 'Optik (MultiCam-Plan)',
   'props.cameraControls.title': 'Steuerbare Funktionen',
   'props.deviceConfigs.assignExisting': '+ Vorhandene Konfiguration zuordnen…',
   'props.deviceConfigs.hint':
@@ -4794,6 +5093,16 @@ export const de: Dict = {
   'settings.hotkeys.reset': 'Auf Standard zurücksetzen',
   'settings.hotkeys.title': 'Aktive Tastenkürzel',
   'settings.integrations.ai': 'AI-Provider (KI-Port-Vorschläge)',
+  // #858 — woher der eine Ausfüllen-Knopf seine Felder holt.
+  'settings.integrations.fill': 'Quelle zum Ausfüllen (der „Ausfüllen"-Knopf)',
+  'settings.integrations.fillDesc':
+    'Woher der eine „Ausfüllen"-Knopf seine Port-Gruppen nimmt — im Anlegen-Dialog und im Rentman-Assistenten. Beide Quellen raten; keine ersetzt ein Datenblatt. Beide halten aber fest, woher die Vermutung stammt.',
+  'settings.integrations.fill.web': 'Web-Suche',
+  'settings.integrations.fill.webDesc':
+    'Wikipedia und DuckDuckGo. Ohne API-Schlüssel. Sie bringt ihre Fundstelle mit und den Textausschnitt, in dem die Stecker gezählt wurden — der bleibt am Gerät.',
+  'settings.integrations.fill.ai': 'KI-Modell',
+  'settings.integrations.fill.aiDesc':
+    'Der unten gewählte Anbieter. Braucht einen API-Schlüssel. Es nennt sich selbst als Urheber, aber keine Fundstelle.',
   'settings.integrations.ai.active': 'Aktiv',
   'settings.integrations.ai.createKey': 'Key erstellen',
   'settings.integrations.ai.saved': 'gespeichert',
@@ -4868,6 +5177,71 @@ export const de: Dict = {
   'settings.integrations.rentmanToggle.desc':
     'Wenn aktiv: Library-Tab, Menü-Einträge und Status-Anzeigen für Rentman erscheinen. Ausgeschaltet zeigt der Cable Planner nur lokale Geräte/Kabel — alle Rentman-Funktionen werden ausgeblendet.',
   'settings.integrations.rentmanToggle.label': 'Rentman-Integration aktivieren',
+  // #877 — was in der Web-Fassung nicht geht, mit Grund. „Desktop-App",
+  // „ATEM", „NetBox", „MCP", „OSC", „UDP", „TCP", „CORS" bleiben, wie sie
+  // heissen: Namen, keine Beschriftungen.
+  'desktopOnly.atem': 'ATEM-Steuerung',
+  'desktopOnly.atem.why':
+    'Spricht über einen UDP-Socket mit dem Mischer. Eine Browser-Seite kann keinen öffnen.',
+  'desktopOnly.videohub': 'Videohub-Routing',
+  'desktopOnly.videohub.why':
+    'Rohes TCP auf Port 9990. Ein Browser kann nur HTTP und WebSocket.',
+  'desktopOnly.netbox': 'NetBox-Integration',
+  'desktopOnly.netbox.why':
+    'Liest ein Token aus dem Schlüsselbund des Systems und ruft einen Host im eigenen Netz.',
+  'desktopOnly.signaling': 'Lokaler Signaling-Server',
+  'desktopOnly.signaling.why':
+    'Lauscht auf einem Port dieses Rechners. Eine Seite kann kein Server sein.',
+  'desktopOnly.sync': 'Netzwerk-Abgleich (LAN)',
+  'desktopOnly.sync.why':
+    'Findet die anderen Rechner im LAN über UDP-Discovery.',
+  'desktopOnly.mobileShare': 'Handy-Zugriff auf den Plan',
+  'desktopOnly.mobileShare.why':
+    'Liefert den Plan von diesem Rechner an Telefone in der Halle – dafür braucht es einen lauschenden Port.',
+  'desktopOnly.mcp': 'MCP-Server',
+  'desktopOnly.mcp.why':
+    'Lauscht auf 127.0.0.1, damit ein Assistent auf diesem Rechner den Plan lesen kann.',
+  'desktopOnly.tally': 'Direktweg zum Tally-Pi',
+  'desktopOnly.tally.why':
+    'Schickt die Tally-Karte an den Pi. Dessen Server sendet keine CORS-Kopfzeilen, eine Seite kommt also nicht heran – der Datei-Export bleibt.',
+  'desktopOnly.switcher': 'Mischer und Kreuzschienen schalten',
+  'desktopOnly.switcher.why':
+    'Schickt die Schaltbefehle und fragt Companion. Beides braucht Sockets, die eine Seite nicht hat.',
+  'desktopOnly.rentman': 'Rentman-Export',
+  'desktopOnly.rentman.why':
+    'Schreibt die Export-Datei über den Datei-Weg der Desktop-App. Das Lesen aus Rentman geht hier.',
+  'desktopOnly.updater': 'Update-Prüfung',
+  'desktopOnly.updater.why':
+    'Es gibt nichts zu aktualisieren: die Web-Fassung ist das, was der Server zuletzt ausgeliefert hat.',
+  'desktopOnly.showControl': 'Show-Steuerung (OSC / UDP-Eingang)',
+  'desktopOnly.showControl.why':
+    'Wartet auf Nachrichten an einem UDP-Port. Im Browser gibt es keinen Port zum Lauschen.',
+  'settings.web.title': 'Du benutzt die Web-Fassung',
+  'settings.web.desc':
+    'Planen, Zeichnen und Exportieren gehen hier. Was einen Socket, einen lauschenden Port oder den Schlüsselbund des Systems braucht, nicht – das ist die Desktop-App.',
+  // #878 — eigene Vorlagen einreichen, mit Pruefung davor.
+  'library.menus.submit': 'Vorlagen einreichen…',
+  'library.menus.submitTitle':
+    'Eigene Vorlagen prüfen und eine Einreichungs-Datei schreiben – jeder Eintrag braucht einen Datenblatt-Link',
+  'library.submit.title': 'Vorlagen einreichen',
+  'library.submit.none': 'Keine eigenen Vorlagen zum Einreichen.',
+  'library.submit.summary': '{n} von {total} Vorlagen können eingereicht werden.',
+  'submit.noName': 'Die Vorlage hat keinen Namen.',
+  'submit.noCategory':
+    'Keine Kategorie – ohne sie ist die Vorlage in der Bibliothek nicht zu finden.',
+  'submit.noSource':
+    'Keine Quelle: eine Vorlage ohne Datenblatt-Link kann niemand nachprüfen – und in einem Plan sieht sie später aus wie eine geprüfte.',
+  'submit.sourceNotALink':
+    'Die Quelle ist kein Link. „Steht im Handbuch" ist keine Quelle: niemand kann es aufschlagen.',
+  'submit.noPorts': 'Keine Ports – es gäbe nichts zu verkabeln.',
+  'submit.portNoConnector':
+    'Port ohne Steckertyp. „Gerät ersetzen" ordnet über den Steckertyp zu – ohne ihn fällt es auf die Position zurück, und die verkabelt die falsche Buchse.',
+  'submit.portNoLabel':
+    'Port ohne Beschriftung. Derselbe Grund: die Zuordnung läuft über Steckertyp UND Beschriftung.',
+  'submit.portLabelTwice':
+    'Zwei Ports teilen sich Steckertyp und Beschriftung „{label}" ({n}x). „Gerät ersetzen" nimmt dann den ersten freien.',
+  'submit.noPower':
+    'Leistungsaufnahme nicht angegeben. Das ist in Ordnung – im Katalog steht dann „nicht angegeben" statt einer 0, die wie eine Messung aussieht.',
   'settings.integrations.rentmanToggle.title': 'Rentman-Integration',
   'settings.integrations.tallyPi.desc':
     'Schickt die Tally-Karte aus dem Export-Dialog direkt an den Pi, statt eine Datei herunterzuladen, die jemand von Hand kopiert. Die Datei bleibt daneben bestehen — sie ist der Weg, der ohne Netz zum Pi funktioniert. Der Pi behält dabei seine Verdrahtung; Rollen, die im Plan fehlen, verschwinden dort.',
@@ -4905,6 +5279,23 @@ export const de: Dict = {
   'settings.project.lengthEst.scale': 'Meter pro 100 px',
   'settings.project.lengthEst.slack': 'Reserve (%)',
   'settings.project.lengthEst.title': 'Kabellängen schätzen',
+  // #875 — die Lagerlängen. „Nicht gezählt" ist der wichtigste Text dieser
+  // Gruppe: leer heisst nicht null, und eine Warnung über einen Fehlbestand,
+  // den niemand festgestellt hat, wäre eine Behauptung über das Lager.
+  'settings.project.stock.title': 'Verfügbare Lagerlängen',
+  'settings.project.stock.desc':
+    'Mit welchen Trommeln diese Produktion fährt. Die Kabel-Stückliste teilt jeden Lauf in diese Längen — erst möglichst wenige Kupplungen, dann möglichst wenig Überlänge — und sagt, was der Bestand nicht hergibt.',
+  'settings.project.stock.none':
+    'Nichts eingetragen. Ohne Lagerlängen bleibt ein Lauf eine Zahl — und am Ladedock gibt es kein Kabel dieser Länge.',
+  'settings.project.stock.type': 'Kabeltyp',
+  'settings.project.stock.length': 'Länge (m)',
+  'settings.project.stock.count': 'Vorhanden',
+  'settings.project.stock.uncounted': 'nicht gezählt',
+  'settings.project.stock.uncountedHint':
+    '„Vorhanden" leer lassen, wenn niemand gezählt hat. Leer ist nicht null — und die Liste warnt nur vor einem Fehlbestand, den jemand wirklich festgestellt hat.',
+  'settings.project.stock.newType': 'Typ für einen neuen Eintrag',
+  'settings.project.stock.add': 'Länge hinzufügen',
+  'settings.project.stock.remove': 'Entfernen',
   'settings.project.libExport.desc':
     'Sichere deine eigenen Geräte-Templates, Gruppen und Rack-Presets als JSON-Datei. Beim Import werden bestehende Einträge mit gleichem Namen NICHT überschrieben (merge-by-name).',
   'settings.project.libExport.devicesWord': 'Geräte',
@@ -4948,6 +5339,20 @@ export const de: Dict = {
   'settings.project.numbering.separator': 'Trennzeichen',
   'settings.project.numbering.start': 'Start-Nummer',
   'settings.project.numbering.title': 'Kabelnummerierung',
+  'stammdaten.add': 'Hinzufügen',
+  'stammdaten.builtIn': 'Eingebaut ({n})',
+  'stammdaten.connectorPlaceholder': 'z. B. opticalCON DUO',
+  'stammdaten.connectors': 'Steckertypen',
+  'stammdaten.exists': 'Gibt es schon.',
+  'stammdaten.intro':
+    'Eigene Steckertypen, Signalstandards und Kabel-Ebenen — an einer Stelle. Sie stehen in jeder Auswahl neben den eingebauten und reisen mit der geteilten Bibliothek (Netzwerk-Sync), damit ein Team dieselben Namen benutzt.',
+  'stammdaten.layerPlaceholder': 'z. B. Intercom',
+  'stammdaten.layers': 'Kabel-Ebenen',
+  'stammdaten.noneOwn': 'Noch keine eigenen Einträge.',
+  'stammdaten.remove': '{name} entfernen',
+  'stammdaten.removeConfirm': '„{name}“ entfernen?',
+  'stammdaten.standardPlaceholder': 'z. B. SMPTE 2110-20',
+  'stammdaten.standards': 'Signalstandards',
   'settings.section': 'Einstellungen',
   'settings.sharedLib.conflicts': '{n} Namens-Konflikt(e) — lokale Version behalten: {names}',
   'settings.sharedLib.desc':
@@ -4974,6 +5379,8 @@ export const de: Dict = {
     'Z:\\Projekte\\CablePlanner oder \\\\server\\share\\cable-planner',
   'settings.sync.user': 'Benutzername (für Lock-Anzeige)',
   'settings.sync.userPlaceholder': 'z. B. Max Mustermann',
+  'settings.tab.stammdaten': 'Stammdaten',
+  'settings.tabTitle.stammdaten': 'Stammdaten (Stecker, Standards, Ebenen)',
   'settings.tab.cableTypes': 'Kabeltypen',
   'settings.title': 'Einstellungen',
   'shortcut.ctrlA': 'Strg+A',
@@ -5579,6 +5986,12 @@ export const de: Dict = {
   'app.loadReport.patternCheck': 'Sichtprüfung vom Prüfbild-Rundgang',
   'app.loadReport.hubSwitch': 'Schaltvorgang an einer Kreuzschiene',
   'app.loadReport.crosspoint': 'Zeile der geplanten Schaltung',
+  'app.loadReport.cableStock': 'Lagerlaenge eines Kabeltyps',
+  'app.loadReport.ledWall': 'LED-Wand oder Panel-Typ',
+  'app.loadReport.foto': 'Foto',
+  'app.loadReport.faser': 'Faser ohne brauchbare Lage in der Buchse',
+  'app.loadReport.polaritaetsnorm': 'Polaritäts-Methode ohne genannte Herkunft',
+  'app.loadReport.berichtsvorlage': 'Berichts-Vorlage ohne Namen oder ohne Liste',
   'app.loadReport.duplicateId': 'doppelte Id, der erste Eintrag gilt',
   'app.loadReport.danglingRef': 'der Verweis zeigt ins Leere — das Ziel wurde gelöscht',
   'app.loadReport.unknownValue': 'unbekannter Wert — die Datei stammt vermutlich aus einer anderen Fassung',
@@ -5641,6 +6054,9 @@ export const de: Dict = {
     '{name} hängt an {punkt}, und das Haus gibt diese Dose als gedimmt an. Ein Schaltnetzteil am Dimmer fällt aus oder brennt.',
   'check.haus.geschaltet':
     '{name} hängt an {punkt}, und das Haus gibt diese Dose als geschaltet an. Wer den Schalter umlegt, nimmt das Gerät mit.',
+  'check.haus.aderDoppelt': 'Ader „{ader}“ der Strecke {strecke} ist von mehreren Kabeln belegt: {kabel}.',
+  'check.haus.aderUnbekannt': 'Kabel {name} benutzt die Ader „{ader}“ der Strecke {strecke}, die das Haus nicht nennt.',
+  'check.haus.streckeFehlt': 'Kabel {name} ist auf einer Hausstrecke geplant, die die Gebäude-Auskunft vom {stand} nicht mehr nennt.',
   'check.haus.klinkeFehlt':
     '{name} benutzt eine Steueradresse, die die Gebäude-Auskunft vom {stand} nicht mehr führt. Was sie schalten würde, ist unbekannt.',
   'check.haus.ueberlast':
@@ -5658,6 +6074,17 @@ export const de: Dict = {
   'haus.dateiUnlesbar':
     'Das ist keine Gebäude-Datei des Gebäude-Werkzeugs, oder sie stammt aus einer neueren Fassung. Es wurde nichts übernommen.',
   'haus.stand': '{name} · gelesen {stand} aus {quelle}',
+  'hausStrecke.conflict': 'Ader {nr} ist von mehreren Kabeln belegt: {cables}',
+  'hausStrecke.core': 'Ader / Port',
+  'hausStrecke.missing': 'Die Gebäude-Auskunft vom {stand} nennt diese Strecke nicht mehr.',
+  'hausStrecke.missingOption': '(nicht mehr in der Gebäude-Auskunft)',
+  'hausStrecke.none': '— keine —',
+  'hausStrecke.occupancy': '{used} von {total} Adern in diesem Plan belegt',
+  'hausStrecke.run': 'Strecke',
+  'hausStrecke.takenBy': 'belegt durch {cables}',
+  'hausStrecke.title': 'Hausstrecke',
+  'hausStrecke.unknownCore': 'Das Haus nennt auf dieser Strecke keine Ader „{nr}“.',
+  'hausStrecke.wholeRun': '— ganze Strecke —',
   'haus.punkt': 'Hausanschluss',
   'haus.keinPunkt': '— keiner —',
   'haus.absicherung': 'Absicherung {a} A',
@@ -5672,33 +6099,227 @@ export const de: Dict = {
   // ── #858 — Vorlage als Ausgangspunkt, ein Ausfuellen-Knopf ──────────
   // Vendoriert aus cable-planner#861. Die Heuristik-Schluessel sind mit
   // ihr entfernt; sie stehen nicht mehr in der Quelle.
-  'library.create.preset': 'Von einem vorhandenen Gerät ausgehen (optional)',
-  'library.create.preset.placeholder': 'In der Bibliothek suchen — Name oder Kategorie',
-  'library.create.preset.noHit': 'Kein Gerät in der Bibliothek passt dazu.',
-  'library.create.preset.ports': '{cat} · {in} Ein / {out} Aus',
-  'library.create.preset.suffix': '(Kopie)',
-  'library.create.preset.taken': 'Felder aus „{name}" übernommen. Passe an, was abweicht.',
-  'library.create.fill': 'Ausfüllen',
-  'library.create.fill.busy': 'Wird ausgefüllt …',
-  'library.create.fill.title': 'Die Port-Gruppen aus der in den Einstellungen gewählten Quelle ausfüllen',
-  'library.create.fill.fromWeb': 'aus einer Web-Suche — ohne API-Schlüssel',
-  'library.create.fill.fromAi': 'aus dem KI-Modell — braucht einen API-Schlüssel',
-  'library.origin.preset': 'Vom Bibliothek-Eintrag „{name}" abgeschrieben',
   'library.suggest.failed': 'Das Ausfüllen ist fehlgeschlagen.',
   'rentman.wizard.fill': 'Ausfüllen',
   'rentman.wizard.fillBusy': 'Wird ausgefüllt …',
   'rentman.wizard.fillTitle': 'Die Port-Gruppen aus der in den Einstellungen gewählten Quelle ausfüllen',
   'rentman.wizard.fillFailed': 'Das Ausfüllen ist fehlgeschlagen.',
   'rentman.wizard.sourceAi': 'dem KI-Modell',
-  'settings.integrations.fill': 'Quelle zum Ausfüllen (der „Ausfüllen"-Knopf)',
-  'settings.integrations.fillDesc':
-    'Woher der eine „Ausfüllen"-Knopf seine Port-Gruppen nimmt — im Anlegen-Dialog und im Rentman-Assistenten. Beide Quellen raten; keine ersetzt ein Datenblatt. Beide halten aber fest, woher die Vermutung stammt.',
-  'settings.integrations.fill.web': 'Web-Suche',
-  'settings.integrations.fill.webDesc':
-    'Wikipedia und DuckDuckGo. Ohne API-Schlüssel. Sie bringt ihre Fundstelle mit und den Textausschnitt, in dem die Stecker gezählt wurden — der bleibt am Gerät.',
-  'settings.integrations.fill.ai': 'KI-Modell',
-  'settings.integrations.fill.aiDesc':
-    'Der unten gewählte Anbieter. Braucht einen API-Schlüssel. Es nennt sich selbst als Urheber, aber keine Fundstelle.',
   'library.suggest.heading': 'Die Ports aus dem Geräte-Namen raten',
 
+  // ── LED-Wand (#881) ──────────────────────────────────────────────────
+  //
+  // „Pixelabstand" und „Sending Card" sind die Branchenbegriffe; die Karte
+  // heisst auch auf Deutsch so. Die wichtigsten Sätze dieser Gruppe sind
+  // die beiden, die eine fehlende Angabe benennen: eine Wand aus Panels
+  // ohne Gewichtsangabe wiegt nicht 0 kg, und eine Karte, über die niemand
+  // etwas gesagt hat, trägt nicht unbegrenzt viel.
+  'app.menu.tools.ledWall': 'LED-Wand…',
+  'app.menu.tools.ledWall.note':
+    'Panels, Auflösung, Gewicht, Leistung — und die Pixelmap für den Medienserver',
+  'led.title': 'LED-Wand',
+  'led.intro':
+    'Eine Wand ist ein Raster gleicher Kacheln. Kachelzahl, Auflösung, Gewicht und Last fallen aus den Kacheldaten heraus — hier wird nichts geschätzt, und ein Panel-Typ ohne Gewichtsangabe ergibt eine Wand von unbekanntem Gewicht und keine von null.',
+  'led.types': 'Panel-Typen',
+  'led.types.none':
+    'Kein Panel-Typ eingetragen. Die Zahlen stehen auf dem Datenblatt — Pixelabstand, Auflösung, Masse, und wo angegeben Gewicht und Leistung.',
+  'led.types.add': 'Panel-Typ hinzufügen',
+  'led.panel.new': 'Neuer Panel-Typ',
+  'led.panel.name': 'Name',
+  'led.panel.pitch': 'Pixelabstand (mm)',
+  'led.panel.px': 'Pixel quer',
+  'led.panel.py': 'Pixel hoch',
+  'led.panel.w': 'Breite (mm)',
+  'led.panel.h': 'Höhe (mm)',
+  'led.panel.weight': 'Gewicht (kg)',
+  'led.panel.avg': 'Leistung, Dauer (W)',
+  'led.panel.max': 'Leistung, Spitze (W)',
+  'led.panel.source': 'Datenblatt (URL)',
+  'led.remove': 'Entfernen',
+  'led.walls': 'Wände',
+  'led.walls.none': 'Noch keine Wand geplant.',
+  'led.walls.needType': 'Eine Wand braucht zuerst einen Panel-Typ.',
+  'led.walls.add': 'Wand hinzufügen',
+  'led.wall.new': 'Neue Wand',
+  'led.wall.name': 'Name',
+  'led.wall.type': 'Panel-Typ',
+  'led.wall.columns': 'Spalten',
+  'led.wall.rows': 'Reihen',
+  'led.opening.w': 'Öffnung Breite (mm)',
+  'led.opening.h': 'Öffnung Höhe (mm)',
+  'led.opening.apply': 'Raster einpassen',
+  'led.opening.result': '{c} × {r} Kacheln, {bw} mm quer und {bh} mm hoch bleiben übrig',
+  'led.sum.panels': 'Panels',
+  'led.sum.pixels': 'Auflösung',
+  'led.sum.size': 'Mass (mm)',
+  'led.sum.weight': 'Gewicht',
+  'led.sum.noWeight': 'Panel-Typ trägt kein Gewicht',
+  'led.sum.avg': 'Leistung, Dauer',
+  'led.sum.max': 'Leistung, Spitze',
+  'led.sum.noPower': 'Panel-Typ trägt keine Leistungsangabe',
+  'led.sum.peakWhy':
+    'Die Sicherung wird nach der Spitze gewählt und nicht nach dem Mittel. Eine LED-Wand zieht im Weissbild ein Vielfaches ihres Mittels, und eine Sicherung nach dem Mittel fällt beim ersten Weissblitz.',
+  'led.ports.count': 'Ports der Sending Card',
+  'led.ports.capacity': 'Pixel je Port',
+  'led.ports.ok': '{need} von {have} Ports tragen sie',
+  'led.ports.short': 'Reicht nicht — {need} Ports nötig, {have} vorhanden',
+  'led.ports.unknown':
+    'Zur Sending Card ist nichts eingetragen — also wird auch nichts behauptet.',
+  'led.pixelmap': 'Pixelmap als PNG',
+  // ── Adapter automatisch einsetzen (#876) ─────────────────────────────
+  //
+  // Drei Dinge, drei Wörter: der Adapter ändert die Bauform, der
+  // Geschlechtswandler nur Stift oder Buchse, der Konverter das Signal. Sie
+  // im Deutschen zusammenzuziehen wäre bequem und falsch — am Lagerregal
+  // liegen sie in drei verschiedenen Kisten.
+  'cableSpec.genderMismatch':
+    'Beide Enden sind {gender}. Sie passen nicht ineinander — dazwischen gehört ein Geschlechtswandler.',
+  'adapter.suggest.none': 'Nichts nötig.',
+  'adapter.suggest.gender':
+    'Beide Enden haben dasselbe Geschlecht — dazwischen gehört ein Geschlechtswandler.',
+  'adapter.suggest.adapter':
+    'Diese Stecker passen nicht direkt ineinander — dazwischen gehört ein Adapter.',
+  'adapter.suggest.converter':
+    'Das sind verschiedene Signalfamilien. Dafür braucht es einen Konverter — ein Gerät mit Strom und einer Bandbreitengrenze, und eines, das man selbst aussucht.',
+  'adapter.suggest.afterCreate':
+    'Dazwischen gehört ein Zwischenstück. Kabel anlegen, dann in den Kabel-Eigenschaften mit einem Klick einsetzen.',
+  'adapter.insert': 'Einsetzen',
+  'adapter.insert.title': 'In diesen Lauf einsetzen — ein Undo nimmt es wieder heraus',
+  // ── Die Sicherungskopie im Browser ───────────────────────────────────
+  //
+  // „Keine Sicherungskopie" und nicht „Speicher voll": der Plan selbst ist
+  // in Ordnung, nur die Kopie im Browser fehlt. Wer „Speicher voll" liest,
+  // sucht den Fehler an der falschen Stelle.
+  'statusbar.autosave.label': 'Keine Sicherungskopie',
+  'statusbar.autosave.title':
+    'Der Browser hat die Sicherungskopie abgelehnt — der Plan ist {mb} MB gross, der Browser-Speicher fasst etwa 5. In eine Datei speichern; am Plan selbst fehlt nichts.',
+  // Hallenplan und Symbole
+  'floorplan.calibrate.badCorners': 'Die vier Ecken ergeben keinen Rechteck-Umriss. Klicke sie der Reihe nach rund um die Fläche an, links oben beginnend.',
+  'floorplan.calibrate.progress': '{n} von {total}',
+  'floorplan.calibrate.rectHint': 'Klicke die vier Ecken der {w} × {d} m großen Fläche an: links oben, rechts oben, rechts unten, links unten.',
+  'floorplan.calibrate.twoPointHint': 'Klicke beide Enden einer Strecke von {m} m an.',
+  'floorplan.exportNeedsUniform': 'Der Venue-Austausch kennt einen Maßstab je Plan; eine Vier-Ecken-Kalibrierung lässt sich darin nicht ausdrücken.',
+  'floorplan.exportVenue': 'Venue für MultiCam / Light Planner exportieren',
+  'floorplan.importVenue': 'Venue aus MultiCam / Light Planner importieren…',
+  'floorplan.lengthsDone': '{n} Kabellängen entlang ihres gezeichneten Wegs neu berechnet.',
+  'floorplan.loadFailed': 'Die Datei ließ sich nicht als Bild lesen.',
+  'floorplan.loadImage': 'Hallenplan-Bild laden…',
+  'floorplan.loaded': 'Hallenplan geladen. Als Nächstes den Maßstab setzen — bis dahin rechnen die Längen mit „Meter pro 100 px“.',
+  'floorplan.lock': 'Position sperren (Klicks gehen an die Geräte durch)',
+  'floorplan.opacity': 'Deckkraft',
+  'floorplan.recalc': 'Kabellängen neu berechnen',
+  'floorplan.remove': 'Hallenplan entfernen',
+  'floorplan.replaceImage': 'Bild ersetzen…',
+  'floorplan.scale.none': 'Kein Maßstab gesetzt.',
+  'floorplan.scale.rect': 'Perspektivischer Maßstab aus einer {w} × {d} m großen Fläche.',
+  'floorplan.scale.rectButton': 'Vier Ecken',
+  'floorplan.scale.rectHelp': 'Für Fotos, Schilder und isometrische Zeichnungen: die Ecken einer rechteckigen Bodenfläche bekannter Größe anklicken. Strecken auf dem Boden werden dann in jeder Richtung richtig gemessen; im Bild gezeigte Höhen nicht.',
+  'floorplan.scale.title': 'Maßstab',
+  'floorplan.scale.twoPoint': 'Maßstab aus {m} m Referenz: {cm} cm je Canvas-Pixel.',
+  'floorplan.scale.twoPointButton': 'Zwei Punkte',
+  'floorplan.scale.twoPointHelp': 'Für Pläne senkrecht von oben (CAD-Export, Scan): beide Enden einer bekannten Strecke anklicken.',
+  'floorplan.title': 'Hallenplan',
+  'floorplan.venueImported': 'Venue „{name}“ aus {app} importiert, mit Maßstab.',
+  'floorplan.venueInvalid': 'Das ist keine Venue-Austauschdatei (MultiCam / Light Planner).',
+  'floorplan.venueNoPlan': 'Die Venue-Datei enthält kein Hallenplan-Bild.',
+  'floorplan.venueNoScale': 'Die Venue-Datei enthält einen Hallenplan ohne reale Maße.',
+  'symbols.ai.button': 'Symbol erzeugen',
+  'symbols.ai.done': '„{name}“ erzeugt und unter Eigene abgelegt. Vor der Verwendung prüfen: es ist die Zeichnung eines Modells, kein Normzeichen.',
+  'symbols.ai.noSvg': 'Die Antwort enthielt kein verwendbares SVG. Versuche eine konkretere Beschreibung.',
+  'symbols.ai.placeholder': 'z. B. „Not-Aus-Taster“, „DMX-Splitter“, „LWL-Spleißbox“',
+  'symbols.ai.running': 'Wird erzeugt…',
+  'symbols.ai.title': 'Mit {provider} erzeugen',
+  'symbols.cat.automation': 'Automation',
+  'symbols.cat.av': 'AV',
+  'symbols.cat.custom': 'Eigene',
+  'symbols.cat.electrical': 'Elektro',
+  'symbols.cat.fire': 'BMA',
+  'symbols.cat.intrusion': 'EMA',
+  'symbols.cat.it': 'IT / Netzwerk',
+  'symbols.cat.voice': 'SAA / ELA',
+  'symbols.empty': 'Hier gibt es noch keine Symbole.',
+  'symbols.import.badSvg': 'Die Datei enthält kein verwendbares SVG (oder ist größer als 200 KB).',
+  'symbols.import.button': 'Symbol importieren (SVG, PNG, JPG, WebP)…',
+  'symbols.import.done': '„{name}“ unter Eigene abgelegt.',
+  'symbols.import.tooLarge': 'Rasterbilder für Symbole sind auf 512 KB begrenzt.',
+  'symbols.list.category': 'Kategorie',
+  'symbols.list.count': 'Anzahl',
+  'symbols.list.export': 'Symbolliste als CSV ({n})',
+  'symbols.list.labels': 'Beschriftungen',
+  'symbols.list.symbol': 'Symbol',
+  'symbols.list.unknown': 'Unbekanntes Symbol',
+  'symbols.place': 'Auf dem Canvas platzieren',
+  'symbols.removeDef': 'Aus der Bibliothek entfernen',
+  'symbols.search': 'Symbole suchen…',
+  'symbols.sel.delete': 'Symbol löschen',
+  'symbols.sel.label': 'Beschriftung',
+  'symbols.sel.lock': 'Position sperren',
+  'symbols.sel.rotation': 'Drehung',
+  'symbols.sel.size': 'Größe',
+  'symbols.title': 'Symbole',
+  'toolbar.floorplan.label': 'Hallenplan',
+  'toolbar.floorplan.title': 'Hallenplan unter dem Canvas, Maßstab für Kabellängen',
+  'toolbar.symbols.label': 'Symbole',
+  'toolbar.symbols.title': 'Planzeichen: Elektro, EMA/BMA, SAA/ELA, IT, Automation, AV',
+  'symbols.builtin.steckdose': 'Steckdose',
+  'symbols.builtin.steckdose-schutz': 'Schutzkontakt-Steckdose',
+  'symbols.builtin.schalter': 'Schalter',
+  'symbols.builtin.taster': 'Taster',
+  'symbols.builtin.leuchte': 'Leuchte',
+  'symbols.builtin.verteiler': 'Verteiler',
+  'symbols.builtin.sicherung': 'Sicherung',
+  'symbols.builtin.fi': 'FI-Schutzschalter',
+  'symbols.builtin.zaehler': 'Zähler',
+  'symbols.builtin.erdung': 'Erdung',
+  'symbols.builtin.motor': 'Motor',
+  'symbols.builtin.trafo': 'Transformator',
+  'symbols.builtin.abzweigdose': 'Abzweigdose',
+  'symbols.builtin.cee': 'CEE-Steckdose',
+  'symbols.builtin.emz': 'Einbruchmelderzentrale',
+  'symbols.builtin.ema-bedienteil': 'Bedienteil',
+  'symbols.builtin.bewegungsmelder': 'Bewegungsmelder (PIR)',
+  'symbols.builtin.magnetkontakt': 'Magnetkontakt',
+  'symbols.builtin.glasbruch': 'Glasbruchmelder',
+  'symbols.builtin.ema-sirene': 'Sirene (EMA)',
+  'symbols.builtin.blitzleuchte': 'Blitzleuchte',
+  'symbols.builtin.bmz': 'Brandmelderzentrale',
+  'symbols.builtin.rauchmelder': 'Rauchmelder',
+  'symbols.builtin.waermemelder': 'Wärmemelder',
+  'symbols.builtin.flammenmelder': 'Flammenmelder',
+  'symbols.builtin.hfm': 'Handfeuermelder',
+  'symbols.builtin.fsd': 'Feuerwehr-Schlüsseldepot',
+  'symbols.builtin.fbf': 'Feuerwehr-Bedienfeld',
+  'symbols.builtin.bma-signalgeber': 'Signalgeber (BMA)',
+  'symbols.builtin.saz': 'Sprachalarmzentrale',
+  'symbols.builtin.lautsprecher': 'Lautsprecher',
+  'symbols.builtin.deckenlautsprecher': 'Deckenlautsprecher',
+  'symbols.builtin.hornlautsprecher': 'Druckkammerlautsprecher',
+  'symbols.builtin.verstaerker': 'Verstärker',
+  'symbols.builtin.mikrofon': 'Mikrofon',
+  'symbols.builtin.sprechstelle': 'Sprechstelle',
+  'symbols.builtin.router': 'Router',
+  'symbols.builtin.switch': 'Switch',
+  'symbols.builtin.access-point': 'Access Point',
+  'symbols.builtin.server': 'Server',
+  'symbols.builtin.firewall': 'Firewall',
+  'symbols.builtin.netzwerkdose': 'Netzwerkdose',
+  'symbols.builtin.patchfeld': 'Patchfeld',
+  'symbols.builtin.lsa-leiste': 'LSA-Trennleiste',
+  'symbols.builtin.ip-kamera': 'IP-Kamera',
+  'symbols.builtin.pc': 'Arbeitsplatz',
+  'symbols.builtin.telefon': 'Telefon',
+  'symbols.builtin.sps': 'SPS',
+  'symbols.builtin.sensor': 'Sensor',
+  'symbols.builtin.aktor': 'Aktor',
+  'symbols.builtin.ventil': 'Ventil',
+  'symbols.builtin.stellantrieb': 'Stellantrieb',
+  'symbols.builtin.relais': 'Relais',
+  'symbols.builtin.kamera': 'Kamera',
+  'symbols.builtin.monitor': 'Monitor',
+  'symbols.builtin.beamer': 'Beamer',
+  'symbols.builtin.leinwand': 'Leinwand',
+  'symbols.builtin.stagebox': 'Stagebox',
+  'symbols.builtin.rack': 'Rack',
+  'symbols.builtin.bodentank': 'Bodentank',
+  'symbols.builtin.kabelbruecke': 'Kabelbrücke',
 }

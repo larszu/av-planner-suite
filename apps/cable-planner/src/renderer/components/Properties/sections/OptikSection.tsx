@@ -1,13 +1,16 @@
 /**
- * #910 — Objektiv und Einstellung einer Kamera aus dem Kameraplan.
+ * #910 — Objektiv und Einstellung einer Kamera aus dem MultiCam-Plan.
  *
  * In der Suite kommt die Optik mit dem Seed (Kamera-Gruppe des geteilten
- * Geraets). Nur lesend: der Kameraplan fuehrt sie, und der naechste Seed
- * schriebe eine Aenderung hier wieder zurueck.
+ * Geraets), deshalb nennen Titel und Herkunftszeile hier den Kameraplan der
+ * Suite und nicht den Datei-Abgleich. Nur lesend: der Kameraplan fuehrt diese Angaben, und der naechste Abgleich
+ * (#909) schriebe eine Aenderung hier wieder zurueck. Geaendert wird dort,
+ * wo die Kamera geplant wird.
  *
- * Erscheint nur, wenn es etwas zu sagen gibt.
+ * Erscheint nur, wenn es etwas zu sagen gibt — Optik oder der Hinweis, dass
+ * die Kamera im MultiCam-Plan nicht mehr steht.
  */
-import { Aperture } from 'lucide-react'
+import { Aperture, AlertTriangle } from 'lucide-react'
 import { useTranslation } from '../../../lib/i18n'
 import { Icon } from '../../shared/Icon'
 import { objektivName, zoombereich } from '../../../lib/kameraOptik'
@@ -18,10 +21,10 @@ const zahl = (n: number): string => String(Math.round(n * 10) / 10)
 export const OptikSection = ({ equipment }: { equipment: EquipmentItem }) => {
   const t = useTranslation()
   const o = equipment.optik
-  if (!o) return null
+  if (!o && !equipment.multicamRemoved) return null
 
   const zeilen: Array<[string, string]> = []
-  {
+  if (o) {
     const name = objektivName(o)
     const bereich = zoombereich(o)
     if (name) zeilen.push([t('props.optik.lens', 'Lens'), name])
@@ -41,6 +44,15 @@ export const OptikSection = ({ equipment }: { equipment: EquipmentItem }) => {
         {t('props.optik.titleSuite', 'Optics (camera plan)')}
       </summary>
       <div className="flex flex-col gap-1 px-2 pb-2 text-cp-xs">
+        {equipment.multicamRemoved && (
+          <p className="text-cp-warn">
+            <Icon icon={AlertTriangle} size="xs" className="mr-1 inline" />
+            {t(
+              'props.optik.removed',
+              'This camera is no longer in the MultiCam plan. It stays here because cables may hang on it — delete it yourself if it is gone.',
+            )}
+          </p>
+        )}
         {zeilen.length > 0 && (
           <table className="block overflow-x-auto w-full border-collapse">
             <tbody>

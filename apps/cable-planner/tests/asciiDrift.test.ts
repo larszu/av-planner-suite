@@ -118,7 +118,7 @@ const HARMLOS = new Set(
     'frequenzen', 'frequenzgang', 'frequenzabstand', 'funkfrequenz',
     'sendefrequenz', 'bauen', 'dauerhaft', 'dauerhafte', 'genaue', 'teuerste',
     'auszugrauen', 'koexistenz', 'manuell', 'manuelle', 'manuellen', 'individuell',
-    'eventuell', 'virtuell', 'treue', 'feuer', 'europa', 'euro',
+    'eventuell', 'virtuell', 'treue', 'feuer', 'feuerwehr', 'europa', 'euro',
     // Eigennamen, Protokolle, Einheiten
     'segoe', 'poe', 'poestandard', 'poestandards', 'poebudget', 'poebudgetw',
     'erpoe', 'aes', 'aea', 'aearibbonmics', 'gerätesteuerung',
@@ -128,7 +128,10 @@ const HARMLOS = new Set(
     'ae', 'oe', 'ue',
     // Deutsch, und richtig geschrieben — „ue"/„ae"/„oe" ueber eine Silben-
     // oder Wortgrenze hinweg.
-    'zuerst', 'neuere', 'neueren', 'neueste', 'querschnitt', 'dauer',
+    // #881 (2026-09-18): „quer" selbst fehlte, waehrend „querschnitt"
+    // dastand — dieselbe Silbengrenze („qu-er"), nur ohne Nachsilbe. Eine
+    // LED-Wand ist „{c} Kacheln quer", und das ist richtiges Deutsch.
+    'zuerst', 'neuere', 'neueren', 'neueste', 'quer', 'querschnitt', 'dauer',
     'störquelle', 'signalquelle', 'signalquellen', 'prüfquelle', 'frequenzbänder',
     'frequenzregulierung', 'koexistieren', 'graues', 'visuell', 'visuelle',
     'virtuelle', 'individuelle', 'aktuellem', 'nachbauen', 'zuerste',

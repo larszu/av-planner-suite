@@ -138,10 +138,12 @@
   --color-bc-text: #1B2B45;
   --color-bc-text-bright: #0B1729;
   /* Im HELL-Thema bleibt eine Stufe unter `muted` uebrig — dort heisst
-     „gedaempfter“ DUNKLER, und dunkler ist auf hellem Grund
-     kontrastREICHER. Gegen den dunkelsten hellen Grund (#F6F5F0):
-     `muted` = 5.75, darunter #5A7094 = 4.60. `faint` stand vorher
-     auf #7C8AA1 = 3.50. */
+     „gedaempfter" DUNKLER, und dunkler ist auf hellem Grund
+     kontrastREICHER. Gerechnet gegen den dunkelsten hellen Grund
+     (#F6F5F0), nicht gegen Weiss: `muted` #4E6180 = 5.75, darunter
+     #5A7094 = 4.60. Gegen Weiss gerechnet lag dieselbe Farbe bei 4.22 —
+     der Lauf hat es gemeldet, bevor es jemand sehen konnte. `faint`
+     stand vorher auf #7C8AA1 = 3.50. */
   --color-bc-muted: #4E6180;
   --color-bc-dim: #5A7094;
   --color-bc-faint: #5A7094;
@@ -169,10 +171,12 @@
     --color-bc-text: #1B2B45;
     --color-bc-text-bright: #0B1729;
     /* Im HELL-Thema bleibt eine Stufe unter `muted` uebrig — dort heisst
-       „gedaempfter“ DUNKLER, und dunkler ist auf hellem Grund
-       kontrastREICHER. Gegen den dunkelsten hellen Grund (#F6F5F0):
-       `muted` = 5.75, darunter #5A7094 = 4.60. `faint` stand vorher
-       auf #7C8AA1 = 3.50. */
+       „gedaempfter" DUNKLER, und dunkler ist auf hellem Grund
+       kontrastREICHER. Gerechnet gegen den dunkelsten hellen Grund
+       (#F6F5F0), nicht gegen Weiss: `muted` #4E6180 = 5.75, darunter
+       #5A7094 = 4.60. Gegen Weiss gerechnet lag dieselbe Farbe bei 4.22 —
+       der Lauf hat es gemeldet, bevor es jemand sehen konnte. `faint`
+       stand vorher auf #7C8AA1 = 3.50. */
     --color-bc-muted: #4E6180;
     --color-bc-dim: #5A7094;
     --color-bc-faint: #5A7094;

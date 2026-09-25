@@ -115,7 +115,17 @@ export const CABLE_FIELD_CLASS: Record<string, FieldClass> = {
   jacketRating: 'substantive',
   terminationFrom: 'substantive',
   terminationTo: 'substantive',
+  // #885 — welche Faser des Breakouts belegt ist. `substantive` aus
+  // demselben Grund wie die Adernfarbe darunter: vertauscht liegt das Kabel
+  // richtig und fuehrt kein Licht, und im Plan sieht man den Unterschied
+  // nicht. Ein Vergleich zweier Staende, der das als Kosmetik durchwinkt,
+  // verschweigt genau die Aenderung, wegen der jemand nachts sucht.
+  faserVon: 'substantive',
+  faserNach: 'substantive',
   isTieLine: 'substantive',
+  // Welche Hausstrecke und Ader belegt wird, ist die Arbeit des Anschliessens.
+  hausStreckeId: 'substantive',
+  hausAder: 'substantive',
   multicoreName: 'substantive',
   // B-45 — die Adern und die Zugehoerigkeit zum Anschluss. `substantive`,
   // und zwar buchstaeblich: an der Adernfarbe haengt, welcher Leiter wohin
@@ -202,6 +212,10 @@ export const EQUIPMENT_FIELD_CLASS: Record<string, FieldClass> = {
   isConverter: 'substantive',
   isDistributionAmp: 'substantive',
   isPatchPanel: 'substantive',
+  // #879 — dass dieses Geraet eine Frontplatte IST, samt Art und
+  // Streifenhoehe. `substantive`: an der Art haengt, in welcher Liste die
+  // Platte steht, und an der Streifenhoehe, was aus dem Drucker kommt.
+  frontplatte: 'substantive',
   // B-46 — der Adapter. `substantive`, und zwar mit Nachdruck: an ihm haengt,
   // ob die Strecke ueberhaupt traegt, was auf der Packliste steht und wie der
   // Signalweg weiterlaeuft. Eine geaenderte Richtung ist keine Optik.
@@ -349,6 +363,9 @@ export const EQUIPMENT_FIELD_CLASS: Record<string, FieldClass> = {
   netboxSourceUrl: 'bookkeeping',
   rentmanId: 'bookkeeping',
   rentmanRemoved: 'bookkeeping',
+  multicamId: 'bookkeeping',
+  multicamProjectId: 'bookkeeping',
+  multicamRemoved: 'bookkeeping',
   manufacturerUrl: 'bookkeeping',
   // Die Klasse nennt „Provenienz-Marker" ausdruecklich; `verifiedBy` steht
   // schon hier. Ein Beleg aendert nicht die physische Arbeit, ist aber auch

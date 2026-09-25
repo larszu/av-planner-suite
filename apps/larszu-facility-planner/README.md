@@ -47,7 +47,74 @@ die Schaltungslogik der Show ist dort gebaut und gehört dorthin.
 | `kreisGeschwister(punktId)` | was am selben RCD hängt |
 | `verfuegbarkeit(punktId)` | frei / belegt / geschaltet / gedimmt |
 | `steuerklinken()` | KNX/DALI/Crestron: nur die benannten Klinken, nicht das Bus-Modell |
-| `hausStrecke(planKabelId)` | gehört diese Strecke dem Haus? |
+| `hausStrecke(planKabelId)` | gehört diese Strecke dem Haus — und auf welcher Ader liegt das Kabel? |
+
+**KNX-Gruppenadressen lassen sich einlesen** statt abzutippen: die Ansicht
+„Steuerung" liest den Gruppenadress-Export, den ETS selbst schreibt (CSV) —
+nicht die Projektdatei `.knxproj`. Die ist ein ZIP mit dem ganzen Projekt,
+teilweise verschlüsselt, und ihr inneres Schema wechselt mit jeder
+ETS-Fassung; ein Leser dafür wäre geraten und beim nächsten Sprung still
+falsch. Der Trenner wird erkannt und nicht angenommen (derselbe Export ist je
+nach Gebietsschema semikolon- oder kommagetrennt), Ordner-Zeilen (`0/0/-`)
+werden übersprungen, Adressen ausserhalb der Protokollgrenzen gezählt statt
+durchgelassen.
+
+**Einlesen gibt nichts frei.** Eine ETS-Datei enthält alle Gruppenadressen des
+Hauses — auch Notlicht, Jalousien und Heizung. Heraus kommen deshalb
+*Kandidaten*: welcher davon eine Klinke wird, entscheidet ein Mensch, mit
+Richtung (Vorgabe `lesen`, die harmlose Hälfte) und Bedeutung. Der Gruppenname
+aus der ETS steht als Vorschlag im Feld; er stammt von dem, der die Anlage
+programmiert hat, nicht von dem, der freigibt.
+
+**Etagen sind eine Liste, kein Freitext** (cable-planner#911). Die Sicht
+„Räume" pflegt die Etagen des Hauses — Name, Höhe der Fertigfußboden-Oberkante
+in Metern über dem Bezug des Hauses, Reihenfolge — und jeder Raum wählt seine
+Etage daraus. Die Reihenfolge ist die der Liste; es gibt kein Rangfeld daneben.
+Eine fehlende Höhe bleibt leer und wird nicht zu 0. Eine Etage, auf der noch
+Räume stehen, lässt sich nicht entfernen: die Ablehnung nennt die Räume, statt
+sie still auf „keine Etage" zu setzen. `ort()` antwortet wie bisher mit
+`etage: string` — dem Namen der Etage.
+
+**Die Sicht „Gebäude" zeigt das Haus als Bild** (QW12): Etagen
+übereinander, jeder Raum als Körper auf seiner Etage, Hausstrecken (mit freien
+Adern, z. B. „HS-01 · 4/8 frei") und Trassen von Decke zu Decke. Gedreht wird in
+Vierteln, Etagen und einzelne Räume lassen sich ausblenden. Wo ein Raum liegt,
+steht unter „Räume" als **Lage im Haus** — x, y, Breite und Tiefe in Metern vom
+Bezugspunkt, alle vier oder keine. Ein Raum ohne Lage wird auf seiner Etage
+eingereiht und gestrichelt gezeichnet, eine Etage ohne Höhe mit der
+Geschosshöhe gestapelt; die Sicht sagt beides. Gezeichnet wird isometrisch in
+SVG, ohne 3D-Bibliothek.
+
+**Hausstrecken haben Endblenden und Adern** (Issue #15). Die Sicht
+„Hausstrecken" trägt zu jeder Strecke die Blende, an der sie im Von- und im
+Nach-Raum endet („B2", „Wandfeld 3.OG-West"), und ihre Adern mit Bezeichnung,
+Stecker und Signal — alles Freitext, weil die Technik schneller wechselt als
+das Haus. Eine Zuordnung darf eine Ader nennen (`ader`); ohne sie gilt sie wie
+bisher der ganzen Strecke. Die **Belegung je Ader wird abgeleitet**, nicht
+eingetragen: `frei`, `belegt` (mit den Plan-Kabeln) oder `unbekannt`, wenn ein
+Plan-Kabel die Strecke benutzt, ohne eine Ader zu nennen — dann ist keine Ader
+sicher frei. Zwei Plan-Kabel auf derselben Ader sind ein Konflikt, eine
+Zuordnung auf eine Ader, die die Strecke nicht führt, wird gemeldet und nicht
+verworfen. Wer eine Ader umbenennt, nimmt die Zuordnungen auf sie mit.
+
+**Das Dateiformat ist `avplan-facility` v2.** Geschrieben wird v2, gelesen
+werden v1 und v2. Neu in v2:
+
+```
+gebaeude.etagen: { id, name, hoeheM? }[]
+gebaeude.raeume[].etageId?
+gebaeude.raeume[].lage?: { xM, yM, breiteM, tiefeM }   (optional, ohne Versionssprung)
+gebaeude.strecken[].vonBlende?, .nachBlende?, .adern?: { nr, stecker?, signal? }[]
+gebaeude.zuordnungen[].ader?
+```
+
+Eine v1-Datei wird beim Lesen geheilt: aus jedem unterschiedlichen Freitext
+`raeume[].etage` (ohne Rand-Leerzeichen) wird eine Etage mit der Id
+`etage:<Name>`, der Raum verweist per `etageId` darauf, und das Freitextfeld
+fällt weg. Die Id hängt nur am Namen, damit dieselbe Datei überall dieselben
+Etagen ergibt; die Reihenfolge ist die des ersten Auftretens und lässt sich
+danach verschieben. Mehr wird nicht zusammengelegt — „EG" und „eg" bleiben
+zwei Etagen, bis der Betreiber sie zusammenführt.
 
 Der eine Rückweg ist `mangelMelden(hausObjektId, befund)`. Eine Show ändert das
 Haus nicht, sie benutzt es; die Ausnahme ist die Aussage eines Menschen über
@@ -73,6 +140,7 @@ npm run dev     # Vite, Port 4185 (fest, strictPort)
 npm run build   # tsc -b && vite build
 npm run lint
 npm test        # vitest + Grenze zum Show-Plan + Quellsprache
+npm run ci:complete    # jeder *:check wird auch wirklich gefahren
 
 npm run electron:dev   # Desktop-Fassung lokal starten (baut vorher)
 npm run dist:win       # Windows: Setup + Portable nach release/
@@ -123,8 +191,9 @@ Downloads.
 ## Stand
 
 Das Modell (Raum, Anschlusspunkt, Stromkreis, Verteilung, Steuerklinke,
-Hausstrecke, Mangel, dazu Trasse, Schaltstelle und Grundriss aus Issue #1),
-der Vertrag als reine Funktionen, ein Speicher und sieben Sichten darüber.
+Hausstrecke, Mangel, dazu Trasse, Schaltstelle und Grundriss aus Issue #1,
+Etage aus cable-planner#911, Ader und Endblende aus Issue #15), der Vertrag
+als reine Funktionen, ein Speicher und neun Sichten darüber.
 
 **Der Grundriss liegt als Verweis vor, nicht als Bild.** Das Dokument trägt
 die Adresse und den Massstab (`meterProBild`), und die Lage eines Punktes
@@ -133,6 +202,25 @@ Feld und die Lagen bleiben gültig — an Bildpixel gehängt wären sie beim
 nächsten Scan falsch, ohne dass es jemand merkt. Ohne Massstab wird gar nichts
 gesetzt: eine geratene Länge sähe im Plan aus wie eine Auskunft des Hauses.
 
-**Noch nicht hier:** Prüfprotokolle nach Norm, die Wartungshistorie, und die
-Verbindung zum Show-Plan (der Planer fragt den Vertrag noch nicht ab). Der Abgleich der sechs Fragen gegen den ADR-Text lebt
-in der Suite — dort liegen ADR und Code im selben Baum.
+**Die Verbindung zum Show-Plan steht — anders, als hier stand.** Der Satz
+„der Planer fragt den Vertrag noch nicht ab" war stehengeblieben;
+nachgemessen am 2026-09-18 im `cable-planner` liest der Planer die
+`.avfacility`-Datei (`project.hausAuskunft`), zeigt sie in einer eigenen
+Abschnitts-Ansicht und prüft **fünf** Dinge dagegen
+(`lib/drawingChecks.ts`): eine Dose, die es in der neuen Auskunft nicht mehr
+gibt · eine gedimmte Dose unter einem Schaltnetzteil · eine geschaltete Dose
+(Warnung, kein Fehler — für die Saalbeleuchtung ist sie richtig, für den
+Medienserver das Ende der Show) · eine Klinke, die es nicht mehr gibt · die
+Summe der Plangeräte gegen die angegebene Dauerleistung. Und er hält sich an
+dieselbe Regel wie dieses Repo: *wo das Haus schweigt, schweigt auch der
+Check.*
+
+**Was wirklich fehlt, ist schmaler:** die Datei trägt die ANGABEN, nicht die
+BEGRÜNDUNGEN. `belastbarkeit()` antwortet hier mit `{ bekannt: false, grund }`
+— der Planer sieht nur, dass nichts dasteht, und kann nicht sagen, warum.
+Das zu ändern heisst, `avplan-facility` um ein Feld zu erweitern, und das ist
+ein Versionssprung in beiden Repos und keine Änderung nebenbei.
+
+**Noch nicht hier:** Prüfprotokolle nach Norm und die Wartungshistorie. Der
+Abgleich der sechs Fragen gegen den ADR-Text lebt in der Suite — dort liegen
+ADR und Code im selben Baum.

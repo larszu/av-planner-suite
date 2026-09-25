@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { Check, AlertCircle, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Check, AlertCircle, AlertTriangle, Bot, CheckCircle2 } from 'lucide-react'
 import { APP_VERSION } from '../../lib/appInfo'
 import { useUiStore } from '../../store/uiStore'
 import { useModule } from '../../store/settingsStore'
@@ -7,6 +7,9 @@ import { useCollabStore } from '../../store/collabStore'
 import { useProjectStore } from '../../store/projectStore'
 import { useTranslation, format } from '../../lib/i18n'
 import { runDrawingChecks } from '../../lib/drawingChecks'
+import { autosaveFehlschlag } from '../../store/projectAutosave'
+import { cablePlannerApi, hasDesktopBridge } from '../../lib/bridge'
+import { fotoMasse } from '../../lib/fotoMasse'
 import { buildAddressPlan } from '../../lib/addressPlan'
 import { segmentFindings } from '../../lib/networkSegments'
 import { actionCounts, actionItems } from '../../lib/actionItems'
@@ -56,6 +59,61 @@ const CollabStatusBadge = () => {
     >
       <span className="inline-block h-2 w-2 bg-emerald-300" />
       {t('statusbar.collab.live', 'Live')} · {Math.max(peers.length, 1)}
+    </button>
+  )
+}
+
+/**
+ * #872 — das Abzeichen fuer den MCP-Server.
+ *
+ * Es steht NUR da, wenn der Server laeuft — und es sagt, ob gerade jemand
+ * fragt. Das ist die Anforderung aus #872 („Anzeige in der Kopfzeile, wenn
+ * ein Client verbunden ist"), und sie hat einen Grund: ein Weg, auf dem ein
+ * anderes Programm den Plan liest, soll nicht unsichtbar offenstehen.
+ *
+ * Gefragt wird alle fuenf Sekunden. Ein Ereignis waere sparsamer und
+ * unehrlicher: „verbunden" heisst hier „hat vor weniger als zwei Minuten
+ * gefragt", und das veraltet von selbst.
+ */
+const McpBadge = () => {
+  const t = useTranslation()
+  const [status, setStatus] = useState<{ running: boolean; verbunden: boolean }>({
+    running: false,
+    verbunden: false,
+  })
+  useEffect(() => {
+    if (!hasDesktopBridge) return
+    let lebt = true
+    const holen = async () => {
+      const s = await cablePlannerApi.mcp.status()
+      if (lebt) setStatus({ running: s.running, verbunden: s.verbunden })
+    }
+    // Erster Blick im Timeout, nicht direkt im Effekt — siehe `McpTab`.
+    const sofort = window.setTimeout(() => void holen(), 0)
+    const uhr = window.setInterval(() => void holen(), 5000)
+    return () => {
+      lebt = false
+      window.clearTimeout(sofort)
+      window.clearInterval(uhr)
+    }
+  }, [])
+  if (!status.running) return null
+  return (
+    <button
+      type="button"
+      onClick={() => useUiStore.getState().openSettings('mcp')}
+      title={t(
+        'statusbar.mcp.title',
+        'The local MCP server is running - Claude can READ this plan. Click for the switch and the token.',
+      )}
+      className={`flex items-center gap-1 whitespace-nowrap px-1.5 py-0.5 text-cp-xs font-medium ${
+        status.verbunden
+          ? 'bg-cp-accent text-white'
+          : 'bg-cp-surface-3 text-cp-text-secondary hover:bg-cp-surface-4'
+      }`}
+    >
+      <Icon icon={Bot} size="xs" />
+      {status.verbunden ? t('statusbar.mcp.asking', 'MCP · asking') : t('statusbar.mcp.on', 'MCP')}
     </button>
   )
 }
@@ -121,19 +179,37 @@ export const StatusBar = ({
   const sourceIdentities = useProjectStore((s) => s.project.sourceIdentities)
   const anschlussListe = useProjectStore((s) => s.project.anschlussListe)
   const farbnormen = useProjectStore((s) => s.project.farbnormen)
+  // #885 — die Polaritaets-Methoden. Ohne gewaehlte urteilt die Pruefung
+  // nicht, sie sagt nur, dass die Polaritaet ungeprueft ist.
+  const polaritaetsnormen = useProjectStore((s) => s.project.polaritaetsnormen)
+  const polaritaetsnormId = useProjectStore((s) => s.project.polaritaetsnormId)
+  // #881 — die LED-Waende. Ihre Last haengt am Anschlusspunkt des Hauses.
+  const ledWalls = useProjectStore((s) => s.project.ledWalls)
+  const ledPanelTypes = useProjectStore((s) => s.project.ledPanelTypes)
   const defaultVideoFormat = useProjectStore((s) => s.project.metadata.defaultVideoFormat)
   // Die Auskunft des Gebaeudes speist die Haus-Checks (facility Issue #2).
   // Fehlt sie, schweigen sie vollstaendig.
   const hausAuskunft = useProjectStore((s) => s.project.hausAuskunft)
   const networkSegments = useProjectStore((s) => s.project.networkSegments)
   const togglePlanCheck = useUiStore((s) => s.togglePlanCheck)
+  // Beim Rendern gefragt und nicht abonniert: die Fussleiste rendert ohnehin
+  // bei jeder Projektaenderung, und der Autosave laeuft aus jedem Slice — ein
+  // Store, der beim Schreiben einen anderen Store schreibt, waere eine
+  // Schleife, auf die niemand gefasst ist.
+  const autosaveWeg = autosaveFehlschlag()
+  // #884 — wie schwer die Fotos den Plan machen. Nicht die Grenze des
+  // Browsers (in der Sicherungskopie stehen die Bilder gar nicht), sondern
+  // die der DATEI: ab etwa 40 MB wird eine `.cableplan` unhandlich zum
+  // Verschicken, und das erfaehrt man sonst am Mailserver.
+  const fotos = useProjectStore((s) => s.project.fotos)
+  const fotoLast = useMemo(() => fotoMasse(fotos), [fotos])
   // Memoisiert, weil die StatusBar bei jeder Viewport-Aenderung rendert, die
   // Check-Engine aber ueber den ganzen Plan laeuft (seit ADR-001 auch ueber
   // den Kabelgraph). Abhaengigkeiten sind Store-Referenzen, wechseln also nur
   // bei echter Projekt-Aenderung.
   const { errorCount, warningCount } = useMemo(
-    () => runDrawingChecks({ equipment, cables, drumKit, sourceIdentities, anschlussListe, farbnormen, defaultVideoFormat, hausAuskunft }),
-    [equipment, cables, drumKit, sourceIdentities, anschlussListe, farbnormen, defaultVideoFormat],
+    () => runDrawingChecks({ equipment, cables, drumKit, sourceIdentities, anschlussListe, farbnormen, polaritaetsnormen, polaritaetsnormId, ledWalls, ledPanelTypes, defaultVideoFormat, hausAuskunft }),
+    [equipment, cables, drumKit, sourceIdentities, anschlussListe, farbnormen, polaritaetsnormen, polaritaetsnormId, ledWalls, ledPanelTypes, defaultVideoFormat],
   )
   // ── DIE NETZ-BEFUNDE, NEBEN DEN PLAN-CHECK (2026-09-07) ────────────────
   //
@@ -230,12 +306,50 @@ export const StatusBar = ({
             {format(t('statusbar.network.counts', 'Network {count}'), { count: netzBefunde })}
           </button>
         )}
+        {/* Die Sicherungskopie im Browser. Sie schwieg bis 2026-09-18, wenn
+            sie nicht mehr geschrieben werden konnte — `localStorage` fasst
+            5–10 MB, und der `catch` war leer. Wer weiterplant und dann den
+            Rechner verliert, hat den Stand von damals, und niemand hat ihm
+            gesagt, ab wann. */}
+        {autosaveWeg && (
+          <span
+            className="inline-flex shrink-0 items-center gap-1 bg-amber-600 px-1.5 py-0.5 text-cp-xs font-bold text-amber-50"
+            title={format(
+              t(
+                'statusbar.autosave.title',
+                'The browser refused the recovery copy — the project is {mb} MB and the browser store holds about 5. Save to a file; the plan itself is not affected.',
+              ),
+              { mb: (autosaveWeg.bytes / 1_000_000).toFixed(1) },
+            )}
+          >
+            <Icon icon={AlertTriangle} size="xs" />
+            {t('statusbar.autosave.label', 'No recovery copy')}
+          </span>
+        )}
+        {fotoLast.ueberBudget && (
+          <span
+            className="inline-flex shrink-0 items-center gap-1 bg-amber-600 px-1.5 py-0.5 text-cp-xs font-bold text-amber-50"
+            title={format(
+              t(
+                'statusbar.fotos.title',
+                '{n} photos carry {mb} MB in this plan. The file still opens, but it gets hard to send by mail.',
+              ),
+              { n: fotoLast.anzahl, mb: (fotoLast.bytes / 1_000_000).toFixed(0) },
+            )}
+          >
+            <Icon icon={AlertTriangle} size="xs" />
+            {format(t('statusbar.fotos.label', 'Photos {mb} MB'), {
+              mb: (fotoLast.bytes / 1_000_000).toFixed(0),
+            })}
+          </span>
+        )}
         <AufgabenBadge />
       </div>
       <div className="flex shrink-0 items-center gap-3">
         {/* v7.9.4 — Rentman-Badge nur sichtbar wenn die Integration
             in den Einstellungen aktiviert ist. */}
         <CollabStatusBadge />
+        <McpBadge />
         {useModule('rentman') && (
           <span className={`hidden whitespace-nowrap lg:inline ${rentmanProjectName ? 'text-orange-300' : hasToken ? 'text-[var(--cp-text-muted)]' : 'text-[var(--cp-text-faint)]'}`}>
             {t('statusbar.rentman.label', 'Rentman:')}{' '}

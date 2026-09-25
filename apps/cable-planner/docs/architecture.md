@@ -5,7 +5,7 @@ Invarianten der App. Sie ist die Pflicht-Lektüre, bevor strukturelle Änderunge
 gemacht werden. Für die interaktive Modul-Übersicht siehe [`app-structure.html`](./app-structure.html),
 für einen Wettbewerber-Vergleich [`comparison.html`](./comparison.html).
 
-Stand: v9.0.1 · ~639 TS/TSX-Module · ~185.2k LOC
+Stand: v9.0.3 · ~748 TS/TSX-Module · ~217.4k LOC
 
 ---
 
@@ -96,7 +96,7 @@ Vier Stores in `src/renderer/store/`. Jeder hat einen klar abgegrenzten Concern.
 
 #### 3.1.1 · Slice-Komposition (#308)
 
-`projectStore.ts` ist intern in **20 Slices** unter `src/renderer/store/slices/`
+`projectStore.ts` ist intern in **24 Slices** unter `src/renderer/store/slices/`
 zerlegt, die alle in den Haupt-Store komponiert werden:
 
 ```
@@ -279,7 +279,7 @@ jemand drei von zwölf Monitoren angesehen hat.
 
 ### 3.2 · Komponenten
 
-`src/renderer/components/` ist in 30 Subdomänen aufgeteilt:
+`src/renderer/components/` ist in 32 Subdomänen aufgeteilt:
 
 ```
 About/         Analysis/      Annotations/   Atem/          Cable/
@@ -314,7 +314,9 @@ prüfen, ob das gemeinsame Konzept nach `shared/` gehört.
 - `CableEdge.tsx` (Custom-Edge mit Waypoints, Auto-Routing, Label-Slider)
 - `LocationNode.tsx` (Rahmen mit Move-Contents-Logik)
 - `LayerVisibilityChips.tsx` (Layer-Filter mit Count-Badges)
-- `pathfinding.ts` (Orthogonal-Routing zwischen Ports)
+- `pathfinding.ts` (Orthogonal-Routing zwischen Ports). **Das Zellmaß ist ein
+  Parameter, keine Konstante** — es kommt aus `lib/raster.ts` und ist gleich
+  der eingestellten Rastergröße (Invariante 24).
 - `cableApproach.ts` (die Anfahrt an das Geraet: Stummel an beiden Enden,
   Form gewaehlt statt angenommen — der Weg macht nicht kehrt, und der Pfeil
   faehrt gerade in die Buchse). Wer eine zweite Stelle baut, an der ein
@@ -618,13 +620,17 @@ einzige unreine Zeile des Wegs.
 liefert `src/mobile/` an Smartphones im LAN. Bidirektional:
 - Main → Mobile: aktuelle Projekt-Snapshot (Pull-Endpunkt), Passwörter und
   Schlüssel vorher via `stripSecrets` entfernt.
-- Mobile → Main: **vier** Schreibwege, nicht einer —
+- Mobile → Main: **fünf** Schreibwege, nicht einer —
   Bauteam-Häkchen (POST `/checks`), neu angelegte Kabel (POST `/cables`,
-  v7.9.54), Feld-Rückmeldungen (POST `/pending-changes`) und die
+  v7.9.54), Feld-Rückmeldungen (POST `/pending-changes`), die
   Sichtprüfung vom Prüfbild-Rundgang (POST `/pattern-checks`, B-42
-  Inkrement 2b). Alle vier sind token-gated (`authed`, Token aus der
-  QR-Code-URL), gehen durch `writeAllowed` (Bedarf 109) und durch
-  `showOk` (Bedarf 127).
+  Inkrement 2b) und **Fotos** (POST `/fotos`, #884). Alle fünf sind
+  token-gated (`authed`, Token aus der QR-Code-URL), gehen durch
+  `writeAllowed` (Bedarf 109) und durch `showOk` (Bedarf 127).
+  Der fünfte hat als einziger eine Obergrenze in Megabyte statt in
+  Kilobyte: ein Foto ist gross, und es wird schon auf dem Telefon
+  heruntergerechnet (1600 px lange Kante) — die 4 MB sind der Deckel
+  gegen ein Telefon, das das nicht tut, nicht das erwartete Mass.
   Der vierte ist bewusst KEIN Zweig von `/checks`: der dort geschickte
   `CheckState` ist ein vollständiger Zustand und ersetzt den vorigen —
   richtig für Häkchen, falsch für eine Beobachtung, die angehängt gehört.
@@ -632,7 +638,7 @@ liefert `src/mobile/` an Smartphones im LAN. Bidirektional:
   im Renderer aus `patternRouting` gerechnet und hier nur gehalten. Eine
   zweite Traversierung auf dem Telefon wäre `zwei-rechnungen`.
 
-**Mobile ist kein Editor** — aber auch nicht read-only: die vier Wege oben
+**Mobile ist kein Editor** — aber auch nicht read-only: die fünf Wege oben
 ändern das Projekt am Desktop. Wer das anders formuliert findet, korrigiert
 es; der Dialog-Hinweis sagte bis v7.9.x fälschlich „kann nur lesen, nichts
 schreiben", was für eine Sicherheits-Entscheidung des Nutzers die falsche
@@ -873,6 +879,110 @@ Das Wichtigste in Listenform. Niemals brechen ohne expliziten Architektur-Review
     Aussage über die Schreibweise der Kategorie und nicht über das Gerät
     (ADR-002).
 
+24. **Das Raster ist EINE Zahl.** `uiStore.gridSize` — im Menü unter
+    *Einstellungen → Bearbeiten → Raster* einstellbar — ist die einzige
+    Schrittweite der Fläche. `lib/raster.ts` leitet daraus **alles** ab: die
+    Kopfhöhe der Gerätekarte, die Port-Reihe, das Innenpolster, die
+    Vorgabebreite **und das Zellmaß des Wegfinders**. Niemand schreibt eine
+    dieser Zahlen mehr hin.
+
+    Vorher waren es drei Rechnungen für dieselbe Frage: die eingestellte
+    Rastergröße, die 11er-Vielfachen in `EQUIPMENT_LAYOUT` und `CELL_SIZE = 20`
+    im A*. 20 ist kein Vielfaches von 11 — die Buchsen lagen also **per
+    Konstruktion** zwischen zwei Gitterpunkten des Wegfinders, und der
+    gezeichnete Weg holte den Rest als Stufe kurz vor der Buchse nach
+    (Nutzer-Meldung 2026-09-12: *„die Kabel gehen manchmal noch etwas unterhalb
+    von dem Ziel-Port und dann wieder hoch"*; in engen Szenen als Haken).
+
+    Zwei Regeln tragen die Ausrichtung, beide in `raster.ts` begründet:
+    - **Das Zellmaß teilt die Rastergröße** (es *ist* sie). Ein größeres Maß —
+      auch ein Vielfaches wie 2 g — lässt jede zweite Port-Reihe wieder
+      dazwischenfallen.
+    - **Die Port-Reihe ist ein GERADES Vielfaches** der Rastergröße, weil die
+      Buchse in ihrer Mitte sitzt.
+
+    Die Mindestmaße (44 / 66 / 22 / 11 / 220 px) bleiben als *Lesbarkeits-*
+    grenzen stehen und werden aufs nächste Vielfache gehoben; bei der Vorgabe
+    11 px ergibt das exakt die alten Zahlen. Die Grenzen `RASTER_MIN = 6` und
+    `RASTER_MAX = 60` sind gemessen, nicht geschätzt: eine Zelle je
+    Rasterschritt heißt quadratisch wachsende Suchfläche, und bei 2 px braucht
+    ein Plan mit 300 Kabeln rund sieben Sekunden (Tabelle in `raster.ts`).
+    Bei der Vorgabe ist das eine Raster **schneller** als die alten festen
+    20 px — 0,45 gegen 0,86 ms je Weg —, weil ein feineres Gitter geradere
+    Wege zulässt.
+
+    Wer das Zellmaß wieder von der Rastergröße löst, fällt in
+    `tests/rasterAlsEineZahl.test.ts` und `tests/anfahrtAmPort.test.ts`.
+25. **Der Breakout gehört der Buchse, nicht dem Kabel** (`types/fiber.ts`,
+    #885). Eine opticalCON QUAD führt vier Fasern, ob jemand sie patcht oder
+    nicht; ein Kabel belegt davon eine. Deshalb steht die Faser-Liste am
+    `Port` (`port.fasern`) und die Faser-NUMMER am Kabelende (`faserVon` /
+    `faserNach`, neben `terminationFrom`/`terminationTo`).
+
+    Die naheliegende Alternative — vier Kabel mit gemeinsamem
+    `multicoreName` — ist der Notbehelf, den heute jeder baut, und sie
+    verliert **den äusseren Steckverbinder**: der Plan zeigt vier
+    LC-Strippen und verschweigt, dass sie durch eine Buchse gehen. Genau
+    daran hängt, ob das Kabel passt und wieviele Stecker man braucht.
+    Ausserdem hinge die Zahl der Kabel im Plan dann an der Zahl der
+    gepatchten Fasern: eine QUAD mit einem Duplex wäre zwei Kabel und ein
+    Loch, und niemand könnte sagen, ob das Loch geplant oder vergessen ist.
+
+    **Eine Polaritäts-Methode wird gewählt, nicht mitgeliefert** — dieselbe
+    Regel wie bei den Farbnormen (Invariante 22) und aus demselben Grund:
+    TIA-568 kennt die Methoden A, B und C, und sie unterscheiden sich darin,
+    WO gekreuzt wird. `EINGEBAUTE_POLARITAETSNORMEN` ist deshalb **leer**,
+    jede Methode trägt ihre `herkunft`, und ohne gewählte Methode meldet der
+    Plan-Check die Richtung als *ungeprüft* statt zu schweigen.
+
+    **`unbestimmt` ist der dritte Zustand der Faserrolle** und kein
+    Notausgang: er ist der Zustand jedes Datenblatts, das die Richtung nicht
+    nennt. Ihn als `tx` zu führen hiesse, gegen eine erfundene Angabe zu
+    prüfen. Gemessen in `tests/fasern.test.ts` und
+    `tests/drawingChecksFasern.test.ts`; Letzterer hält auch fest, dass
+    Prüfung 17b einen Breakout **nicht** mehr für einen Steckertyp-Fehler
+    hält.
+26. **Die Vorschau IST der Export** (`types/bericht.ts`, #880). Der
+    Berichts-Editor formt eine `CsvTable` — Spalten, Gruppierung, Sortierung,
+    Filter — und Bildschirm, CSV und Papier lesen **dasselbe** Ergebnis von
+    `wendeForm(...)`. Eine Vorschau, die den Export nachbaut, stimmt am ersten
+    Tag und driftet danach; das vierte Kriterium aus #880 ist deshalb keine
+    Absprache zwischen zwei Stellen, sondern eine Eigenschaft des Aufbaus.
+
+    Gearbeitet wird **auf `CsvTable` und nicht auf einem neuen Modell**: neun
+    Listen liefern sie bereits (`lib/berichtsQuellen.ts`, die eine Registry —
+    sie lag vorher in `PacketSection.tsx`, und eine zweite Abschrift wäre beim
+    nächsten Blatt auseinandergelaufen). Ein Modell darüber wäre eine zweite
+    Beschreibung derselben Tabelle, und gedruckt würde weiter die erste.
+
+    Die Spalte wird über ihren **Kopftext** angesprochen und nicht über einen
+    Index: ein Index verrutscht, sobald eine Liste eine Spalte dazwischen
+    bekommt, und die Vorlage von gestern blendet danach die falsche aus. Den
+    Preis trägt `heileForm`: Unbekanntes fällt aus der Vorlage, Neues kommt
+    **sichtbar** dazu. Gemessen in `tests/berichtForm.test.ts`.
+27. **Die Frontplatte legt kein zweites Positionsfeld an** (`types/frontplatte.ts`,
+    #879). Gemessen, bevor gebaut wurde: `equipment.widthMm`/`heightMm`
+    (v7.9.80) sind das Mass der Platte, `port.panelPosX/Y` (#170) die Lage
+    jedes Steckers, `ConnectorSymbol` (#472) die Zeichnung. Neu ist nur die
+    Aussage, DASS ein Gerät eine Platte ist (`equipment.frontplatte`), samt
+    Art und Streifenhöhe.
+
+    Daraus folgt das vierte Kriterium aus #879 von selbst: wer im
+    Platten-Editor zieht, verschiebt den Punkt in der Rack-Ansicht und in der
+    3D-Sicht mit — es ist dasselbe Feld und keine Synchronisierung.
+
+    **Der Ausschnitt wird eingetragen, nie geraten.** Ein D-Loch misst 24 mm,
+    eine BNC-Durchführung je nach Bauform 10 bis 12,7 mm; welche gilt, steht
+    im Dokument des Herstellers. `ausschnittMm` ist deshalb optional, und ohne
+    ihn prüft `plattenBefunde` **nicht** auf Überschneidung — und sagt das:
+    eine Platte ohne Ausschnittmasse ist nicht kollisionsfrei, sie ist
+    ungeprüft. Dieselbe Regel auf dem Papier: ohne Mass zeichnet
+    `frontplattenBlatt` ein Kreuz und keinen geratenen Kreis.
+
+    Der Editor liegt in `components/Panel/` und **nicht** in `components/Rack/`:
+    dort hängt die Three.js-Grenze, und eine Anschlussdose soll kein 1,2-MB-
+    Bundle nachladen. Gemessen in `tests/frontplatte.test.ts`.
+
 ---
 
 ## 9 · Offene Architektur-Pfade
@@ -882,7 +992,7 @@ Diese Themen sind diskutiert, aber noch nicht entschieden / umgesetzt.
 ### 9.1 · Store-Slicing — **erledigt** ✓ (#308)
 
 Implementiert. `projectStore.ts` von 2178 LOC auf ~1146 reduziert durch
-20 Slices unter `store/slices/`. Siehe §3.1.1.
+24 Slices unter `store/slices/`. Siehe §3.1.1.
 
 ### 9.2 · Komponenten-Splits — **teilweise** ✓ (#306, #307)
 
@@ -935,7 +1045,7 @@ optionales Cloud-Backend (`y-websocket`, Auth/Permissions) bleiben offen.
 `vitest` ist eingerichtet (`npm test` / `npm run test:watch`); dazu kommen
 gezielte Node-Checks (`npm run test:crdt`, `npm run test:signaling`), ein
 UI-Smoke-Skript (`npm run ui:smoke`) und ein headless Drag-/Interaktions-Test
-(`npm run test:drag`, treibt den Renderer via Playwright). Bei ~185.2k LOC
+(`npm run test:drag`, treibt den Renderer via Playwright). Bei ~217.4k LOC
 bleibt der Ausbau der Abdeckung wichtig — empfohlene Schwerpunkte:
 - Snapshot-Tests auf `healProjectPositions` mit echten
   Beispiel-Projekt-JSONs.

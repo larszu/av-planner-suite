@@ -65,7 +65,48 @@ export type LoadDropKind =
   | 'equipment-circuit'
   | 'equipment-adapter'
   | 'farbnorm'
+  /** #885 — eine Faser ohne brauchbare Lage in der Buchse. */
+  | 'faser'
+  /** #885 — eine Polaritaets-Methode ohne Herkunft. */
+  | 'polaritaetsnorm'
+  /** #880 — eine Berichts-Vorlage ohne Namen oder ohne Liste. */
+  | 'berichtsvorlage'
+  /** #879 — ein Ausschnittmass, das keine positive Zahl ist. */
+  | 'ausschnitt'
+  /** #879 — eine Frontplatte mit unbekannter Art. */
+  | 'frontplatte'
+  /** #873 — eine MCP-Nachweiszeile ohne Zeitpunkt. */
+  | 'mcp-log'
   | 'anschlussListe'
+  /**
+   * #875 — eine Lagerlaenge ohne rechenbare Laenge oder mit negativer
+   * Stueckzahl.
+   *
+   * Warum sie faellt und gemeldet wird: sie geht in die Stueckelung der
+   * Kabellaeufe ein. Eine Laenge von 0 teilte jeden Lauf in unendlich viele
+   * Stuecke, eine negative Zahl machte aus einem Fehlbestand einen
+   * Ueberschuss. Beides sieht auf der Packliste aus wie eine Aussage ueber
+   * das Lager — und wer die Datei angelegt hat, soll erfahren, dass hier
+   * eine Angabe verlorenging.
+   */
+  | 'cable-stock'
+  /**
+   * #881 — eine LED-Wand ohne Panel-Typ oder ein Typ ohne rechenbares Mass.
+   *
+   * Warum sie faellt: aus ihr faellt eine Gesamtauflösung, ein Gewicht und
+   * eine Stromlast heraus. Ein Panel mit der Kantenlaenge 0 ergaebe
+   * unendlich viele Kacheln; eine Wand ohne Typ ergaebe eine Flaeche ohne
+   * Kachel. Beides steht danach auf einem Anschlussblatt.
+   */
+  | 'led-wall'
+  /**
+   * #884 — ein Foto-Datensatz ohne Id oder ohne Masse.
+   *
+   * Warum er faellt: die Fussleiste rechnet mit `bytes`, und die Galerie
+   * zeichnet mit `breite`/`hoehe`. Ein Datensatz ohne diese Zahlen ist kein
+   * Foto, sondern ein Loch, das jede Rechnung darueber still verfaelscht.
+   */
+  | 'foto'
   | 'ader'
   | 'senkenprofil'
   /**

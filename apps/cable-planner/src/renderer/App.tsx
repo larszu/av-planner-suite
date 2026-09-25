@@ -1,5 +1,8 @@
 import { hasDrops, type LoadDropKind, type LoadDropReason } from './types/loadReport'
 import { hasMobileDrops } from './types/mobileReport'
+import { v4 as uuidv4 } from 'uuid'
+import { beantworteWerkzeug } from './lib/mcpWerkzeuge'
+import { MCP_SCHREIBWERKZEUGE } from './lib/mcpSchreiben'
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 import { useIsNarrow } from './hooks/useBreakpoint'
 import { CanvasArea } from './components/Canvas/CanvasArea'
@@ -32,6 +35,8 @@ import { CableContextMenu } from './components/Canvas/CableContextMenu'
 import { LayerVisibilityChips } from './components/Canvas/LayerVisibilityChips'
 import { ExportDialog } from './components/Export/ExportDialog'
 import { AnnotationsPanel } from './components/Annotations/AnnotationsPanel'
+import { GrundrissPanel } from './components/Grundriss/GrundrissPanel'
+import { SymbolPanel } from './components/Grundriss/SymbolPanel'
 
 // v7.9.3 — Hook-Wrapper damit das Annotations-Panel auf
 // uiStore.annotationsPanelOpen reagiert. Direkt im JSX würde
@@ -53,6 +58,10 @@ import { AnnotationsPanel } from './components/Annotations/AnnotationsPanel'
 const RackEditorDialog = lazy(() =>
   import('./components/Rack/RackEditorDialog').then((m) => ({ default: m.RackEditorDialog })),
 )
+/** #916 — dritter Eintritt nach `Rack/`, genauso lazy und nur offen gemountet. */
+const Gebaeude3DDialog = lazy(() =>
+  import('./components/Rack/Gebaeude3DDialog').then((m) => ({ default: m.Gebaeude3DDialog })),
+)
 
 const AnnotationsPanelHost = () => {
   const open = useUiStore((s) => s.annotationsPanelOpen)
@@ -71,6 +80,9 @@ import { BulkConnectDialog } from './components/Canvas/BulkConnectDialog'
 import { AnalysisDialog } from './components/Analysis/AnalysisDialog'
 import { DeliveryDialog } from './components/Delivery/DeliveryDialog'
 import { AdernDialog } from './components/Power/AdernDialog'
+import { BerichtEditorDialog } from './components/Export/BerichtEditorDialog'
+import { FrontplattenDialog } from './components/Panel/FrontplattenDialog'
+import { LedWallDialog } from './components/Project/LedWallDialog'
 import { OscEmpfangPanel } from './components/ShowControl/OscEmpfangPanel'
 import { ReconcileDialog } from './components/Network/ReconcileDialog'
 import { setStreamKeyDropper } from './store/slices/deliverySlice'
@@ -176,12 +188,21 @@ const DROP_ART: Record<LoadDropKind, [key: string, de: string]> = {
   'equipment-circuit': ['app.loadReport.equipmentCircuit', 'Circuit role of a device'],
   'equipment-adapter': ['app.loadReport.equipmentAdapter', 'Adapter details of a device'],
   'farbnorm': ['app.loadReport.farbnorm', 'Colour standard without a stated origin'],
+  'faser': ['app.loadReport.faser', 'Fibre without a usable position in the socket'],
+  'polaritaetsnorm': ['app.loadReport.polaritaetsnorm', 'Polarity method without a stated origin'],
+  'berichtsvorlage': ['app.loadReport.berichtsvorlage', 'Report template without a name or a list'],
+  'ausschnitt': ['app.loadReport.ausschnitt', 'Cutout size that is not a positive number'],
+  'frontplatte': ['app.loadReport.frontplatte', 'Faceplate of an unknown kind'],
+  'mcp-log': ['app.loadReport.mcpLog', 'MCP trace line without a timestamp'],
   'anschlussListe': ['app.loadReport.anschlussListe', 'Wire bundle'],
   'ader': ['app.loadReport.ader', 'Conductor details of a cable'],
   'senkenprofil': ['app.loadReport.senkenprofil', 'Sink profile without a stated origin'],
   'pattern-check': ['app.loadReport.patternCheck', 'Visual check from the test-pattern walk'],
   'hub-switch': ['app.loadReport.hubSwitch', 'Switching action on a router'],
   'crosspoint': ['app.loadReport.crosspoint', 'Row of the planned routing'],
+  'cable-stock': ['app.loadReport.cableStock', 'Stock length of a cable type'],
+  'led-wall': ['app.loadReport.ledWall', 'LED wall or panel type'],
+  'foto': ['app.loadReport.foto', 'Photo'],
 } satisfies Record<LoadDropKind, [string, string]>
 
 const DROP_GRUND: Record<LoadDropReason, [key: string, de: string]> = {
@@ -277,6 +298,7 @@ export default function App() {
   // Nur der Offen-Zustand: der Rack-Dialog (und mit ihm Three.js) wird erst
   // gemountet und nachgeladen, wenn ihn jemand oeffnet.
   const rackEditorOpen = useUiStore((s) => s.rackEditor.open)
+  const gebaeude3dOpen = useUiStore((s) => s.gebaeude3dOpen)
   const settingsSection = useUiStore((s) => s.settingsSection)
   const setSettingsOpen = (open: boolean) =>
     open ? useUiStore.getState().openSettings() : useUiStore.getState().closeSettings()
@@ -819,6 +841,76 @@ export default function App() {
     })
   }, [addPendingChange])
 
+  // #884 — ein Foto vom Telefon. Es kommt FERTIG kleingerechnet an (das
+  // Telefon rechnet es herunter, bevor es sendet), also wird hier nur noch
+  // ein Datensatz daraus. `aufgenommenAm` bleibt leer: was ueber die
+  // Leitung kam, trug keinen Aufnahmezeitpunkt, und „jetzt" waere die
+  // Empfangszeit.
+  const addFoto = useProjectStore((s) => s.addFoto)
+  useEffect(() => {
+    if (!hasDesktopBridge) return
+    return cablePlannerApi.mobileShare.onFoto((foto) => {
+      addFoto({
+        id: uuidv4(),
+        dataUri: foto.dataUri,
+        breite: foto.breite,
+        hoehe: foto.hoehe,
+        bytes: foto.dataUri.length,
+        zeigtAuf: foto.zeigtAuf,
+        quelle: 'handy',
+        hinzugefuegtAm: new Date().toISOString(),
+        notiz: foto.notiz,
+      })
+    })
+  }, [addFoto])
+
+  // #872 — der MCP-Server fragt, dieses Fenster antwortet. Aus DEM Store,
+  // der auf dem Bildschirm steht, und mit denselben Rechnungen: ein
+  // Assistent, der eine andere Signalkette meldet als der Plan daneben, ist
+  // schlimmer als keiner.
+  useEffect(() => {
+    if (!hasDesktopBridge) return
+    return cablePlannerApi.mcp.onFrage((frage) => {
+      try {
+        // #873 — schreibende Werkzeuge gehen durch den Store-Slice (ein
+        // Aufruf, ein Undo-Schritt, eine Nachweiszeile). Lesende bleiben
+        // rein.
+        if ((MCP_SCHREIBWERKZEUGE as readonly string[]).includes(frage.werkzeug)) {
+          // #873 — EIN Aufruf, EIN Undo-Schritt. Die Klammer steht hier und
+          // nicht im Slice: `projectHistory` liest beim Laden den Store, und
+          // ein Slice, den derselbe Store zusammensetzt, saehe ihn als
+          // `undefined` (Ringschluss). Dieselbe Form wie im
+          // `BulkConnectDialog`.
+          const { daten, text } = projectHistory.transact(() =>
+            useProjectStore.getState().mcpSchreiben(frage.werkzeug, frage.args),
+          )
+          cablePlannerApi.mcp.beantworten({ id: frage.id, daten, text })
+          return
+        }
+        const { daten, text } = beantworteWerkzeug(
+          useProjectStore.getState().project,
+          frage.werkzeug,
+          frage.args,
+        )
+        cablePlannerApi.mcp.beantworten({ id: frage.id, daten, text })
+      } catch (e) {
+        // Der Fehler geht zurueck und wird nicht verschluckt: eine leere
+        // Antwort liest das Modell als „es gibt nichts".
+        cablePlannerApi.mcp.beantworten({
+          id: frage.id,
+          fehler: e instanceof Error ? e.message : 'unknown error',
+        })
+      }
+    })
+  }, [])
+
+  // #884 — die Bilder aus der Ablage nachtragen. Die Sicherungskopie im
+  // Browser traegt nur die Datensaetze; siehe `store/fotoSpeicher.ts`.
+  const fotosNachladen = useProjectStore((s) => s.fotosNachladen)
+  useEffect(() => {
+    void fotosNachladen()
+  }, [fotosNachladen])
+
   // Issue #69: dispatch user-customizable hotkeys defined in
   // Settings → Hotkeys. The undo/redo entries below intentionally
   // overlap with useUndoRedoShortcuts() — only the first matching
@@ -909,7 +1001,17 @@ export default function App() {
   }
 
   // v7.7.1 — PNG / JPEG export (canvas only, no header / title block).
+  // #914/#915 — jede Ausgabe zeigt den ganzen Plan, auch wenn auf dem Schirm
+  // Raeume ausgeblendet sind oder ein Signalweg hervorgehoben ist. Zwei
+  // Bilder warten, bis der Canvas ohne Filter gezeichnet ist.
+  const setVollansicht = useUiStore((state) => state.setVollansicht)
+  const vollansichtAn = async () => {
+    setVollansicht(true)
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+  }
+
   const handleExportImage = async (imgFormat: 'png' | 'jpeg' | 'svg' | 'dxf') => {
+    if (imgFormat !== 'dxf') await vollansichtAn()
     try {
       if (imgFormat === 'dxf') {
         // #355 — DXF wird strukturiert aus den Projektdaten erzeugt (nicht
@@ -939,6 +1041,8 @@ export default function App() {
           tone: 'error',
         },
       )
+    } finally {
+      setVollansicht(false)
     }
   }
 
@@ -1073,6 +1177,7 @@ export default function App() {
     // Bedarf 128 — wie das Thema: nur fuer die Dauer dieser Ausgabe gesetzt
     // und im `finally` zurueckgenommen. Auf dem Schirm aendert sich nichts.
     setPdfExportMonochrome(monochrom)
+    setVollansicht(true)
     setPdfProgress({ active: true, phase: 'Starte…' })
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
@@ -1121,6 +1226,7 @@ export default function App() {
     } finally {
       setPdfExportThemeOverride(null)
       setPdfExportMonochrome(false)
+      setVollansicht(false)
       setPdfProgress({ active: false })
     }
   }
@@ -1130,6 +1236,7 @@ export default function App() {
    *  printPdfBlob → unsichtbares iframe → window.print() → OS-Druckdialog. */
   const handlePrintPdf = async (theme: 'dark' | 'light' = canvasTheme) => {
     setPdfExportThemeOverride(theme)
+    setVollansicht(true)
     setPdfProgress({ active: true, phase: 'Starte…' })
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
@@ -1160,6 +1267,7 @@ export default function App() {
     } finally {
       setPdfExportThemeOverride(null)
       setPdfExportMonochrome(false)
+      setVollansicht(false)
       setPdfProgress({ active: false })
     }
   }
@@ -1469,12 +1577,20 @@ export default function App() {
       <RundownDialog />
       <DeliveryDialog />
       <AdernDialog />
+      <BerichtEditorDialog />
+      <FrontplattenDialog />
+      <LedWallDialog />
       <OscEmpfangPanel />
       <ReconcileDialog />
       <LocationBomDialog />
       {rackEditorOpen && (
         <Suspense fallback={null}>
           <RackEditorDialog />
+        </Suspense>
+      )}
+      {gebaeude3dOpen && (
+        <Suspense fallback={null}>
+          <Gebaeude3DDialog />
         </Suspense>
       )}
       <MobileShareDialog />
@@ -1513,6 +1629,8 @@ export default function App() {
       <TemplatesDialog />
       <CableContextMenu />
       <AnnotationsPanelHost />
+      <GrundrissPanel />
+      <SymbolPanel />
       <ExportDialog
         open={exportDialogOpen}
         onClose={() => setExportDialogOpen(false)}

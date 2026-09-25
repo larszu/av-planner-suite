@@ -21,13 +21,42 @@ import type { Anschluss, Farbnorm } from '../../types/conductor'
  */
 export type ConductorSlice = Pick<
   ProjectState,
-  'setFarbnormen' | 'setAnschluss' | 'setOscLauscher'
+  'setFarbnormen' | 'setAnschluss' | 'setOscLauscher' | 'setPolaritaetsnormen' | 'setPolaritaetsnormId' | 'setBerichtsvorlagen'
 >
 
 export const createConductorSlice: StateCreator<ProjectState, [], [], ConductorSlice> = (set) => ({
   setFarbnormen: (farbnormen: Farbnorm[]) =>
     set((state) => {
       const updated = { ...state.project, farbnormen }
+      scheduleProjectAutosave(updated)
+      return { project: updated }
+    }),
+
+  // #885 — dieselbe Bauform fuer die Polaritaets-Methoden, und hier im
+  // selben Slice: es ist dieselbe Sorte Aussage — eine Zuordnung, die fuer
+  // die ganze Anlage gilt und die jemand WAEHLEN muss, statt sie geschenkt
+  // zu bekommen.
+  setPolaritaetsnormen: (polaritaetsnormen) =>
+    set((state) => {
+      const updated = { ...state.project, polaritaetsnormen }
+      scheduleProjectAutosave(updated)
+      return { project: updated }
+    }),
+
+  setPolaritaetsnormId: (polaritaetsnormId) =>
+    set((state) => {
+      const updated = { ...state.project, polaritaetsnormId }
+      scheduleProjectAutosave(updated)
+      return { project: updated }
+    }),
+
+  // #880 — die Berichts-Vorlagen des Projekts. Sie stehen hier, weil sie
+  // dieselbe Bauform haben wie die Normen darueber: eine Liste am Projekt,
+  // ganz ersetzt, ohne Aufraeumen beim Loeschen — was ins Leere zeigt,
+  // heilt beim naechsten Laden.
+  setBerichtsvorlagen: (berichtsvorlagen) =>
+    set((state) => {
+      const updated = { ...state.project, berichtsvorlagen }
       scheduleProjectAutosave(updated)
       return { project: updated }
     }),

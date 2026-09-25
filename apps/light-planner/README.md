@@ -15,6 +15,21 @@
 
 ---
 
+## The web page
+
+Every push to the default branch builds this repo's page from
+`.github/workflows/pages.yml` and publishes it:
+
+**https://larszu.github.io/light-planner/**
+
+The workflow **asks the Pages API before it configures anything.** With no
+Pages site it still builds — that is a real check — and skips only the
+publishing step, with a warning and the one missing step in the run summary.
+A run that must stay red for a click nobody made teaches people to ignore red.
+
+Measured 2026-09-09: **published** — the `deploy` job ran and succeeded.
+
+---
 ## ✨ What it is
 
 **LightPlanner** is a small desktop app for quickly sketching out a lighting setup.
@@ -58,8 +73,19 @@ It is **not** a replacement for Vectorworks, or Capture. It's the tool you reach
 - LEE & Rosco CTO / CTB / frost gels
 - Add your own custom fixture — or **let the AI pull the specs from a datasheet** (paste the text, it fills the photometric/beam/power fields and shows where each value came from so you can check it)
 
+### 🗄️ Device library (devices.zumpelars.de)
+- **Settings → Device library**: server address (default `https://devices.zumpelars.de`, changeable, one click back to the default), sign-in with email or username and password, second step for accounts with two-factor sign-in, sign-out, and links to create an account or reset the password — accounts are created on the website, not in the app
+- Synced fixture profiles appear in the fixture library as their own **read-only group** with status (verified / confirmed / unconfirmed / disputed), number of confirmations and a link to the entry. Sync is incremental (`latestSeq`); entries the library hides or removes disappear locally; every profile passes the planner's profile check first, and entries that fail are counted and listed under Settings instead of being shown half-filled
+- **Submit to device library…** (sidebar footer) sends one of your custom fixtures for moderation. A link to the manufacturer's datasheet is required. If the manufacturer and model are already in the library, the app says so instead of creating a duplicate; if the community guidelines have changed, it links to `<server>/guidelines` to accept the new version
+- The synced profiles are cached on this computer, separate from the project. A fixture from the library enters a project only when it is placed, as a copy like any other, so the plan stays readable offline
+- The sign-in token is stored encrypted with Electron `safeStorage` in the desktop app (in `localStorage` in the web build) — never in the project, never in a log. Where the system offers no secure storage, the sign-in lasts until the app is closed
+- Another server address has to be allowed by the content security policy in `index.html`; the settings say so instead of failing as "offline". Changing the address signs out and starts with an empty cache
+
+**Facet format `planners.light`.** The library entry for this planner is the planner's **native fixture profile** — a `Fixture` from `src/types.ts` exactly as the fixture editor saves it: photometry, beam, optics, colour, `dmxModes` (with `origin`/`evidence`) and `specSource` (datasheet evidence per field). The local `id` is not sent (the server drops it anyway); an imported profile gets the stable id `devlib:<slug>`. Manufacturer and name come from the library's shared core (`manufacturer`, `model`); wattage and weight from the facet, falling back to `powerWatts`/`weightKg`. The core category is `Lighting`; the planner's own category stays in the facet. Submitting and importing use the same two functions in `src/core/deviceLibrary.ts`, and `npm run library:check` holds the round trip. The client `src/core/deviceLibraryClient.ts` is an unchanged copy from `larszu/av-device-library`.
+
 ### 📋 Patch & paperwork
 - Auto-number the rig and auto-patch DMX (universe / address, footprint-aware, with clash detection)
+- **Operating modes decide the footprint**: a moving head occupies a different number of channels per mode, so the mode is part of the fixture and the patch follows it. A device whose mode has not been chosen gets *no* address and says so — an unknown footprint is not a footprint of zero, and a single channel count out of place shifts every address after it. Each channel count carries where it came from (device, console patch, GDTF, by hand, estimate); a count carried over from the old single-number field counts as an estimate until someone confirms it
 - Equipment list, instrument schedule and an electrical-load summary (kW, A per phase, 16 A circuits) — export to CSV
 - Trusses / hanging positions you can draw and label
 - **Return from the console**: load the desk's patch export (CSV/TSV) and hold it against the plan — re-addressed, renamed, retyped, only-on-the-desk, only-in-the-plan. One-way on purpose: nothing is written back, because the plan carries the intent and the desk the state after load-in
@@ -72,6 +98,8 @@ It is **not** a replacement for Vectorworks, or Capture. It's the tool you reach
 ### 💾 Save / open · export
 - One project file with everything in it — fixtures, trusses, and the calibrated building plan — in local storage, no cloud
 - File menu with undo / redo, and export of the current view as PNG, JPG or PDF
+- **Print the light plot as PDF on a real sheet** — A4 to A0+, portrait or landscape, margin, optional title block with legend and scale bar. The plan is placed centred and never distorted, so the scale bar on it stays true. "Original" keeps the old behaviour: the page is as large as the drawing.
+- Every list you can export as CSV is also available as a typeset PDF (searchable text, not a photo of a table)
 
 ---
 
@@ -101,17 +129,22 @@ argument to point a script somewhere else.
 
 Electron · React · TypeScript · Three.js · Vite · electron-builder.
 
-**Source language:** `en`. The German string in `t('key', 'Deutsche Form')` is
+**Source language:** `en`. The English string in `t('key', 'English text')` is
 the source text — it is what appears when a key has no translation, so it is
-the text a contributor writes first. English lives in the dictionary under
-`src/i18n/`.
+the text a contributor writes first. Translations live under `src/i18n/`, one
+file per language (`de.ts` today).
 
-This is a property of *this repository*, decided on 2026-09-08 (E-17/E-20):
-`cable-planner` is German-source as well, `multicam-planner` and
-`sony-camera-bridge` are English-source. Turning the direction around later
-means touching every string again for no visible gain, so it is not a
-formatting preference — `npm run lang:check` measures the fallbacks and fails
-on any line in the other language, and the machine-readable copy of this
+**Decided on 2026-09-09 (E-28), and it replaces E-17/E-20:** *every* repository
+in the suite is English-source. German is the first translation; further
+languages of the target audience follow. Before E-28 the source language was a
+property of each repository — this one and `cable-planner` were German-source —
+which meant a German-only contributor and an English-only one wrote in
+different places depending on the repo.
+
+Adding a language touches no logic: drop a `src/i18n/<code>.ts` next to `de.ts`,
+register it in `src/i18n/index.ts`, done. `npm run lang:check` measures the
+fallbacks, fails on any line in the other language, and separately counts
+visible text that was never wrapped at all. The machine-readable copy of this
 declaration sits in `package.json` under `avplan.sourceLanguage`.
 
 ---

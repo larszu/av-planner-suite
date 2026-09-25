@@ -23,6 +23,18 @@ export type ConnectorType =
    *  Touring/Stage-Variante. */
   | 'LEMO 3K.93C (SMPTE 304M)'
   | 'Neutrik Dragonfly (SMPTE 304M)'
+  /**
+   * #885 — die beiden Breakout-Buchsen von Neutrik: aussen EIN Stecker,
+   * innen zwei bzw. vier Fasern.
+   *
+   * Sie stehen als eigene Typen und nicht als Freitext in `fiberConnector`,
+   * weil die Faserzahl an ihnen haengt: „opticalCON" allein sagt nicht, ob
+   * zwei oder vier Fasern durchgehen — und genau danach fragt jede
+   * Patchliste. Der Breakout selbst steht in `port.fasern`; diese Typen
+   * sagen, was aussen sitzt.
+   */
+  | 'Neutrik opticalCON DUO'
+  | 'Neutrik opticalCON QUAD'
   | 'Wireless/RF'
   | 'VGA'
   | 'DVI'
@@ -137,6 +149,7 @@ export const ALL_CONNECTOR_TYPES: ConnectorType[] = [
   'DisplayPort', 'VGA', 'DVI', 'USB', 'USB-C',
   'Triax', 'Triax (Damar & Hagen)', 'Triax (Fischer)',
   'LEMO 3K.93C (SMPTE 304M)', 'Neutrik Dragonfly (SMPTE 304M)',
+  'Neutrik opticalCON DUO', 'Neutrik opticalCON QUAD',
   'F-Connector', 'DB9', 'DB25', 'Wireless/RF',
   'DMX 5-pol (XLR)', 'DMX 3-pol (XLR)', 'Cinch/RCA', 'SCART', 'S-Video', 'TT/Bantam', 'Mini-BNC', 'Micro-BNC',
   'IEC 230V', 'PowerCON', 'Schuko 230V', 'C7 Eurostecker',
@@ -393,6 +406,17 @@ export interface Port {
    */
   fiberClass?: string
   /**
+   * #885 — der Breakout dieser Buchse: welche Fasern liegen dahinter.
+   *
+   * Leer/fehlend heisst „nicht aufgeteilt" und ist der Normalfall — eine
+   * LC-Duplex-Buchse braucht das nicht. Eine opticalCON QUAD schon: dort
+   * haengt an der Faser-Nummer, welches Kabel Licht fuehrt.
+   *
+   * Warum die Liste hier steht und nicht als vier Kabel im Plan, steht im
+   * Kopf von `types/fiber.ts`.
+   */
+  fasern?: import('./fiber').Faser[]
+  /**
    * v7.9.77 / #170 — Manual position override of the port-dot on the
    * device's rack-panel (front oder rear). Normalized 0..1 across the
    * panel face (0=links/oben, 1=rechts/unten). Wenn nicht gesetzt,
@@ -402,6 +426,18 @@ export interface Port {
    */
   panelPosX?: number
   panelPosY?: number
+  /**
+   * #879 — Durchmesser des Ausschnitts in Millimetern, den dieser Stecker
+   * in der Frontplatte braucht.
+   *
+   * EINGETRAGEN, nie geraten. Ein D-Loch misst 24 mm, eine BNC-Durchfuehrung
+   * je nach Bauform 10 bis 12,7 mm — welche gilt, steht im Dokument des
+   * Herstellers und nicht in diesem Programm. Ohne die Angabe prueft
+   * `plattenBefunde` diesen Stecker NICHT auf Ueberschneidung und sagt das:
+   * eine Platte ohne Ausschnittmasse ist nicht kollisionsfrei, sie ist
+   * ungeprueft.
+   */
+  ausschnittMm?: number
   /**
    * v7.9.81 / #170 — Auf welcher Rack-Face (Front/Rear) der Port
    * physisch sitzt. Unabhängig davon ob Input/Output (das ist die
@@ -639,7 +675,24 @@ export interface EquipmentItem {
   /** Tracks how the device entered the project — used by the import
    *  dialog's diff view and by Rentman / GraphML re-imports so we know
    *  which subset of devices is replaceable. */
-  importSource?: 'graphml' | 'rentman' | 'netbox' | 'manual'
+  importSource?: 'graphml' | 'rentman' | 'netbox' | 'multicam' | 'manual'
+  /** #909 — Id der Kamera im MultiCam-Plan (`camera-list`). Stabile
+   *  Identitaet ueber Import-Laeufe: der naechste Import aktualisiert dieses
+   *  Geraet, statt ein zweites anzulegen. */
+  multicamId?: string
+  /** #909 — Projekt-Id des MultiCam-Plans, aus dem die Kamera stammt. Trennt
+   *  `cam-1` aus zwei verschiedenen Plaenen; fehlt sie (Altdatei v1), gilt
+   *  die Kamera-Id allein. */
+  multicamProjectId?: string
+  /** #909 — der letzte Import fand diese Kamera im MultiCam-Plan nicht mehr.
+   *  Markiert statt geloescht: sie kann verkabelt sein, und das Kabel waere
+   *  sonst still weg. */
+  multicamRemoved?: boolean
+  /** #910 — Optik der Kamera, wie der MultiCam-Plan sie gesetzt hat. In der
+   *  Suite kommt sie aus der Kamera-Gruppe des Seeds
+   *  (`kamera.lens/focalMm/hfovDeg`) — der Kameraplan fuehrt sie, dieser Plan
+   *  zeigt sie nur (siehe `fachdaten.ts`, GETEILT). */
+  optik?: KameraOptik
   x: number
   y: number
   width: number
@@ -731,10 +784,6 @@ export interface EquipmentItem {
    * steht nur, DASS sie benutzt wird.
    */
   hausKlinkeId?: string
-  /** #910 — Optik der Kamera. In der Suite aus der Kamera-Gruppe des Seeds
-   *  (`kamera.lens/focalMm/hfovDeg`) — der Kameraplan fuehrt sie, dieser Plan
-   *  zeigt sie nur (siehe `fachdaten.ts`, GETEILT). */
-  optik?: KameraOptik
   dmxProfil?: import('../lib/dmx').DmxProfil
   /** Welcher Modus gefahren wird (Id aus `dmxProfil.modi`). */
   dmxModusId?: string
@@ -1044,6 +1093,17 @@ export interface EquipmentItem {
    *  Beeinflusst die Darstellung (kleines "PP"-Badge, thin-depth in 3D
    *  default) und das Filtering in den View-Modi. */
   isPatchPanel?: boolean
+  /**
+   * #879 — dieses Geraet IST eine Frontplatte (Anschlussfeld, Wanddose,
+   * Stagebox).
+   *
+   * Das Mass der Platte steht in `widthMm`/`heightMm` (v7.9.80) und die Lage
+   * jedes Steckers in `panelPosX/Y` (#170) — beides gab es schon, und ein
+   * zweites Positionsfeld waere eine zweite Wahrheit ueber dieselbe Bohrung.
+   * Neu ist nur die Aussage, DASS es eine Platte ist, samt Art und
+   * Streifenhoehe.
+   */
+  frontplatte?: import('./frontplatte').Frontplatte
   /** v7.9.75 / #170 — Rack-Shelf-Marker. Geräte mit diesem Flag rendern
    *  als flache Plattform im Rack; auf sie können Non-19"-Items "gestellt"
    *  werden. Die HE-Höhe bleibt die volle Höhe (1HU = klassisches Single-

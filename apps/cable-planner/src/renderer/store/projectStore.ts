@@ -5,15 +5,20 @@ import { create, type StateCreator } from 'zustand'
 import type { Connection } from 'reactflow'
 import type { Cable } from '../types/cable'
 import type { EquipmentItem, EquipmentTemplate, GroupPreset, Port } from '../types/equipment'
-import type { LocationFrame } from '../types/location'
+import type { Floor, LocationFrame } from '../types/location'
+import { etageVon, heileEtagen } from '../lib/etagen'
 import type { CablePlannerProject } from '../types/project'
 import { useUiStore } from './uiStore'
 import { defaultProject, isProjectLocked, sanitizePort, touchProject } from './projectStoreHelpers'
 import { createLocationSlice } from './slices/locationSlice'
 import { createCableSlice } from './slices/cableSlice'
 import { createAnnotationSlice } from './slices/annotationSlice'
+import { createGrundrissSlice } from './slices/grundrissSlice'
 import { createSourceIdentitySlice } from './slices/sourceIdentitySlice'
 import { createDeliverySlice } from './slices/deliverySlice'
+import { createCableStockSlice } from './slices/cableStockSlice'
+import { createMcpSlice } from './slices/mcpSlice'
+import { createFotoSlice } from './slices/fotoSlice'
 import { createConductorSlice } from './slices/conductorSlice'
 import { createCrewSlice } from './slices/crewSlice'
 import { createAddressTemplateSlice } from './slices/addressTemplateSlice'
@@ -113,6 +118,10 @@ import {
   normalisiereAnschluss,
   normalisiereFarbnorm,
 } from '../types/conductor'
+import { normalisiereFaser, normalisierePolaritaetsnorm } from '../types/fiber'
+import { normalisiereBerichtsvorlage } from '../types/bericht'
+import { normalisiereFrontplatte } from '../types/frontplatte'
+import { MCP_LOG_MAX, normalisiereMcpEintrag } from '../types/mcpLog'
 import { pruefeVorlage } from '../lib/textProtocol'
 import { pruefeCompanion } from '../lib/companionControl'
 
@@ -291,6 +300,9 @@ export interface ProjectState {
   setCanvasState: (x: number, y: number, zoom: number) => void
   addEquipment: (equipment: Omit<EquipmentItem, 'id'>) => void
   importEquipment: (equipment: EquipmentItem[]) => void
+  /** #909 — Abgleich eines Imports: neue Geraete anhaengen und vorhandene
+   *  patchen, in EINEM Schritt (ein Undo, ein Autosave). */
+  syncImportedEquipment: (neu: EquipmentItem[], patches: Array<{ id: string; patch: Partial<EquipmentItem> }>) => void
   /** #414 — Fügt KI-generierte Geräte + Kabel atomar ein, ohne IDs neu zu
    *  vergeben (die Kabel referenzieren die mitgelieferten IDs). */
   insertGeneratedPlan: (equipment: EquipmentItem[], cables: import('../types/cable').Cable[]) => void
@@ -398,6 +410,12 @@ export interface ProjectState {
   addLocation: (partial?: Partial<LocationFrame>) => void
   addLocationAroundEquipment: (equipmentIds: string[], partial?: Partial<LocationFrame>) => void
   updateLocation: (id: string, patch: Partial<LocationFrame>) => void
+  /** #911 — die Etagenliste ersetzen (Reihenfolge, Hoehen, neue Etagen). */
+  setFloors: (floors: Floor[]) => void
+  /** #911 — Etage umbenennen; die Rahmen darauf ziehen mit. */
+  renameFloor: (alt: string, neu: string) => void
+  /** #911 — Etage entfernen; die Rahmen darauf verlieren ihre Etagen-Angabe. */
+  removeFloor: (name: string) => void
   deleteLocation: (id: string) => void
   deleteLocationWithContents: (id: string) => void
   moveLocationWithContents: (id: string, dx: number, dy: number, containedEquipmentIds: string[]) => void
@@ -431,6 +449,11 @@ export interface ProjectState {
   renumberCables: () => void
   deleteEquipment: (id: string) => void
   deleteCable: (id: string) => void
+  /**
+   * #876 — einen Adapter in ein bestehendes Kabel einsetzen: aus einem Lauf
+   * werden zwei, dazwischen steht ein Geraet. Ein `set`, ein Undo-Schritt.
+   */
+  adapterEinsetzen: (kabelId: string, spec: import('../types/adapter').AdapterSpec) => void
   deleteSelected: () => void
   reconnectCable: (
     cableId: string,
@@ -579,6 +602,15 @@ export interface ProjectState {
   addAnnotation: (annotation: import('../types/project').ProjectAnnotation) => void
   updateAnnotation: (id: string, patch: Partial<import('../types/project').ProjectAnnotation>) => void
   removeAnnotation: (id: string) => void
+  /** Hallenplan unter dem Canvas; `null` entfernt ihn. */
+  setGrundriss: (g: import('../types/grundriss').Grundriss | null) => void
+  updateGrundriss: (patch: Partial<import('../types/grundriss').Grundriss>) => void
+  kalibriereGrundriss: (k: import('../types/grundriss').PlanKalibrierung) => void
+  addSymbol: (s: import('../types/symbol').PlatziertesSymbol) => void
+  updateSymbol: (id: string, patch: Partial<import('../types/symbol').PlatziertesSymbol>) => void
+  removeSymbol: (id: string) => void
+  addSymbolDef: (d: import('../types/symbol').SymbolDef) => void
+  removeSymbolDef: (id: string) => void
   /** ADR-001 — Signalquellen-Rolle anlegen; liefert die (ggf. erzeugte) Id,
    *  oder undefined wenn nichts angelegt wurde (leerer Name). */
   addSourceIdentity: (
@@ -782,7 +814,39 @@ export interface ProjectState {
    *  Liefert die Anzahl neu vergebener IDs je Sorte. */
   assignDocIds: () => { cables: number; equipment: number }
   /** B-45 — die Farbnormen des Projekts ersetzen. */
+  /** #875 — die verfuegbaren Lagerlaengen je Kabeltyp, als ganze Liste. */
+  setCableStock: (cableStock: import('../types/cable').CableStockEntry[]) => void
+  /** #881 — die Panel-Typen des Projekts, als ganze Liste. */
+  setLedPanelTypes: (typen: import('../types/ledWall').LedPanelType[]) => void
+  /** #881 — die geplanten LED-Waende, als ganze Liste. */
+  setLedWalls: (waende: import('../types/ledWall').LedWall[]) => void
+  /** #884 — ein Foto aufnehmen. */
+  addFoto: (foto: import('../types/foto').Foto) => void
+  /** #884 — ein Foto entfernen. */
+  removeFoto: (id: string) => void
+  /** #884 — die Bilddaten aus der Ablage nachtragen (nach einem Absturz). */
+  fotosNachladen: () => Promise<void>
+  /** #884 — Notiz oder Ziel eines Fotos aendern. */
+  updateFoto: (
+    id: string,
+    patch: Partial<Pick<import('../types/foto').Foto, 'notiz' | 'zeigtAuf'>>,
+  ) => void
   setFarbnormen: (farbnormen: import('../types/conductor').Farbnorm[]) => void
+  /** #885 — die Polaritaets-Methoden und die gewaehlte. */
+  setPolaritaetsnormen: (normen: import('../types/fiber').Polaritaetsnorm[]) => void
+  /** #880 — die Berichts-Vorlagen dieses Projekts ersetzen. */
+  setBerichtsvorlagen: (v: import('../types/bericht').Berichtsvorlage[]) => void
+  /**
+   * #873 — ein schreibendes MCP-Werkzeug ausfuehren.
+   *
+   * Ein Aufruf ist ein Undo-Schritt, und er schreibt eine Nachweiszeile in
+   * `project.mcpLog`. Was erlaubt ist, steht in `lib/mcpSchreiben.ts`.
+   */
+  mcpSchreiben: (
+    werkzeug: string,
+    args: Record<string, unknown>,
+  ) => { ok: boolean; text: string; daten: Record<string, unknown> }
+  setPolaritaetsnormId: (id: string | undefined) => void
   /** B-45 — die Anschluss des Projekts ersetzen. */
   setAnschluss: (anschlussListe: import('../types/conductor').Anschluss[]) => void
   /** E-23 — die Lauscher-Einstellung dieses Projekts. */
@@ -905,6 +969,67 @@ const healProjectPositions = (
   // fremden Angabe lauscht, ist einer, den hier niemand wollte.
   const oscLauscher = normalisiereOscLauscher(project.oscLauscher)
 
+  // #875 — die Lagerlaengen. Eine Laenge, die nicht rechenbar ist oder bei
+  // 0 liegt, faellt: sie teilte einen Lauf in unendlich viele Stuecke. Eine
+  // negative Stueckzahl faellt ebenfalls — sie machte aus einem Fehlbestand
+  // einen Ueberschuss. Was bleibt, ist entweder eine Zahl oder ausdruecklich
+  // keine (`count` fehlt = nicht gezaehlt, und das ist nicht null).
+  const cableStock = (project.cableStock ?? []).filter(
+    (e) =>
+      !!e &&
+      typeof e.type === 'string' &&
+      Number.isFinite(e.lengthM) &&
+      e.lengthM > 0 &&
+      (e.count === undefined || (Number.isFinite(e.count) && e.count >= 0)),
+  )
+  if ((project.cableStock?.length ?? 0) !== cableStock.length) {
+    onDrop?.({ kind: 'cable-stock', reason: 'invalid-value', label: '' })
+  }
+
+  // #881 — die Panel-Typen und die Waende. Die TYPEN zuerst: eine Wand, die
+  // auf einen geloeschten Typ zeigt, hat keine Kachel und damit keine
+  // Auflösung, kein Gewicht und keine Last — sie faellt mit.
+  const ledPanelTypes = (project.ledPanelTypes ?? []).filter(
+    (t) =>
+      !!t &&
+      typeof t.id === 'string' &&
+      t.id !== '' &&
+      t.sizeMm?.w > 0 &&
+      t.sizeMm?.h > 0 &&
+      t.pixels?.x > 0 &&
+      t.pixels?.y > 0,
+  )
+  const panelIds = new Set(ledPanelTypes.map((t) => t.id))
+  const ledWalls = (project.ledWalls ?? []).filter(
+    (w) => !!w && typeof w.id === 'string' && panelIds.has(w.panelTypeId),
+  )
+  if (
+    (project.ledPanelTypes?.length ?? 0) !== ledPanelTypes.length ||
+    (project.ledWalls?.length ?? 0) !== ledWalls.length
+  ) {
+    onDrop?.({ kind: 'led-wall', reason: 'invalid-value', label: '' })
+  }
+
+  // #884 — die Fotos. Ein Datensatz ohne Id oder ohne Masse faellt: die
+  // Fussleiste rechnet mit `bytes`, die Galerie zeichnet mit `breite`/`hoehe`,
+  // und ein Loch darin verfaelscht jede Rechnung darueber still.
+  //
+  // Die BILDDATEN duerfen fehlen und das ist kein Mangel: die
+  // Sicherungskopie im Browser traegt sie nicht (siehe `lib/fotoMasse.ts`),
+  // sie kommen aus der Ablage nach.
+  const fotos = (project.fotos ?? []).filter(
+    (f) =>
+      !!f &&
+      typeof f.id === 'string' &&
+      f.id !== '' &&
+      Number.isFinite(f.breite) &&
+      Number.isFinite(f.hoehe) &&
+      typeof f.dataUri === 'string',
+  )
+  if ((project.fotos?.length ?? 0) !== fotos.length) {
+    onDrop?.({ kind: 'foto', reason: 'invalid-value', label: '' })
+  }
+
   // B-45 — die Farbnormen und die Anschluss. Die Normen ZUERST: ein Anschluss
   // mit einem Zeiger auf eine geloeschte Norm verliert ihn, und die Kabel
   // brauchen anschliessend die gueltigen Anschluss-Ids. Eine Norm ohne
@@ -918,6 +1043,43 @@ const healProjectPositions = (
     onDrop?.({ kind: 'farbnorm', reason: 'invalid-value', label: '' })
   }
   const normIds = new Set(farbnormen.map((n) => n.id))
+
+  // #873 — der MCP-Nachweis. Eine Zeile ohne Zeitpunkt faellt weg: sie waere
+  // keine Auskunft darueber, WANN etwas passiert ist, und genau das ist der
+  // Zweck der Liste.
+  const mcpLog = (project.mcpLog ?? [])
+    .map(normalisiereMcpEintrag)
+    .filter((e): e is import('../types/mcpLog').McpEintrag => !!e)
+    .slice(-MCP_LOG_MAX)
+  if ((project.mcpLog?.length ?? 0) !== mcpLog.length) {
+    onDrop?.({ kind: 'mcp-log', reason: 'invalid-value', label: '' })
+  }
+
+  // #880 — die Berichts-Vorlagen des Projekts. Eine ohne Namen oder ohne
+  // Liste faellt weg: sie stuende in der Auswahl und formte nichts.
+  const berichtsvorlagen = (project.berichtsvorlagen ?? [])
+    .map(normalisiereBerichtsvorlage)
+    .filter((v): v is import('../types/bericht').Berichtsvorlage => !!v)
+  if ((project.berichtsvorlagen?.length ?? 0) !== berichtsvorlagen.length) {
+    onDrop?.({ kind: 'berichtsvorlage', reason: 'invalid-value', label: '' })
+  }
+
+  // #885 — dieselbe Bauform fuer die Polaritaets-Methoden: ohne `herkunft`
+  // faellt eine weg. Sie stuende sonst in der Auswahl, ohne dass jemand
+  // nachlesen kann, ob sie fuer diese Anlage gilt — und beurteilte trotzdem
+  // jede Faser.
+  const polaritaetsnormen = (project.polaritaetsnormen ?? [])
+    .map(normalisierePolaritaetsnorm)
+    .filter((n): n is import('../types/fiber').Polaritaetsnorm => !!n)
+  if ((project.polaritaetsnormen?.length ?? 0) !== polaritaetsnormen.length) {
+    onDrop?.({ kind: 'polaritaetsnorm', reason: 'invalid-value', label: '' })
+  }
+  // Ein Zeiger auf eine geloeschte Methode verliert sich — sonst stuende im
+  // Projekt eine Wahl, die es nicht gibt, und die Pruefung liefe gegen
+  // `undefined` und schwiege.
+  const polaritaetsnormId = polaritaetsnormen.some((n) => n.id === project.polaritaetsnormId)
+    ? project.polaritaetsnormId
+    : undefined
   const anschlussListe = (project.anschlussListe ?? [])
     .map((b) => normalisiereAnschluss(b, normIds))
     .filter((b): b is import('../types/conductor').Anschluss => !!b)
@@ -1038,6 +1200,7 @@ const healProjectPositions = (
     project as CablePlannerProject & { greengoConfig?: GreenGoConfig },
   ) as CablePlannerProject
 
+  const etagen = heileEtagen(project.floors, project.locations ?? [])
   return {
     ...ohneAltesFeld,
     ...(intercom ? { intercom } : {}),
@@ -1125,9 +1288,45 @@ const healProjectPositions = (
         const neu = ports.map((p) => {
           const typ = heileSteckertyp(p.connectorType)
           const art = heileSteckertyp(p.type)
-          if (typ === p.connectorType && art === p.type) return p
+          // #885 — der Breakout. Eine Faser ohne brauchbare Lage faellt weg:
+          // sie waere nicht adressierbar, und eine geratene Lage stuende
+          // danach im Plan wie eine Angabe des Datenblatts. Zwei Fasern auf
+          // derselben Lage sind KEIN Wegwurf — das ist ein Befund, und den
+          // zeigt `breakoutBefunde`, statt ihn hier stillschweigend
+          // aufzuraeumen.
+          const rohFasern = (p as { fasern?: unknown }).fasern
+          let fasern = p.fasern
+          if (Array.isArray(rohFasern)) {
+            const geheilt = rohFasern
+              .map((f, i) => normalisiereFaser(f, i))
+              .filter((f): f is import('../types/fiber').Faser => !!f)
+            if (geheilt.length !== rohFasern.length) {
+              onDrop?.({ kind: 'faser', reason: 'invalid-value', label: p.name })
+            }
+            fasern = geheilt.length > 0 ? geheilt : undefined
+          } else if (rohFasern !== undefined) {
+            onDrop?.({ kind: 'faser', reason: 'invalid-value', label: p.name })
+            fasern = undefined
+          }
+          // #879 — der Ausschnitt. Was keine positive Zahl ist, faellt weg:
+          // eine 0 stuende auf der Bohrschablone als Loch ohne Durchmesser,
+          // und eine negative Zahl machte aus einer Ueberschneidung einen
+          // Abstand.
+          const rohMass = (p as { ausschnittMm?: unknown }).ausschnittMm
+          let ausschnittMm = p.ausschnittMm
+          if (rohMass !== undefined && !(Number(rohMass) > 0)) {
+            onDrop?.({ kind: 'ausschnitt', reason: 'invalid-value', label: p.name })
+            ausschnittMm = undefined
+          }
+          if (
+            typ === p.connectorType &&
+            art === p.type &&
+            fasern === p.fasern &&
+            ausschnittMm === p.ausschnittMm
+          )
+            return p
           veraendert = true
-          return { ...p, connectorType: typ, type: art }
+          return { ...p, connectorType: typ, type: art, fasern, ausschnittMm }
         })
         return veraendert ? neu : ports
       }
@@ -1135,6 +1334,21 @@ const healProjectPositions = (
       const neueAus = heilePorts(item.outputs)
       if (neueEin !== item.inputs || neueAus !== item.outputs) {
         item = { ...item, inputs: neueEin, outputs: neueAus }
+      }
+
+      // #879 — die Frontplatte. Eine Art, die dieser Stand nicht kennt,
+      // faellt WEG statt stehenzubleiben: die Oberflaeche zeigte sonst ein
+      // leeres Auswahlfeld, und die Liste im Plan gruppierte nach einem Wort,
+      // das niemand kennt. Die MASSE bleiben (`widthMm`/`heightMm`) — sie
+      // gehoeren dem Geraet und nicht der Platte.
+      if (item.frontplatte !== undefined) {
+        const geheilt = normalisiereFrontplatte(item.frontplatte)
+        if (!geheilt) {
+          onDrop?.({ kind: 'frontplatte', reason: 'invalid-value', label: item.name })
+          item = (({ frontplatte: _weg, ...rest }) => rest)(item) as EquipmentItem
+        } else if (geheilt !== item.frontplatte) {
+          item = { ...item, frontplatte: geheilt }
+        }
       }
 
       // Schaltbild (Strom, 2026-09-08). Eine Bauart, die dieser Stand nicht
@@ -1373,6 +1587,17 @@ const healProjectPositions = (
           patched = { ...patched, adern: geheilt }
         }
       }
+      // #885 — die belegte Faser je Ende. Was keine ganze Zahl ab 1 ist,
+      // faellt weg: eine `0` oder eine `2.5` stuende in der Patchliste als
+      // Faser-Nummer, und danach sucht jemand am Breakout nach ihr.
+      for (const feld of ['faserVon', 'faserNach'] as const) {
+        const wert = patched[feld]
+        if (wert === undefined) continue
+        if (!Number.isInteger(wert) || wert < 1) {
+          onDrop?.({ kind: 'faser', reason: 'invalid-value', label: patched.name || patched.id })
+          patched = { ...patched, [feld]: undefined }
+        }
+      }
       // Ein Anschluss-Zeiger ins Leere faellt WEG. Er saehe in der Anzeige aus
       // wie eine Zugehoerigkeit — und die Pruefung, die das fehlende
       // Gegenstueck finden soll, faende ein Anschluss, das es nicht gibt.
@@ -1395,6 +1620,7 @@ const healProjectPositions = (
             fromY: r(o.fromY),
             toX: r(o.toX),
             toY: r(o.toY),
+            ...(o.weg ? { weg: o.weg.map((w) => ({ x: r(w.x), y: r(w.y) })) } : {}),
           },
         }
       }
@@ -1418,7 +1644,13 @@ const healProjectPositions = (
       width: snap > 0 ? Math.ceil(loc.width / snap) * snap : Math.round(loc.width),
       height: snap > 0 ? Math.ceil(loc.height / snap) * snap : Math.round(loc.height),
       moveContents: loc.moveContents !== false,
+      // #911 — die Schreibweise der Liste gilt: „1.og" am Rahmen und „1.OG"
+      // in der Liste sind dieselbe Etage, die Auswahl zeigt nur eine davon.
+      ...(loc.floor !== undefined ? { floor: etageVon(loc, etagen)?.name } : {}),
     })),
+    // #911 — die Etagen. Freitext-Etagen alter Rahmen werden zur Liste, ohne
+    // dass ein Rahmen seine Angabe verliert (lib/etagen.ts).
+    floors: etagen,
     // #412 — Revisionen sind optional; alte Projekte heilen zu [].
     revisions: project.revisions ?? [],
     // Festinstallation — Änderungsprotokoll ist optional; alte Projekte
@@ -1432,8 +1664,19 @@ const healProjectPositions = (
     tallyPositions,
     patternChecks,
     hubSwitches,
+    // #875 — dito: leere Liste, nicht `undefined`.
+    cableStock,
+    // #881 — dito.
+    ledPanelTypes,
+    ledWalls,
+    // #884 — dito.
+    fotos,
     // B-45 — dito: leere Liste, nicht `undefined`.
     farbnormen,
+    berichtsvorlagen,
+    mcpLog,
+    polaritaetsnormen,
+    polaritaetsnormId,
     // E-23 — dito.
     oscLauscher,
     anschlussListe,
@@ -1680,8 +1923,12 @@ const buildProjectStore = (
   ...createLocationSlice(set, get, store),
   ...createCableSlice(set, get, store),
   ...createAnnotationSlice(set, get, store),
+  ...createGrundrissSlice(set, get, store),
   ...createSourceIdentitySlice(set, get, store),
   ...createDeliverySlice(set, get, store),
+  ...createCableStockSlice(set, get, store),
+  ...createMcpSlice(set, get, store),
+  ...createFotoSlice(set, get, store),
   ...createConductorSlice(set, get, store),
   ...createCrewSlice(set, get, store),
   ...createAddressTemplateSlice(set, get, store),
@@ -1827,6 +2074,10 @@ const buildProjectStore = (
         equipment: slice.equipment,
         cables: slice.cables,
         locations: slice.locations,
+        // #911 — der Abgleich traegt nur Rahmen, nicht die Etagenliste. Eine
+        // Etage, die ein Mitarbeiter angelegt hat, kommt so wenigstens als
+        // Name in die Liste (ohne Hoehe), statt am Rahmen ins Leere zu zeigen.
+        floors: heileEtagen(state.project.floors, slice.locations),
       },
     })),
   importGraphml: (payload) => {
@@ -2019,6 +2270,14 @@ const buildProjectStore = (
         // Haupt-/Backup-Paar zu behaupten, das niemand erklaert hat — und
         // zwei Geraete auf dieselbe Tally-Adresse zu setzen.
         sourceIdentityId: undefined,
+        // #909 — die MultiCam-Herkunft ebenso wenig. Mit ihr gewaenne beim
+        // naechsten Kamera-Import das Original den Abgleich, und die Kopie
+        // stuende als „nicht mehr im MultiCam-Plan" da, ohne je wieder
+        // nachgezogen zu werden.
+        multicamId: undefined,
+        multicamProjectId: undefined,
+        multicamRemoved: undefined,
+        importSource: item.importSource === 'multicam' ? undefined : item.importSource,
       }
     })
     const newCables: Cable[] = []

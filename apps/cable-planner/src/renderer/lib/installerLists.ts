@@ -12,12 +12,15 @@
  * Spaltennamen orientieren sich an TIA-568-Pull-Schedule / Cable-Schedule.
  * Alles ist seiteneffektfrei und damit headless testbar.
  */
+import { ortVonGeraet } from './kabelOrt'
 import type { CablePlannerProject } from '../types/project'
 import type { Cable } from '../types/cable'
 import type { EquipmentItem, Port } from '../types/equipment'
 import { INSTALL_STATUS_LABEL } from '../types/lifecycle'
 import { aderKurz } from '../types/conductor'
 import { cableLabelId } from './docIds'
+import { rowSplit, shortfallLabel, splitLabel } from './cableSplit'
+import type { SplitResult, StockShortfall } from './cableSplit'
 import { portDisplayLabel } from './portLabel'
 import type { CsvCell, CsvTable } from './csv'
 import { csvFromTable, type DocumentStamp } from './documentStamp'
@@ -70,8 +73,13 @@ export interface PullListRow {
   labelId: string
   cableNumber: string
   name: string
+  /** #912 — Etage und Raum je Ende, aus der Lage im Rahmen abgeleitet. */
+  fromFloor: string
+  fromRoom: string
   fromDevice: string
   fromPort: string
+  toFloor: string
+  toRoom: string
   toDevice: string
   toPort: string
   type: string
@@ -85,6 +93,15 @@ export interface PullListRow {
    * ein Drehfeld; ein als N gezogener Aussenleiter ist eine Gefahr.
    */
   adern: string
+  /**
+   * #885 — welche Faser der Buchse dieses Kabel belegt, je Ende.
+   *
+   * Sie steht neben `adern` und aus demselben Grund: auf der Ziehliste
+   * haengt an dieser Angabe, welches Ende an welchen Schwanz des Breakouts
+   * kommt. Vertauscht man sie, liegt das Kabel richtig und fuehrt kein
+   * Licht. Leer, wo keine Buchse aufgeteilt ist.
+   */
+  fasern: string
   /** Zu welchem Anschluss die Leitung gehoert — leer, wenn zu keinem. */
   anschluss: string
   layer: string
@@ -95,6 +112,29 @@ export interface PullListRow {
   status: string
   test: string
   notes: string
+}
+
+/**
+ * Die Faser-Spalte einer Ziehlisten-Zeile: „2 TX \u2192 2 RX" (#885).
+ *
+ * Die Rolle steht nur dort, wo sie angegeben ist. Ein angenommenes TX waere
+ * auf einer Ziehliste genau die Sorte Zahl, die wie eine Messung aussieht.
+ */
+const faserSpalte = (
+  von: EquipmentItem | undefined,
+  vonPortId: string,
+  faserVon: number | undefined,
+  nach: EquipmentItem | undefined,
+  nachPortId: string,
+  faserNach: number | undefined,
+): string => {
+  if (faserVon === undefined && faserNach === undefined) return ''
+  const seite = (e: EquipmentItem | undefined, portId: string, pos: number | undefined): string => {
+    if (pos === undefined) return '?'
+    const rolle = portObj(e, portId)?.fasern?.find((f) => f.position === pos)?.rolle
+    return rolle && rolle !== 'unbestimmt' ? `${pos} ${rolle.toUpperCase()}` : String(pos)
+  }
+  return `${seite(von, vonPortId, faserVon)} \u2192 ${seite(nach, nachPortId, faserNach)}`
 }
 
 export const buildPullListRows = (project: CablePlannerProject): PullListRow[] => {
@@ -111,15 +151,23 @@ export const buildPullListRows = (project: CablePlannerProject): PullListRow[] =
     const b = id ? anschlussById.get(id) : undefined
     return b?.farbnormId ? normById.get(b.farbnormId) : undefined
   }
+  const locations = project.locations ?? []
+  const floors = project.floors ?? []
   return project.cables.map((c) => {
     const from = byId.get(c.fromEquipmentId)
     const to = byId.get(c.toEquipmentId)
+    const vonOrt = ortVonGeraet(from, locations, floors)
+    const nachOrt = ortVonGeraet(to, locations, floors)
     return {
       labelId: cableLabelId(c),
       cableNumber: c.cableNumber ?? '',
       name: c.name ?? '',
+      fromFloor: vonOrt.etage ?? '',
+      fromRoom: vonOrt.raum ?? '',
       fromDevice: from?.name ?? '—',
       fromPort: portName(from, c.fromPortId),
+      toFloor: nachOrt.etage ?? '',
+      toRoom: nachOrt.raum ?? '',
       toDevice: to?.name ?? '—',
       toPort: portName(to, c.toPortId),
       type: c.type,
@@ -127,6 +175,7 @@ export const buildPullListRows = (project: CablePlannerProject): PullListRow[] =
       adern: (c.adern ?? [])
         .map((a) => aderKurz(a, normFuer(c.anschlussId)))
         .join(' · '),
+      fasern: faserSpalte(from, c.fromPortId, c.faserVon, to, c.toPortId, c.faserNach),
       anschluss: anschlussName(c.anschlussId),
       layer: c.layer ?? '',
       pathway: c.pathway ?? '',
@@ -146,13 +195,18 @@ export const pullListTable = (project: CablePlannerProject): CsvTable => {
     'Label-ID',
     'Kabel-Nr.',
     'Name',
+    'Von Etage',
+    'Von Raum',
     'Von Gerät',
     'Von Port',
+    'Nach Etage',
+    'Nach Raum',
     'Nach Gerät',
     'Nach Port',
     'Typ',
     'Länge (m)',
     'Adern',
+    'Faser',
     'Bündel',
     'Ebene',
     'Trasse/Pfad',
@@ -167,13 +221,18 @@ export const pullListTable = (project: CablePlannerProject): CsvTable => {
     r.labelId,
     r.cableNumber,
     r.name,
+    r.fromFloor,
+    r.fromRoom,
     r.fromDevice,
     r.fromPort,
+    r.toFloor,
+    r.toRoom,
     r.toDevice,
     r.toPort,
     r.type,
     r.lengthM,
     r.adern,
+    r.fasern,
     r.anschluss,
     r.layer,
     r.pathway,
@@ -266,17 +325,25 @@ export const cableScheduleTable = (project: CablePlannerProject): CsvTable => {
     'Typ',
     'Standard',
     'Länge (m)',
+    'Von Etage',
+    'Von Raum',
     'Von Gerät',
     'Von Port',
+    'Nach Etage',
+    'Nach Raum',
     'Nach Gerät',
     'Nach Port',
     'Ebene',
     'Tie-Line',
     'Status',
   ]
+  const locations = project.locations ?? []
+  const floors = project.floors ?? []
   const body: CsvCell[][] = project.cables.map((c) => {
     const from = byId.get(c.fromEquipmentId)
     const to = byId.get(c.toEquipmentId)
+    const vonOrt = ortVonGeraet(from, locations, floors)
+    const nachOrt = ortVonGeraet(to, locations, floors)
     return [
       cableLabelId(c),
       c.cableNumber ?? '',
@@ -284,8 +351,12 @@ export const cableScheduleTable = (project: CablePlannerProject): CsvTable => {
       c.type,
       c.standard ?? '',
       c.length ?? 0,
+      vonOrt.etage ?? '',
+      vonOrt.raum ?? '',
       from?.name ?? '—',
       portName(from, c.fromPortId),
+      nachOrt.etage ?? '',
+      nachOrt.raum ?? '',
       to?.name ?? '—',
       portName(to, c.toPortId),
       c.layer ?? '',
@@ -310,6 +381,24 @@ export interface CableBomRow {
   qtyWithReserve: number
   totalLengthM: number
   tieLine: boolean
+  /**
+   * #875 — die Stückelung EINES Laufs dieser Zeile in Lagerlängen.
+   *
+   * Fehlt sie, hat das Projekt für diesen Kabeltyp keine Lagerlängen
+   * hinterlegt. Das ist ausdrücklich nicht „passt genau": niemand hat gesagt,
+   * welche Trommeln es gibt, und eine Stückelung zu erfinden hiesse, eine
+   * Packliste gegen ein Lager zu rechnen, das niemand genannt hat.
+   */
+  split?: SplitResult
+  /**
+   * Was der Bestand für die GESAMTE Menge dieser Zeile nicht hergibt.
+   *
+   * Gerechnet wird gegen `qty` Läufe und nicht gegen einen: wer fünfmal
+   * denselben Lauf zieht, braucht fünfmal die Stücke. Leer heisst „reicht"
+   * oder „nicht gezählt" — den Unterschied macht `count` am Bestandseintrag,
+   * und ohne Zählung gibt es keine Warnung.
+   */
+  shortfall?: StockShortfall[]
 }
 
 /**
@@ -351,6 +440,20 @@ export const buildCableBomRows = (
       })
     }
   }
+  // #875 — die Stückelung je Zeile. Sie wird NACH dem Aggregieren gerechnet
+  // und nicht je Kabel: zehn gleich lange Läufe werden zehnmal gleich
+  // gestückelt, und zehnmal dieselbe Rechnung zu führen wäre nur langsamer.
+  //
+  // Der Fehlbestand dagegen zählt die ganze Zeile: wer fünfmal denselben Lauf
+  // zieht, braucht fünfmal die Stücke. Eine Warnung, die nur einen Lauf
+  // prüft, meldete Entwarnung für ein Lager, das beim zweiten leer ist.
+  const bestand = project.cableStock ?? []
+  for (const row of buckets.values()) {
+    const { split, shortfall } = rowSplit(bestand, row.type, row.lengthM, row.qty)
+    if (split) row.split = split
+    if (shortfall) row.shortfall = shortfall
+  }
+
   return Array.from(buckets.values()).sort(
     (a, b) => a.type.localeCompare(b.type) || a.lengthM - b.lengthM,
   )
@@ -361,6 +464,10 @@ export const cableBomTable = (
   reservePercent = 10,
 ): CsvTable => {
   const rows = buildCableBomRows(project, reservePercent)
+  // Die drei Stückelungs-Spalten erscheinen nur, wenn das Projekt überhaupt
+  // Lagerlängen führt. Drei leere Spalten in jedem Blatt wären eine Frage an
+  // den Leser, auf die das Werkzeug die Antwort hat: es gibt keine.
+  const mitStueckelung = rows.some((r) => r.split)
   const headers = [
     'Typ',
     'Länge (m)',
@@ -368,6 +475,7 @@ export const cableBomTable = (
     `Menge inkl. ${reservePercent}% Reserve`,
     'Gesamtlänge (m)',
     'Festverbindung',
+    ...(mitStueckelung ? ['Stückelung', 'Kupplungen', 'Fehlbestand'] : []),
   ]
   const body: CsvCell[][] = rows.map((r) => [
     r.type,
@@ -376,6 +484,13 @@ export const cableBomTable = (
     r.qtyWithReserve,
     r.totalLengthM,
     r.tieLine ? 'ja' : '',
+    ...(mitStueckelung
+      ? [
+          r.split ? splitLabel(r.split) : '',
+          r.split ? r.split.couplers * r.qty : '',
+          r.shortfall && r.shortfall.length > 0 ? shortfallLabel(r.shortfall) : '',
+        ]
+      : []),
   ])
   return { headers, rows: body }
 }

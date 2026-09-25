@@ -5,6 +5,92 @@
 > großflächigen Migrationen, die bewusst nicht im Big-Bang erledigt
 > werden.
 
+## Nebenbefund 2026-09-10: die Mobile-Ansicht war weiss
+
+Beim Nachmessen der Typo-Skala im Browser (`dist/renderer/mobile.html`, echtes
+Chromium, 390x844) warf die Seite beim Laden eines Projekts einen
+`ReferenceError: writeMode is not defined` und rendert gar nichts mehr.
+
+**Der Defekt:** `ProjectView` in `src/mobile/MobileApp.tsx` las `writeMode` an
+vier Stellen als freien Bezeichner. Der Zustand dazu lag in `MobileApp` und
+wurde nie als Prop durchgereicht. Drin seit Bedarf 109 (`d3ca31c`) — die ganze
+Schreibrechte-Anzeige des Handys („Nur lesen"-Hinweis, Meldung, + Kabel) hat
+seitdem nie funktioniert, weil die Ansicht vorher abstuerzte.
+
+**Warum es niemand gesehen hat, und das ist der eigentliche Befund:**
+`src/mobile` stand in **keinem der fuenf tsconfigs**. `tsconfig.app.json`
+nannte `src/renderer` und `src/viewer`; `build:renderer` ist `vite build`, und
+Vite transpiliert TypeScript ohne Typpruefung. Die Pruefung, die CLAUDE.md vor
+jedem Push verlangt, war also gruen — sie sah den Ordner nicht an. Eine
+Pruefung, die weniger prueft als ihr Name sagt, ist schlimmer als keine: sie
+wird geglaubt.
+
+**Behoben:** `writeMode` ist Prop, `src/mobile` steht in `tsconfig.app.json`,
+und `tests/typpruefungDecktSrc.test.ts` fragt `tsc --listFilesOnly` fuer jedes
+tsconfig, ob noch eine Quelldatei unter `src/` durchfaellt. Der Waechter liest
+die `include`-Muster ausdruecklich NICHT nach — die erste Fassung tat das und
+lag falsch (`src/main*.ts` deckt entgegen der Dokumentation auch
+`src/main/ipc/*.ts` mit ab, nachgemessen mit einer Wegwerfdatei). Wer die
+Regel nachbaut, prueft am Ende seine eigene Lesart.
+
+## Nebenbefund 2026-09-10 (dritter): vier Light-Regeln standen doppelt da
+
+`index.css` deklarierte vier Regeln **zweimal**, mit unterschiedlichen Werten:
+
+```
+Zeile 333:  .bg-slate-950\/30 { background-color: rgba(240,244,248,0.7); }
+Zeile 480:  .bg-slate-950\/30 { background-color: rgba(240,244,248,0.3); }
+```
+
+dazu `/40`, `/50` und `/60` in derselben Form. Gleiche Spezifität, also gewann
+die spätere; der Minifier hat die frühere aus dem Build sogar ganz entfernt
+(nachgesehen in `dist/renderer/assets/*.css`), und im Fenster gemessen rendert
+`bg-slate-950/50` tatsächlich `rgba(240,244,248,0.5)`.
+
+**Die schlimmere Hälfte war nicht der Wert, sondern wo die tote Fassung
+stand:** genau unter dem Kommentar, der erklärt, *warum* es diese Regeln gibt
+(„damit die Context-Menüs, Modal-Overlays und Sub-Karten im Light-Mode nicht
+dunkel bleiben"). Wer eine Glasfläche nachjustieren wollte, las dort die
+Begründung, änderte die Zeile darunter — und sah nichts passieren.
+
+Behoben: die Regeln stehen jetzt an **einer** Stelle, bei ihrer Begründung.
+Übernommen wurden die **wirksamen** Werte, nicht die kommentierten — was die
+App seit Monaten zeigt, ist der Ist-Zustand; ihn nebenbei zu ändern wäre eine
+unbestellte Änderung am Aussehen. Nachgemessen: die vier Klassen rendern nach
+dem Umbau byte-gleich wie vorher.
+
+Dazu drei Regeln für Klassen, die im ganzen Baum nicht vorkommen
+(`bg-sky-950/50`, `border-amber-400`, `border-orange-700/60`) — jeweils eine
+Ziffer neben einer, die es gibt. Ein Eintrag ohne Nutzer ist nicht bloß
+ungenutzt: er sieht beim Lesen aus wie eine Deckung, die es nicht gibt.
+
+`tests/themeRemapEindeutig.test.ts` hält beides fest.
+
+## Nebenbefund 2026-09-10 (zweiter): drei Reiter fielen aus dem Analysen-Dialog
+
+Der Analysen-Dialog legt **dreizehn Reiter** in eine `flex`-Zeile, die nicht
+umbricht. Die letzten drei — „Kabelwege", „Signalwege", „Blatt prüfen" — lagen
+**164 px, 98 px und 5 px über der rechten Kante**, bei 1280×800 wie bei
+1500×950. Nicht sichtbar, nicht anklickbar: drei Auswertungen, die es für den
+Nutzer nicht gab.
+
+Das ist wörtlich derselbe Befund, aus dem `scripts/ui-overflow.mjs` entstanden
+ist („da kann man Equipment lesen, aber Cable schon nicht mehr") — nur eine
+Ebene tiefer. **Der Wächter stand an der Tür:** er misst die stehende
+Oberfläche und die Menüs, aber ein Dialog ist zu, bis jemand ihn öffnet. Der
+Defekt war Monate alt (nachgemessen gegen `776ed7c`, identische Zahlen) und
+hat jede CI-Runde überlebt.
+
+Behoben mit `flex-wrap` — und nicht mit `overflow-x-auto`: eine waagerecht
+scrollende Reiterleiste versteckt die hinteren Reiter hinter einer Geste, die
+niemand sucht.
+
+**Der Wächter geht jetzt durch die Tür.** `ui-overflow.mjs` läuft die
+Befehlspalette Eintrag für Eintrag durch, öffnet jeden Dialog und misst ihn
+(heute 15 Dialoge, 0 Befunde). Die Liste führt die App: wer einen Dialog anlegt
+und in die Palette hängt, wird gemessen, ohne dass jemand eine zweite Liste
+pflegt — dieselbe Lehre wie bei `tests/dialogTastaturbedienung.test.ts`.
+
 ## Baseline (vor Phase 0)
 
 | Check         | Ergebnis                                   |
@@ -116,19 +202,41 @@ Gesamtzahl Unicode-Icon-Treffer im Scan: ~136 Dateien (inkl. Daten-Pfeile
 
 Hartkodierte Pixel-Schriftgrößen (Tailwind-Arbitrary-Values):
 
-| Klasse        | Treffer |
-| ------------- | ------: |
-| `text-[10px]` |     336 |
-| `text-[11px]` |     256 |
-| `text-[9px]`  |      43 |
-| `text-[8px]`  |       5 |
-| `text-[12px]` |       4 |
-| `text-[13px]` |       2 |
+| Klasse        | Audit-Start<br>2026-06-15 | vor der Migration<br>2026-09-10 | heute |
+| ------------- | ------------------------: | ------------------------------: | ----: |
+| `text-[10px]` |                       336 |                             423 |     0 |
+| `text-[11px]` |                       256 |                             390 |     4 |
+| `text-[9px]`  |                        43 |                              10 |     2 |
+| `text-[8px]`  |                         5 |                               5 |     0 |
+| `text-[12px]` |                         4 |                              20 |    20 |
+| `text-[13px]` |                         2 |                               2 |     2 |
 
-Top-Dateien mit Sub-12px-Schrift: `RackBuilderDialog` (56),
-`GreenGoExportDialog` (43), `LibraryPanel` (42), `CableLibraryPanel` (21),
-`MobileApp` (20), `RentmanCableExportDialog` (18), `CableProperties` (18),
-`App.tsx` (16).
+**Die mittlere Spalte ist der eigentliche Befund.** Unter 12px waren es beim
+ersten Commit dieses Audits 743 Stellen — und drei Monate spaeter 881, also
+138 MEHR, nachdem hier aufgeschrieben stand, dass es weniger werden sollen.
+
+Das ist keine Nachlaessigkeit einzelner Aenderungen, sondern die vorhersehbare
+Folge davon, dass die Grenze nur in Prosa stand: ein TODO in einer Datei
+bremst nichts, weil niemand es beim Schreiben einer neuen Komponente liest.
+Seit `tests/schriftgroesseUntergrenze.test.ts` ist es eine Ratsche — die Zahl
+darf sinken, nie steigen. Der Weg zurück lief in vier Schritten:
+**881 → 828** (`src/mobile`) **→ 705** (die drei größten Einzeldateien)
+**→ 515** (die nächsten neun) **→ 0**.
+
+**Die sechs verbliebenen Stellen sind genau die Ausnahme, die dieses TODO
+selbst nennt** — rein dekorative Micro-Glyphen: vier Carets (`▾`/`▴` in
+`MenuBar`, `LibraryMenus` ×2, `PanelWindowMenu`), ein Sortier-Dreieck (`▲` in
+`PatchListDialog`) und die Pin-Markierung (`📌` im Rechner). Ein Pfeil hat
+keine Lesbarkeitsuntergrenze, ein Wort hat eine.
+
+**Damit ist aus der Ratsche eine Regel geworden.** Solange hunderte Stellen
+offen waren, stand im Wächter eine Zahl — die richtige Form für eine laufende
+Migration und die falsche für eine fertige: eine Zahl sagt nicht, *warum* eine
+Stelle bleiben darf, und wer eine neue anlegt, könnte sie mit einer Migration
+anderswo verrechnen. Geprüft wird jetzt, dass **jede** Stelle unter 12px ein
+Glyph ist: der sichtbare Text der Zeile darf keinen Buchstaben und keine
+Ziffer tragen. Wer morgen einen Caret braucht, bleibt grün; wer eine
+Beschriftung auf 10px setzt, wird sofort rot.
 
 **Theming-Schuld:** `index.css` remappt die komplette Tailwind-Slate-Rampe
 (+ Dutzende Opacity-Varianten einzeln) für `[data-theme="light"]`. Fragil,
@@ -154,18 +262,87 @@ Inline-Fallback in `ErrorBoundary`). → Token-Schicht einführen.
 
 ### TODO (großflächiger Rest, NICHT Big-Bang)
 
-- [ ] `text-[10px]`/`text-[11px]`/`text-[9px]` flächendeckend auf
-      Typo-Skala migrieren (zentrale Shells in Phase 2 erledigt, Rest
-      offen — v. a. RackBuilderDialog/LibraryPanel/Export-Dialoge).
-      Fließtext-Mindestgröße 12px. (Rein dekorative Micro-Glyphen wie
-      MenuBar-Caret `▾` bleiben.)
-- [ ] Translucente Glas-Flächen (`bg-slate-950/95`, `bg-slate-900/80`,
-      `bg-slate-950/40`) auf Alpha-Tokens (z. B. `color-mix`) heben —
-      aktuell bewusst als slate-Klassen belassen (Remap deckt Light ab).
-- [ ] Slate-Remapping in `index.css` schrittweise durch `--cp-*`-Tokens
-      ersetzen; Ziel: Opacity-Varianten-Liste schrumpfen.
-- [ ] Inline-Style-Komponenten (`CableEdge`, `CanvasToolbar`,
-      `EquipmentNode`) auf `var(--cp-*)` statt `canvasTheme`-Branching.
+- [x] `text-[10px]`/`text-[11px]`/`text-[9px]` flächendeckend auf
+      Typo-Skala migrieren. Fließtext-Mindestgröße 12px. **Erledigt
+      2026-09-10** in vier Schritten (881 → 828 → 705 → 515 → 0);
+      die sechs verbliebenen Stellen sind dekorative Micro-Glyphen,
+      siehe oben. **Gehalten** von
+      `tests/schriftgroesseUntergrenze.test.ts` — nicht mehr als Zahl,
+      sondern als Regel: jede Stelle unter 12px muss ein Glyph sein.
+      **Im echten Fenster nachgemessen** (Electron unter xvfb): alle vier
+      UI-Skripte grün, `ui:overflow` prüft dabei 15 Dialoge. Der Sprung
+      10 → 12px in dichten Tabellen ist der Punkt, an dem eine Migration
+      Layout bricht — `npm test` sieht das nicht.
+- [x] Translucente Glas-Flächen auf Alpha-Tokens heben — **erledigt
+      2026-09-10.** Die im TODO genannten Beispiele (`bg-slate-950/95`,
+      `bg-slate-900/80`) gab es beim Nachmessen gar nicht mehr; übrig waren
+      neun klassenbasierte Stellen in `AtemAudioRouterDialog` (3),
+      `RackLivePreview` (3), `CableContextMenu` (2) und
+      `VideohubRoutingMatrix` (1).
+      **Kein `color-mix` von Hand nötig:** der Opacity-Modifier wirkt auf den
+      semantischen Utilities, `bg-cp-surface-3/40` kompiliert zu
+      `color-mix(in oklab, var(--cp-surface-3) 40%, transparent)`. Die
+      Migration ist damit ein Eins-zu-eins-Tausch mit **exakt gleicher
+      Deckung** — nur die Basisfarbe wechselt von Schiefer auf die
+      Marken-Palette.
+      `CableContextMenu` verliert dabei seinen `isLight`-Zweig ganz (vier
+      Stellen); die Datei führt keine eigene Farbtabelle mehr.
+      **Nicht migriert, mit Grund:** die Kreuzpunkt-Füllung der
+      Videohub-Matrix (`bg-slate-400/50`) ist eine Zustands-Farbe — sie sagt
+      „diese Verbindung ist geschaltet" und darf mit dem Theme nicht kippen.
+      Ebenso die dunklen Overlays in `Rack3DView` und das Amber-Banner in
+      `PendingCableOverlay`: beide liegen über einer eigenen dunklen Szene
+      bzw. sind Warnfarbe, nicht Fläche.
+- [x] Slate-Remapping in `index.css` schrittweise durch `--cp-*`-Tokens
+      ersetzen; Ziel: Opacity-Varianten-Liste schrumpfen. **Erledigt
+      2026-09-10, soweit es die Liste betrifft.**
+      **Nachgemessen: die Liste war nicht das Problem, für das der TODO sie
+      hielt.** 207 Regeln, davon 204 mit echten Nutzern — der Remap ist
+      längst das Legacy-Sicherheitsnetz, das sein Kopfkommentar beschreibt.
+      Die drei ohne Nutzer sind entfernt, und mit der Glas-Migration oben
+      fielen fünf weitere Regeln von selbst weg: `bg-slate-950/30|40|50|60`
+      und `bg-slate-900/98` hatten keinen Nutzer mehr.
+      **Der Wächter hat das gemeldet, nicht ein Mensch** — genau so soll er
+      sich verhalten: die Liste schrumpft mit der Migration mit, statt
+      Karteileichen anzusammeln.
+      Was stattdessen gefunden wurde, steht als eigener Nebenbefund oben:
+      vier Regeln waren doppelt deklariert, mit widersprüchlichen Werten.
+      **Gehalten** von `tests/themeRemapEindeutig.test.ts`.
+      **Was bleibt, ist kein Rest, sondern der Zweck:** die verbliebenen
+      Regeln decken die `isLight`-Canvas-/Print-Komponenten ab, die pro
+      Theme **manuell** unterschiedliche Shades wählen (`EquipmentNode`
+      liest dafür sogar Nutzer-Einstellungen, siehe unten). Sie lassen sich
+      nicht auf einen auto-kippenden Token abbilden — das ist der Grund,
+      warum es das Sicherheitsnetz gibt, und nicht der Grund, es weiter
+      abzutragen.
+- [x] Inline-Style-Komponenten auf `var(--cp-*)` statt
+      `canvasTheme`-Branching — **erledigt 2026-09-10 für `CanvasToolbar`
+      und `CableEdge`.** Die Werkzeugleiste lief als einzige Fläche noch auf
+      Tailwind-Schiefer (`#0f172a`, `#1e293b`, `#cbd5e1`), während die App
+      seit ADR-007 auf Zumpe Navy läuft; jede Farbänderung am Haus ging an
+      ihr vorbei. `isLight`-Verzweigungen: `CanvasToolbar` 18 → 2 (Deklaration
+      + Schlagschatten, der pro Theme legitim anders ist), `CableEdge` 11 → 5
+      (nur noch Durchreichen an Unterkomponenten).
+      Nachgemessen im echten Fenster in **beiden** Themes: dunkel
+      `#182948`/92 % auf `#e1ecef`, hell `#ffffff`/92 % auf `#1d324f`.
+      `color-mix` löst in Electron 42 (Chromium 140) auf, und `var(--cp-*)`
+      gilt auch beim PDF-Export, weil `App.tsx`
+      `document.documentElement.dataset.theme` auf
+      `pdfExportThemeOverride ?? canvasTheme` setzt.
+      **Zwei Sorten Farbe bleiben fest, und das ist keine Restarbeit:**
+      Zustands-Farben (`btnActiveBg` blau, der Lila-Rand „vom Handy
+      dazugekommen") sagen *was ist*, nicht *worauf es liegt* — sie dürfen
+      mit dem Theme nicht kippen. `--cp-accent` ist im Dunkel-Theme
+      Off-White; ein aktiver Knopf würde damit weiß statt blau.
+
+      **`EquipmentNode` gehört NICHT auf diese Liste — der TODO war falsch.**
+      Seine Farben sind keine Theme-Tokens, sondern **Nutzer-Daten**: #307
+      gibt in Einstellungen → Darstellung je Theme Body/Header/Border/Text/
+      Subtext frei, `uiStore.equipmentColors.{light,dark}` hält sie, und
+      einzelne Geräte haben zusätzlich ihre eigene Farbe aus den Properties.
+      `var(--cp-*)` kann das nicht ausdrücken; wer diesen Punkt „abarbeitet",
+      löscht ein Feature. Dass die Zeile hier als offenes Kästchen stand,
+      hat genau diesen Griff eingeladen.
 
 ## Phase 3 — Accessibility
 
@@ -197,31 +374,87 @@ Inline-Fallback in `ErrorBoundary`). → Token-Schicht einführen.
 - Globaler `:focus-visible`-Ring war bereits vorhanden (`index.css`).
 - Lint dadurch sogar verbessert (124 statt 127 Fehler).
 
-### TODO (restliche Standalone-Dialoge → useDialogA11y adоptieren)
+### ~~TODO (restliche Standalone-Dialoge → useDialogA11y adoptieren)~~ — erledigt 2026-09-08
 
-Diese rollen noch eigenes `fixed inset-0`-Boilerplate ohne Focus-Trap/
-Escape — Hook analog `SettingsDialog`/`ExportDialog` anwenden:
-`RentmanImportDialog`, `RentmanCableExportDialog`, `NewRentmanDeviceWizard`,
-`AtemMvConfigDialog`, `AtemAudioRouterDialog`, `MultiviewerLayoutView`,
-`VideohubExportDialog`, `GreenGoExportDialog`, `GraphmlImportDialog`,
-`RackEditorDialog`, `RackImageCropDialog`, `NonRackAddDialog`,
-`PatchPanelCreateDialog`, `RackShelfCreateDialog`, `MobileShareDialog`,
-`LocationBomDialog`, `CableBomDialog`. (Panels `LibraryPanel`/
-`CableLibraryPanel` sind keine Modals — separat behandeln.)
+**Alle selbstgebauten Dialoge gehen jetzt über `useDialogA11y`**, und ein
+Wächter hält das fest: `tests/dialogTastaturbedienung.test.ts`.
+
+Die Liste, die hier stand, war an **beiden** Enden falsch — und beide Fehler
+kommen daher, dass sie von Hand geführt wurde:
+
+* **Sieben der siebzehn brauchten gar nichts mehr.** `RentmanCableExportDialog`,
+  `NonRackAddDialog`, `PatchPanelCreateDialog`, `RackShelfCreateDialog`,
+  `MobileShareDialog`, `LocationBomDialog` und `CableBomDialog` gehen längst
+  über `ModalShell` — und die hat den Hook seit derselben Phase.
+* **Neun Dialoge fehlten ganz.** Sie sind nach dem Audit entstanden und
+  niemand hat sie nachgetragen: `ReconcileDialog`, `DeliveryDialog`,
+  `DrumMicingDialog`, `WirelessRigDialog`, `RackInternalWireOverlay`,
+  `RackBuilderDialog`, `CommandPalette` und die vier Überlagerungen in
+  `LibraryPanel`/`CableLibraryPanel` — die beiden Panels sind zwar keine
+  Modals, die Dialoge **in** ihnen aber schon.
+
+**Deshalb ist der Wächter kein Listenabgleich, sondern ein Lauf über den
+Ordner:** er findet jede Datei unter `src/renderer/components`, die ein
+eigenes `fixed inset-0` aufspannt, und verlangt für sie den Hook (oder
+`ModalShell`). Wer morgen einen Dialog anlegt, wird rot, ohne dass jemand
+eine Liste pflegt. Dieselbe Lehre wie beim Lager-Vertrag in ADR-006: **die
+Domäne ist der Ordner, nicht eine Liste im Wächter.**
+
+Zwei Dialoge bekommen den Hook bewusst **ohne** sein Escape
+(`closeOnEscape: false`), weil sie eine eigene, klügere Behandlung haben:
+der `RackBuilderDialog` fragt bei ungesicherten Änderungen nach, die
+`CommandPalette` hat ihre eigene Tastensteuerung. Beide nehmen vom Hook nur
+Fokus-Falle und Fokus-Rückgabe — ein zweites Escape daneben würde an der
+Rückfrage vorbei schließen.
 
 ## Phase 4 — i18n
 
 - Vollständiges `en`-Dict in `lib/i18n.ts`; Inline-Fallbacks deutsch
   (`t('key', 'Deutsche Form')`), `translations.de` bewusst leer.
 
-### Fallback-Sprache (Entscheidung)
+### Fallback-Sprache (Entscheidung) — ÜBERHOLT SEIT E-28
 
-Die Aufgabe empfahl **Englisch** als Fallback, aber **CLAUDE.md** legt
-verbindlich fest: *„Deutsche Strings = Quell-Sprache, immer als Fallback in
-`t(key, 'Deutsche Form')`. EN-Übersetzung im `en`-Dict."* CLAUDE.md
-überschreibt Defaults → **Deutsch bleibt einheitliche Fallback-Sprache**.
-Ein Umstellen aller `t()`-Fallbacks auf Englisch wäre zudem ein massiver,
-risikoreicher Eingriff entgegen der dokumentierten Projektkonvention.
+Dieser Abschnitt stand bis 2026-09-10 im Präsens da und sagte das Gegenteil
+der geltenden Konvention. **Er wird nicht gelöscht, sondern richtiggestellt**:
+gelöscht wäre nicht nachvollziehbar, warum die Fallbacks im Code aussehen, wie
+sie aussehen.
+
+**Was hier stand (Stand Phase 4):** Die Aufgabe empfahl Englisch als Fallback,
+aber CLAUDE.md lege verbindlich Deutsch als Quell-Sprache fest; ein Umstellen
+aller `t()`-Fallbacks wäre ein massiver, risikoreicher Eingriff entgegen der
+dokumentierten Projektkonvention.
+
+**Was heute gilt:** **E-28 (2026-09-09, vom Eigentümer entschieden) hebt
+E-17/E-20 auf.** Quellsprache ist `en` — für ALLE Repos der Suite, nicht mehr
+je Repo. Deutsch ist die erste Übersetzung. Der Eingriff, der hier als „massiv
+und riskant" abgelehnt wurde, ist gemacht: `t(key, 'English text')`,
+Übersetzungen je Sprache in `src/renderer/lib/i18n/`, gemessen von
+`npm run lang:check` (heute: 0 deutsche, 1281 englische Zeichenketten in
+`src/renderer`).
+
+**Die Lehre steht hier, nicht nur die Korrektur.** Ein Dokument, das eine
+Entscheidung mit „CLAUDE.md sagt X" begründet, wird falsch, wenn CLAUDE.md
+X ändert — und zwar lautlos, weil es weiter so aussieht wie eine gültige
+Begründung. Wer hier nachschlug, hätte deutsche Fallbacks eingetragen und
+den Wächter gegen sich gehabt, ohne zu verstehen warum. Begründungen, die
+auf eine andere Datei zeigen, gehören deshalb datiert.
+
+**Erledigt am 2026-09-10:** `lang:check` prüft jetzt alle drei Ordner, die
+im Browser laufen — `src/renderer`, `src/mobile`, `src/viewer`. Gemessen:
+0 deutsche Fallbacks, 0 ungewickelte Zeichenketten in der jeweils anderen
+Sprache, in allen dreien.
+
+Die Lücke war real und groß: **63 deutsche Zeichenketten in `src/mobile`,
+12 in `src/viewer`** — beide Ordner ohne jede `t()`-Verdrahtung, beide von
+keiner Prüfung angefasst. Der Wächter stand an einer Tür von dreien und
+meldete „0 Verstöße"; dieselbe Form wie bei der Typprüfung, die `src/mobile`
+nicht ansah.
+
+**Der Umfang ist jetzt keine Liste mehr, sondern eine Regel.**
+`tests/i18nEintrittspunkte.test.ts` liest die Browser-Ordner aus
+`tsconfig.app.json` und besteht darauf, dass jeder davon im `lang:check`-
+Skript vorkommt. Wer einen vierten Eintrittspunkt anlegt, wird dort rot —
+nicht erst, wenn jemand eine halb übersetzte Seite meldet.
 
 ### Phase 4 — erledigt
 
@@ -238,11 +471,210 @@ risikoreicher Eingriff entgegen der dokumentierten Projektkonvention.
 
 ### TODO (großflächiger Rest)
 
-- [ ] Flächendeckende Suche nach restlichen hartkodierten JSX-Texten /
-      `placeholder` / `title` ohne `t()` (z. B. Teile von App-CableDialog,
-      CableDialog-Labels „Connector Type"/„Notizen", RackBuilder-Interna).
-- [ ] In-`t()`-String-Glyphen aus Phase 1 (`⚠`/`✓`/`✕` in `cable.warn.*`,
+- [x] Flächendeckende Suche nach restlichen hartkodierten JSX-Texten /
+      `placeholder` / `title` ohne `t()`.
+      **2026-09-10, erster Schnitt: `src/renderer` ist sauber.** Der
+      CableDialog trug fünf deutsche Roh-Beschriftungen („Kabel bearbeiten",
+      „+ Neuer Stecker-Typ…", „+ Neuer Signal-Standard…", „Verbindung",
+      „Notizen") — mitten in einem Repo mit Quellsprache `en`. Sie sind
+      gewickelt und übersetzt.
+      **Warum der Wächter sie nicht meldete:** `quellsprache.mjs` LIEST rohen
+      JSX-Text längst (`sichtbareTexte`), aber seine Wortliste bestand aus
+      Bindewörtern — und die kommen in kurzen Beschriftungen nicht vor. Er
+      hatte die Zeilen gesehen und als „unklar" abgelegt. Die Liste trägt
+      jetzt auch Inhaltswörter, gemessen gegen alle 4622 englischen Fallbacks:
+      **kein einziger** würde durch sie fälschlich als deutsch gelten.
+      **2026-09-10, zweiter Schnitt: `src/mobile` und `src/viewer` sind
+      ebenfalls sauber.** Gemessen waren es nicht 34 und 7, sondern **63 und
+      12** — die frühere Zahl stammte aus einer Suche über Umlaute, die
+      kurze Beschriftungen ohne Umlaut („Von Port", „Plan read-only") nicht
+      sah. Beide Ordner sind verdrahtet und übersetzt; `lang:check` deckt sie
+      jetzt ab (siehe Phase 3).
+
+      **Sie bekommen ein eigenes, kleines Wörterbuch — mit Grund.**
+      `renderer/lib/i18n.ts` importiert `de.ts` statisch: 316 KB, 5276
+      Schlüssel. Der Mobile-Chunk ist 57 KB groß und wird über das
+      Hallen-WLAN auf ein Telefon geladen. Ein Import von dort hätte die
+      Seite vervierfacht, damit ein Handy Zeichenketten lädt, die es nie
+      zeigt. Das Werk (`spracheAusBrowser`, `format`) steht deshalb einmal in
+      `renderer/lib/i18nLite.ts`, die Wörterbücher je Seite in
+      `src/mobile/i18n.ts` (169 Schlüssel) und `src/viewer/i18n.ts` (33).
+      Gemessene Kosten: Mobile-Chunk 57 → 72 kB, Viewer 15,8 kB.
+      `tests/i18nEintrittspunkte.test.ts` folgt den Importen beider Seiten
+      durch den ganzen Baum und fällt, wenn `lib/i18n` wieder hereinkommt —
+      auch mittelbar über ein Hilfsmodul.
+
+      **Was `lang:check` NICHT sehen kann, und was deshalb dazukam:** ein
+      fehlender Schlüssel im Wörterbuch zeigt den englischen Fallback, und
+      der ist eine regelkonforme Zeichenkette. Gefunden wurde genau so ein
+      Fall nur, weil die gebaute Seite mit deutscher Spracheinstellung im
+      Browser offen war: „.cpviewer or .json" zwischen lauter deutschen
+      Zeilen, weil ich beim Eintragen geschätzt hatte, die Zeile sei in
+      beiden Sprachen gleich. Derselbe Test besteht jetzt darauf, dass jeder
+      benutzte Schlüssel entweder übersetzt oder in einer kurzen Liste
+      ausdrücklich als „in beiden Sprachen gleich" erklärt ist (heute sechs
+      Einträge: „Plan", „Name", „Problem", „optional…", „Name (optional)",
+      „📶 Remote").
+- [x] In-`t()`-String-Glyphen aus Phase 1 (`⚠`/`✓`/`✕` in `cable.warn.*`,
       `bom.cable.missingTypes`, „✕ Reset" etc.) extrahieren + Icon im JSX.
+      **2026-09-10 erledigt: 71 → 6.** Gemessen waren es 71 Fallbacks, die mit
+      einem Symbol anfingen oder aufhörten — „✕ Reset", „↻ Refresh",
+      „✓ linked", „Apply →", „📂 Choose a file…", „🏷 Labels PDF". Sie sind
+      jetzt `<Icon icon={…} />` im JSX; das Symbol ist aus dem Fallback **und**
+      aus jedem Wörterbuch verschwunden.
+
+      **Der Grund steht in `Icon.tsx` selbst** („Emojis rendern je
+      Plattform/Font inkonsistent") und gilt für eine Zeichenkette genauso wie
+      für ein JSX-Kind. Dazu kommt einer, der nur Übersetzungen betrifft: das
+      Symbol stand in jedem Wörterbuch noch einmal. Wer das Icon ändert, hätte
+      es in jeder Sprache ändern müssen — ein Icon ist keine Sprache.
+
+      **Sechs Stellen bleiben, mit Begründung je Eintrag** in
+      `tests/glyphenNichtImText.test.ts`: `♂`/`♀` an der Steckerbauart (die
+      Kennzeichnung am Stecker selbst), `◄`/`►` in der Pfeilspitzen-Auswahl und
+      `↓`/`↑` in der Sortier-Auswahl — dort ist das Symbol der **Wert**, nicht
+      seine Verzierung. Symbole mitten im Satz („from source → destination",
+      „Settings → Rentman") bleiben ebenfalls: der Pfeil ist dort ein Wort, und
+      ihn herauszulösen hieße, den Satz aus zwei `t()`-Aufrufen zusammenzusetzen.
+
+      **Zwei Funde nebenbei, die kein TODO genannt hatte:**
+      (a) `RentmanCableExportDialog` färbte seine Fehlerzeile über
+      `status.startsWith('Fehler')` — eine Verzweigung auf **übersetzten Text**.
+      Seit E-28 steht dort `Error: …`, die Fehlerzeile rendete also für jeden,
+      der die Oberfläche nicht auf Deutsch stellt, in der ruhigen Textfarbe
+      statt in Rot. Der Ton ist jetzt ein eigenes Feld im Zustand.
+      (b) `StatusBar` rendete `<Icon icon={checkIcon} />` **und** ein `⚠` im
+      Text daneben — dieselbe Aussage zweimal.
+- [x] **Der Sprachmix-Zähler brach an der geschweiften Klammer ab** —
+      2026-09-10 gefunden und behoben. `JSX_TEXT` in `scripts/quellsprache.mjs`
+      lautete `[^<>{}]{4,}`: ein Textknoten, in dem **irgendwo** eine Einsetzung
+      steht, war für den Zähler nicht vorhanden. Das ist nicht der Randfall, als
+      der es aussieht — es ist die häufigste Form, in der eine Beschriftung
+      geschrieben wird, sobald eine Zahl darin vorkommt.
+
+      **Der Schaden war die Null.** `lang:check` meldete für alle drei
+      Browser-Ordner „0 ungewickelte Zeichenkette(n) in der anderen Sprache",
+      und diese Null las sich wie ein Beleg. Gemessen mit dem geöffneten Muster:
+      **vier deutsche Beschriftungen** standen roh im JSX eines Repos mit
+      Quellsprache `en` — `An Videohub senden (TCP) …` und `Gefunden ({n}) —
+      Klick übernimmt IP/Port` (`VideohubExportDialog`), `· {n} ohne Bauart`
+      (`CircuitChip`), `· {n} Wände · {n} Personen · {n} Bühne` (`MenuBar`).
+      Drei weitere fand erst das Auge, weil sie kein Wort der Wortlisten tragen
+      (`Seitenansicht (Tiefe)`, `Vorne ◀ {n} mm ▶ Hinten`, `Kameras ({n})`).
+
+      **Drei Formen waren blind, nicht eine:**
+      (a) Einsetzung *im* Satz (`Gefunden ({discovered.length}) — …`);
+      (b) Einsetzung *hinter* dem Satz — bei `An Videohub senden …` folgt in
+      der nächsten Zeile bloß ein `{cond && (`, und das brach den Lauf ab,
+      bevor das schließende `<` erreicht war. Ein Wächter, der an der Klammer
+      **hinter** dem Text scheitert, ist schlimmer als keiner;
+      (c) der reine Ausdruck als Kind (`` {`· ${n} ohne Bauart`} ``) — kein
+      Textknoten, also auch mit geöffnetem Muster unsichtbar. Dafür gibt es
+      jetzt `JSX_LITERAL`, und zwar nur für die **reine** Form: was um die
+      Zeichenkette herum noch gerechnet wird, ist Code.
+
+      **Nachtrag desselben Tages: das Fragment ist auch ein Tag.**
+      `[^\s=<!>]` verbot vor dem `>` ausdrücklich ein `<` — damit `<=` und
+      `<Foo>` nicht als Tag-Ende durchgehen. Es verbot damit aber auch `<>`,
+      und das ist das **JSX-Fragment**: ein vollwertiges Element, dessen
+      Kinder auf dem Bildschirm stehen wie die jedes anderen. Gefunden an der
+      Stelle, an der es am meisten weh tut — `ErrorBoundary`, der Text, den
+      jemand liest, wenn die App schon abgestürzt ist: „Zusätzlich wurde eine
+      Sicherheitskopie des Autosaves angelegt (…)". `<>` kommt in TypeScript
+      sonst nicht vor (`=>` fängt das `=`, ein Generic trägt vor dem `>`
+      einen Bezeichner, `a < b > c` hat Leerzeichen), die Öffnung ist also
+      eng. Der Satz ist jetzt **ein** Schlüssel mit Platzhalter statt eines
+      Satzes plus eingebettetem `<code>`.
+
+      **Dritter Nachtrag: die eigenen Dialoge, nicht die des Browsers.**
+      Der Zähler kannte `alert`, `confirm` und `prompt` — Formen, die diese
+      App gar nicht mehr benutzt: der `dialogs:native`-Wächter der Suite
+      verbietet sie, an ihrer Stelle stehen `infoDialog`, `confirmDialog`
+      und `promptDialog` aus `renderer/lib/`. Die Liste war also eine Liste
+      der Formen, die es **nicht mehr gibt**, und ihre Null damit wertlos.
+      Dazu kommt `{ body: '…' }`: der Titel steht im ersten Argument, der
+      längere und wichtigere Fließtext in den Optionen.
+
+      Gemessen nach der Erweiterung: **fünf deutsche Rückfragen in
+      `App.tsx`** — darunter „Neuer Stecker-Typ (z. B. „Speakon NL4"):",
+      also eine **Eingabeaufforderung**, ohne deren Verständnis niemand
+      weitermacht. Zwei weitere fand dabei das Auge in
+      `VideohubExportDialog`: „⚠ {n} Zeilen nicht erkannt" und „{in} Inputs
+      · {out} Outputs neu beschriftet" — keine davon ist JSX-Text, Attribut
+      oder `t()`-Fallback, sondern eine gewöhnliche Zuweisung an eine
+      Variable, die später im Dialog landet. **Diese Form sieht der Zähler
+      weiterhin nicht**, und das steht hier, statt verschwiegen zu werden.
+
+      **Der Preis ist benannt:** ein Lauf, der über `{` hinweggeht, endet öfter
+      mitten im Ausdruck. `NACH_CODE` hat deshalb `return`, `null`, `typeof`,
+      `??` und `if (` dazubekommen — `if` steht auf der **englischen**
+      Wortliste, ein Bruchstück wie `(null) if (!hasDesktopBridge)` wäre in
+      einem deutsch-quelligen Repo als englische Beschriftung gemeldet worden.
+      Die feste Probe im CLI-Teil trägt die drei neuen Formen jetzt mit; ohne
+      sie fällt genau diese Härte beim nächsten Aufräumen still wieder heraus.
+
+- [x] **Rohe Symbole im JSX: 180 → 138 Stellen, 61 → 50 Dateien**
+      (2026-09-10, gemessen über dieselbe Baumsuche wie der Glyph-Wächter).
+      Zwei Klassen sind durch, und zwar die zwei, für die `Icon.tsx` genau
+      seinen Grund nennt („Emojis rendern je Plattform/Font inkonsistent"):
+
+      **(a) Alle 24 Aufklapp-Carets.** `{open ? '▾' : '▸'}`,
+      `{collapsed ? '▶' : '▼'}`, `{offen ? '▴' : '▾'}` und die
+      freistehenden `▾` in `MenuBar`, `LibraryMenus`, `RackAddSplitButton` —
+      jetzt `<Icon icon={open ? ChevronDown : ChevronRight} />`. Es waren
+      **fünf verschiedene Glyph-Paare für dieselbe Geste**; das allein ist der
+      Grund, warum ein Aufklapper je nach Dialog anders aussah.
+
+      **(b) 17 freistehende Emoji/Symbol-Kinder**: `🔄` (drei Mal, dieselbe
+      Aktualisieren-Aktion), `📦`, `🔍`, `📁` (zwei Mal), `▥` (zwei Mal),
+      `🪑`, `⏬`/`⏫` (fünf Mal), `✅`, `📌`, `◆`, `➕`.
+
+      **Ein Wächter ist dabei umgefallen, und das war richtig so.**
+      `tests/schriftgroesseUntergrenze.test.ts` sicherte zu, dass die
+      Baumsuche „mindestens eine" Stelle unter 12px findet — die sechs
+      dekorativen Micro-Glyphen, die es damals noch gab. Die sind jetzt
+      `<Icon />` und tragen ihre Größe als Zahl statt als CSS-Klasse, also
+      fand sie null. Der Kommentar dort hatte den Fall vorhergesehen und
+      benannt. Eine Zusicherung, die am Bestand hängt, geht mit dem letzten
+      Fund verloren: „keine Stelle unter 12px" wäre ab dann auch bei kaputtem
+      Muster erfüllt. Sie steht jetzt auf einer **festen Probe** — dieselbe
+      Form wie im Sprachmix-Zähler.
+- [x] **Dritter Schnitt: die Zustands-Symbole, 138 → 111 Stellen**
+      (2026-09-10). 26 weitere Stellen sind Icons: `↺` (sechs Zurücksetzen-
+      Knöpfe, `RotateCcw`), `✕` (vier Entfernen/Schließen, `X`), `✓` (elf
+      Bestätigungen, `Check`), `●`/`○` (vier Auswahlpunkte, `CircleDot`/
+      `Circle` bzw. `Dot`), `▦` (`Grid3x3`) und `⬆` (`Upload`).
+
+      **Ein Fund nebenbei:** `IntegrationsTab` zeigte „✓ Key" als **rohen
+      englischen Text** — kein `t()`, also auch keine Übersetzung. Der
+      Sprachmix-Zähler sah ihn nicht (er meldet nur die jeweils **andere**
+      Sprache), der Glyph-Durchgang schon. Jetzt
+      `settings.integrations.keyStored`.
+- [ ] **Offen: 111 Stellen in 42 Dateien**, und der Rest ist keine
+      Fleißarbeit mehr, sondern Urteilsarbeit — drei Gruppen mit je eigenem
+      Grund:
+
+      **(1) Pfeile im Satz oder im Datensatz** (40× `→`, 11× `←`, 8× `↔`):
+      `${from} → ${to}` in einer Stückliste, ein Achsen-Label der
+      Routing-Matrix, der Zielhinweis einer Zeile. Das sind **Daten**, keine
+      Verzierung, und sie landen in CSV/PDF, wo kein SVG hinkann.
+
+      **(2) `<option>`-Kinder** (`◆ {l}` in `CableProperties`, `📦 ` in
+      `InventoryDialog`, `▼` im Videohub-Dialog): `<option>` nimmt nur Text.
+      Ein Icon dort ist technisch unmöglich, nicht bloß unerwünscht — wer die
+      Zeile „aufräumt", bekommt `[object Object]` in der Auswahlliste.
+
+      **(3) Symbole, die der Wert sind**: `♂`/`♀` an der Steckerbauart,
+      `◄`/`►` in der Pfeilspitzen-Auswahl, `▲` des Polardiagramms und die
+      elf `ICON_GLYPHS` in `OptionalFieldsSection` — Letztere stehen **im
+      Projekt-File**, sind also Nutzerdaten und nicht Darstellung.
+
+      Was danach noch bleibt, ist im Wesentlichen Gruppe (1): Pfeile in
+      Datensätzen und Exportzeilen. Von den Zustands-Symbolen sind noch die
+      übrig, die in einer **Zeichenkette** stecken statt im JSX
+      (`⚠ ${e.message}`, `level === 'ok' ? '✓' : …`, `' · ✓'`) — dort ist
+      ein Icon erst möglich, wenn der Aufrufer einen ReactNode annimmt, und
+      das ist eine Änderung an der Schnittstelle, nicht am Symbol.
 
 ## Phase 5 — Komponenten-Dekomposition (RISIKO)
 
@@ -295,20 +727,135 @@ Z. 49–84) als nächsten einfachen Kandidaten.
 - Alle gelieferten Roh-Screenshots (`Screenshot (NNN).png`) nach der
   Verarbeitung aus dem Branch-Tree entfernt.
 
+### 2026-09-10 — die Aufnahme ist kein Mensch-Schritt mehr
+
+`npm run docs:shots` (`scripts/screenshots.mjs`) startet die App unter
+`xvfb-run`, lädt das eingebaute Beispielprojekt, stellt Sprache und Thema
+**fest** ein und nimmt die Slots auf. Aus dem Beispielprojekt heißt: keine
+Kundendaten, also **nichts zu schwärzen** — die sicherste Schwärzung ist die,
+die nicht nötig ist.
+
+Der Guide behauptete das Gegenteil („können nicht automatisch erzeugt
+werden"). Ein Satz, der eine Arbeit für unmöglich erklärt, sorgt zuverlässig
+dafür, dass sie liegenbleibt — **gemessen:** die eingecheckten Bilder stammen
+aus `v8.1.0-101`, die App steht bei `v9.0.1`. Dazwischen liegen die
+Sprachdrehung (E-28) und der Icon-Durchgang; auf `properties.png` ist deshalb
+eine deutsche Oberfläche mit Knöpfen zu sehen („Configure multiviewer layout
+→", „↻ auto"), die es so nicht mehr gibt.
+
+**Die Bilder sind trotzdem noch die alten — mit Grund.** Eine frische
+Aufnahme wurde gemacht und wieder verworfen: das Beispielprojekt ist deutsch
+benannt („Kamera 1", „Bildmischer", „Regie-Monitor"), und 12 der 64
+ausgelieferten Gerätekategorien ebenfalls („Funkstrecke", „Stromverteilung",
+„Sync/Referenz" …). Eine englische Oberfläche mit deutschen Inhalten ist
+nicht besser als ein altes Bild, nur anders falsch — und ein Titelbild
+schlechter zu machen, ist keine Verbesserung. Der Sprachmix in den
+ausgelieferten **Daten** ist als eigenes Issue erfasst (er hängt an einer
+Eigentümer-Entscheidung und an einer Schema-Migration, weil
+`equipment.category` in den Projektdateien der Nutzer steht). Danach
+`npm run docs:shots`.
+
 ### TODO (manueller Mensch-Schritt)
 
-- [ ] Restliche 3 Slots: `canvas.gif` (animierte Canvas-Demo), `rack-3d.png`
-      (3D-Rack-Ansicht), `patch-pdf.png` (Patch-Listen-PDF — der gelieferte
-      Shot enthält einen Personennamen im Routing-Text, daher offen gelassen;
-      neutral neu erzeugen oder die Namen schwärzen).
-- [ ] Für neue Bilder: Roh-PNGs nach `docs/screenshots/_raw/` legen + `node
-      docs/redact-screenshots.mjs` laufen lassen (oder aus neutralem
-      Demo-Projekt ohne Kundennamen frisch aufnehmen → keine Schwärzung nötig).
-- [ ] **Rohbilder aus `main`/Branch-History bereinigen**:
-      `Screenshot (573).png` liegt in `main` (Commit `f5279e9`), die übrigen
-      Rohbilder in der Branch-History (`a670c71`) — bei öffentlichem Repo ggf.
-      History scrubben (die ungeschwärzten Bilder sind sonst über alte
-      Commits abrufbar).
+- [ ] `canvas.gif` (animierte Canvas-Demo): braucht einen GIF-Encoder, den
+      dieser Container nicht hat (kein `ffmpeg`/`gifski`). Einzelbilder kann
+      `docs:shots` liefern, das Zusammensetzen nicht.
+- [x] `rack-3d.png`: **das Beispiel bringt jetzt ein Rack mit** (2026-09-10,
+      `lib/demoRack.ts`) — ein 12-HE-Rack mit Patchblende, Mischer,
+      Multiviewer und IEC-Leiste plus drei internen Verbindungen. **Das Bild
+      ist aufgenommen** und liegt unter `docs/screenshots/rack-3d.png`;
+      `docs:shots` erzeugt es bei jedem Lauf mit.
+
+      **Der zweite Grund lag im Aufnahme-Lauf selbst**, und er war nirgends
+      notiert: `scripts/screenshots.mjs` startete Electron mit
+      `--disable-gpu`. Der Schalter macht WebGL unbenutzbar —
+      `canvas.getContext('webgl')` gibt `null` zurück, das Canvas bleibt auf
+      seiner Vorgabegrösse (300×150), die Fläche ist schwarz. Nachgemessen;
+      mit `--use-gl=swiftshader` meldet sich `ANGLE (Google, Vulkan 1.3.0
+      (SwiftShader Device (Subzero)), SwiftShader driver)`, und das Rack steht
+      da. Der Lauf nimmt den Weg eines Nutzers: Bibliothek → Reiter „Racks" →
+      Stift → Reiter „3D"; ein Bild, das über eine Abkürzung in den Store
+      entsteht, belegt nicht, dass die Bedienung dorthin führt.
+
+      **Was dabei auffiel und bewusst so bleibt:** die Gerätenamen stehen im
+      3D-Bild doppelt. Das ist Absicht (`Rack3DView.tsx`: Label vorne UND
+      hinten, sonst ist beim Drehen um 180° die Beschriftung weg) und fällt
+      nur in der Vorgabe-Kameraposition als Überlappung auf. `occlude`
+      probiert — es macht beide Label halbtransparent und überlappt
+      weiterhin, also verworfen.
+
+      **Der Befund war größer als die fehlende Aufnahme.** Rack-Vorlagen
+      kommen ausschliesslich aus `localStorage`
+      (`groupPresetsPersist.loadGroupPresets`: kein Eintrag → `[]`), also hat
+      eine frische Installation keine einzige. An `components/Rack/` hängt
+      aber die gesamte 3D-Ansicht samt `lib/exportRack.ts` — der grösste
+      einzelne Brocken der Anwendung. Wer die App zum ersten Mal öffnete,
+      konnte davon nichts sehen. Dieselbe Form wie B-65 in der Suite:
+      gebaute Rechenwerke ohne einen Weg hinein.
+
+      **Am Beispiel und nicht am Start**, denn eine Vorlage, die beim Start
+      nachwächst, kommt nach dem Löschen wieder. `loadDemoProject()` im
+      Store legt sie an, wenn `DEMO_RACK_PRESET_ID` fehlt; zweimal laden legt
+      nichts doppelt an.
+
+      **Nebenbefund derselben Klasse:** die `description` des
+      Beispielprojekts war deutsch, während der `name` daneben englisch war —
+      Daten, also für `lang:check` unsichtbar. `tests/beispielRack.test.ts`
+      prüft beides jetzt mit `klassifiziere()`, dazu die Kabel-Endpunkte, die
+      HE-Belegung und den Namen der Strom-Leiste gegen `passiveCatalog`.
+- [x] **Die Bilder sind aufgefrischt** (2026-09-10, gegen **v9.0.1** statt
+      v8.1.0-101). Möglich wurde das durch #822: Kategorien und Beispielprojekt
+      stehen jetzt in der Quellsprache, eine Aufnahme zeigt also nicht mehr
+      eine englische Oberfläche mit deutschen Inhalten.
+
+      **Zwei Defekte hat erst die Aufnahme gezeigt**, und beide sind behoben:
+      (a) Der Lauf nahm das **Autosave der letzten Sitzung** auf statt des
+      Beispielprojekts — das Titelbild hing damit davon ab, was jemand zuletzt
+      im Container gemacht hatte. `docs:shots` löscht das Profil jetzt vor dem
+      Start, dasselbe Argument wie beim Festnageln von Sprache und Thema.
+      (b) Die Bibliotheks-Seitenleiste führte `Patch panels` und
+      `Power distribution` **je zweimal**: eine Vorlage aus `localStorage`
+      trug noch den deutschen Kategorienamen, und `categoryDisplay` zeigte
+      beide unter demselben Namen. `loadCustomLibrary` migriert jetzt mit.
+- [x] `patch-pdf.png` **als Slot gestrichen** (2026-09-10). Nachgesehen, bevor
+      entschieden wurde: die Datei ist in `main` nicht vorhanden und war es
+      nie (`git log --all -- docs/screenshots/patch-pdf.png` ist leer) — der
+      Personenname im Routing-Text stand im gelieferten Shot, nicht im Repo.
+      `docs:shots` liefert die Patch-Liste als `patch-sheets.png` aus dem
+      Beispielprojekt; ein zweiter Slot für dieselbe Sache, den nur ein
+      Kundenplan füllen könnte, ist die schlechtere Hälfte. Zeile aus
+      `docs/screenshots/README.md` entfernt.
+- [ ] **Rohbilder aus der History bereinigen** — offen, und nur der Eigentümer
+      kann es entscheiden: ein History-Scrub ändert veröffentlichte Commits.
+
+      **Nachgemessen am 2026-09-10**, weil dieser Punkt bis dahin Zahlen
+      nannte, die so nicht mehr stimmten:
+      * **`main` ist sauber.** In `origin/main` liegen heute nur die acht
+        Bilder aus `docs/screenshots/` plus `build/icon.png` und die drei
+        Suite-Mockups. `Screenshot (573).png`, das diese Zeile in `main`
+        verortete, ist dort nicht (mehr).
+      * **Ein Rohbild ist trotzdem aufgetaucht** — nicht hier, sondern in der
+        Suite: `apps/cable-planner/docs/screenshots/hero.png.png`, 1,4 MB,
+        doppelte Endung, von nirgends referenziert. Es ist ein **echter,
+        ungeschwärzter Kundenplan**: Projektname und Rentman-Zeile mit Kunden-
+        und Projektnamen im Klartext, dazu die Taskleiste des aufnehmenden
+        Rechners. (Die Kennungen stehen mit Absicht nicht in dieser Datei —
+        sie wäre sonst genau der Kanal, den sie beschreibt.)
+      * **Dasselbe Bild lag auch hier**, hinzugefügt in `955da7e` und entfernt
+        in `3da81ad`. Die Suite-Kopie hat die Löschung nie mitbekommen —
+        dieselbe Form, gegen die B-5 in der Suite steht: ein Fix in einem Repo,
+        den das andere nie bekommt.
+      * Aus dem Arbeitsbaum der Suite ist die Datei mit `suite#218` raus. **Aus
+        beiden Historien nicht**, und beide Repos sind öffentlich.
+      * Was ein Scrub allein nicht erledigt: GitHub hält alte Blobs auch nach
+        einem Rewrite noch vor, bis der Support sie räumt.
+      * **Der Klon in dieser Umgebung ist flach** (545 Commits). „Nicht in der
+        History gefunden" ist von hier aus deshalb kein Beleg — der Fund oben
+        ist einer, das Ausbleiben weiterer Funde nicht.
+
+      Gefunden hat es `tests/screenshotsAktuell.test.ts` bei seinem ersten Lauf
+      in der Suite: die Frage „steht dieses Bild im Stempel oder in `VON_HAND`?"
+      ist entscheidbar, und sie sieht auch, was niemand referenziert.
 
 ## Abschluss — Gesamtstatus
 
@@ -323,15 +870,17 @@ Alle 6 Phasen abgeschlossen, je ein Commit, gepusht auf
 | 3 Accessibility | `useDialogA11y` (role/aria-modal/Escape/Focus-Trap/Rückgabe); ModalShell + 3 Standalone + modalRoot + MenuBar | ✅ (restl. Dialoge als TODO) |
 | 4 i18n | `i18n-check.mjs` + 105 fehlende EN-Keys + String-Migration; DE/EN deckungsgleich | ✅ |
 | 5 Dekomposition | `RackBuilderDialog`-Modell → `rackBuilderModel.ts` (−250 Zeilen) | ✅ (tiefere JSX-Zerlegung als verifizierter Folgeschritt) |
-| 6 README | Hero + Galerie (6/9 Slots mit echten, geschwärzten Bildern) + Capture-/Redact-Tooling | ✅ (canvas.gif/rack-3d/patch-pdf offen) |
+| 6 README | Hero + Galerie (7/8 Slots) + Capture-/Redact-Tooling + **automatische Aufnahme** (`npm run docs:shots`) | ✅ (nur `canvas.gif` offen — kein GIF-Encoder im Container; Bilder gegen v9.0.1, `rack-3d.png` seit 2026-09-10 dabei) |
 
 **Verifikations-Endstand:** `npx tsc -p tsconfig.app.json --noEmit` = 0,
 `npm run build` grün, `npm run lint` = 124 Fehler / 18 Warnungen
 (**3 Fehler unter** dem 127er-Baseline, **0 neu eingeführt**),
 `node docs/i18n-check.mjs` = 0 fehlende Keys.
 
-**Offene Hauptpunkte (manuell):** restliche Screenshots (`canvas.gif`,
-`rack-3d.png`, `patch-pdf.png`), History-Scrub der Rohbilder, sowie die je
+**Offene Hauptpunkte (manuell):** `canvas.gif` (kein GIF-Encoder im
+Container), der History-Scrub der Rohbilder — **eine Eigentümer-Entscheidung,
+und seit dem Fund in der Suite (`hero.png.png`, siehe oben) keine theoretische
+mehr** —, sowie die je
 Phase dokumentierten großflächigen Migrations-TODOs (Typo/Token-Rest,
 restliche Dialog-a11y, in-`t()`-Glyphen).
 

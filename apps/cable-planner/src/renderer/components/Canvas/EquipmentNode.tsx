@@ -1,4 +1,3 @@
-import { optikKurz } from '../../lib/kameraOptik'
 import { Handle, Position, useUpdateNodeInternals, type NodeProps } from 'reactflow'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Headphones, Lock, Check } from 'lucide-react'
@@ -37,6 +36,7 @@ import { testPatternDataUri } from '../../lib/testPattern'
 import { PatternCheckRow } from './PatternCheckRow'
 import { useCircuitStore, istSchaltbar } from '../../store/circuitStore'
 import { CIRCUIT_KIND_INFO } from '../../types/circuit'
+import { optikKurz } from '../../lib/kameraOptik'
 // 2026-09-12 — Diese fuenf Zahlen standen hier als Modul-Konstanten und waren
 // damit fuer die Lebensdauer des Moduls festgenagelt. Sie folgen jetzt der im
 // Menue eingestellten Rastergroesse und werden deshalb IN der Komponente
@@ -340,7 +340,7 @@ export const EquipmentNode = ({ id, data, selected }: NodeProps<EquipmentNodeDat
   // Ports auf Dot-Reihen landen.
   const EXTRA_HEADER_LINE = GRID_SIZE
   const beltpackLine = greengoUser ? EXTRA_HEADER_LINE : 0
-  // #910 — die Optik einer Kamera steht als eigene Header-Zeile.
+  // #910 — die Optik einer MultiCam-Kamera steht als eigene Header-Zeile.
   const optikZeile = optikKurz(data.optik)
   const optikLine = optikZeile ? EXTRA_HEADER_LINE : 0
   const headerHeight = (
