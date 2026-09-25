@@ -1,7 +1,7 @@
-import type { Cable } from './cable'
+import type { Cable, CableStockEntry } from './cable'
 import type { EquipmentItem } from './equipment'
 import type { IntercomPlan } from './intercomPlan'
-import type { LocationFrame } from './location'
+import type { Floor, LocationFrame } from './location'
 import type { VenueAnswer } from './venueAnswer'
 import type { HausAuskunft } from './hausAuskunft'
 import type { VideoFormatId } from './videoFormat'
@@ -185,6 +185,16 @@ export interface CablePlannerProject {
   cables: Cable[]
   canvasState: CanvasState
   locations?: LocationFrame[]
+  /** Hallenplan unter dem Canvas, mit Massstab. */
+  grundriss?: import('./grundriss').Grundriss
+  /** Symbole auf dem Canvas. */
+  symbole?: import('./symbol').PlatziertesSymbol[]
+  /** Eigene Symbol-Definitionen dieses Projekts (importiert, per KI erzeugt).
+   *  Reisen in der Datei mit, damit der Plan auf einem anderen Rechner
+   *  dieselben Zeichen zeigt. */
+  symbolDefs?: import('./symbol').SymbolDef[]
+  /** #911 — die Etagen, von unten nach oben. Siehe `Floor`. */
+  floors?: Floor[]
   /**
    * Der Intercom-Slot (E-2, Schritt 1).
    *
@@ -369,7 +379,73 @@ export interface CablePlannerProject {
    *  je Projekt: eine App-weite Einstellung erbte ein zweites Projekt mit,
    *  und dann lauschte ein Port, den fuer dieses Projekt niemand wollte. */
   oscLauscher?: import('./showControl').OscLauscherConfig
+  /**
+   * #875 — die verfuegbaren Lagerlaengen je Kabeltyp.
+   *
+   * Sie stehen am PROJEKT und nicht im Lager: ADR-006 hat den Bestand in ein
+   * eigenes Werkzeug ausgelagert, und der Planer soll kein Lager-Modell
+   * bekommen. Was hier steht, ist die Angabe „mit diesen Trommeln fahren wir
+   * diese Produktion" — von Hand gepflegt oder spaeter uebernommen.
+   * Optional -> alte Projekte heilen zu [].
+   */
+  cableStock?: CableStockEntry[]
+  /**
+   * #881 — die Panel-TYPEN, mit denen dieses Projekt rechnet.
+   *
+   * Sie stehen am Projekt und nicht app-weit: welche Kacheln im Haus liegen,
+   * ist eine Angabe der Produktion, und ein zweites Projekt erbte sie sonst
+   * mit. Optional -> alte Projekte heilen zu [].
+   */
+  ledPanelTypes?: import('./ledWall').LedPanelType[]
+  /**
+   * #881 — die geplanten LED-Waende. Jede verweist auf ihren Typ und traegt
+   * die ANZAHL, nie die Masse: die stehen am Typ (ADR-001).
+   * Optional -> alte Projekte heilen zu [].
+   */
+  ledWalls?: import('./ledWall').LedWall[]
+  /**
+   * #884 — Fotos zur Dokumentation. Vom Planer aus aufgenommen oder vom
+   * Handy hereingeschickt.
+   *
+   * EINE Liste am Projekt, und die Fotos zeigen ueber `zeigtAuf` auf Geraet
+   * oder Kabel (ADR-001). Am Geraet gespeichert waeren sie beim Kopieren
+   * mitkopiert, und der Abgleich mit dem Kollab-Modell (`projectCrdt`
+   * spiegelt Geraete als GANZE Objekte) schoebe bei jeder Beruehrung des
+   * Geraets das Bild ueber die Leitung.
+   *
+   * Die Bilddaten stehen NICHT in der Sicherungskopie im Browser — die
+   * Rechnung dazu steht in `lib/fotoMasse.ts`. Optional -> alte Projekte
+   * heilen zu [].
+   */
+  fotos?: import('./foto').Foto[]
+  /**
+   * #880 — Berichts-Vorlagen, die mit DIESEM Plan reisen.
+   *
+   * Neben den globalen in den Einstellungen: „so sieht die Ziehliste dieser
+   * Produktion aus" gehoert in die Plandatei, „so sieht meine Ziehliste aus"
+   * in die Installation. Optional -> heilt zu [].
+   */
+  berichtsvorlagen?: import('./bericht').Berichtsvorlage[]
+  /**
+   * #873 — was ueber den MCP-Server am Plan geaendert wurde.
+   *
+   * Im Projekt und nicht in den Einstellungen: wer die Datei weitergibt, gibt
+   * mit, was daran nicht von Hand entstanden ist. Gedeckelt auf 50 Zeilen.
+   * Optional -> heilt zu [].
+   */
+  mcpLog?: import('./mcpLog').McpEintrag[]
   farbnormen?: import('./conductor').Farbnorm[]
+  /**
+   * #885 — die Polaritaets-Methoden dieser Anlage (TIA-568 A/B/C …).
+   *
+   * Eingebaut ist KEINE, und das ist eine Entscheidung: die Begruendung in
+   * voller Laenge im Kopf von `types/fiber.ts`. Wie bei den Farbnormen wird
+   * eine GEWAEHLT und traegt ihre Herkunft. Optional -> heilt zu [].
+   */
+  polaritaetsnormen?: import('./fiber').Polaritaetsnorm[]
+  /** #885 — welche der Methoden fuer dieses Projekt gilt. Ohne sie bleibt
+   *  die Polaritaet ungeprueft, und der Plan-Check sagt das. */
+  polaritaetsnormId?: string
   /** B-45 — die Anschluss: welche Leitungen zusammen einen Anschluss bilden
    *  und welche Leiter er haben MUSS. Powerlock zieht man je Leiter einzeln;
    *  ein 400-A-Anschluss sind fuenf Leitungen. Ohne das `soll` koennte die

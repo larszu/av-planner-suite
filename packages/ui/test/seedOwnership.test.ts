@@ -217,3 +217,46 @@ describe('Einen Befund aufloesen', () => {
     expect(nach.holds?.['venue.name' as SeedVenueField]).toBeUndefined()
   })
 })
+
+describe('Die Lage im Raum aus dem Signalplan', () => {
+  // „Raum in 3D" zeigte Mischer und Switch nie: den Raum setzten nur Kamera-
+  // und Lichtplan, und die platzieren keinen Mischer. Der Signalplan darf ihn
+  // jetzt dorthin stellen — aber nur Geraete, die kein anderer Plan fuehrt.
+  const mit = (geraete: SuiteSeed['geraete']): SuiteSeed => ({ ...seed(HALLE), geraete })
+
+  it('stellt einen Mischer dorthin, wo er auf dem vermessenen Plan liegt', () => {
+    const { seed: nach } = mergeSeedPatch(mit([{ id: 'atem', name: 'ATEM', kategorie: 'Video Mixer' }]), {
+      domain: 'signal',
+      revision: 3,
+      geraete: [{ id: 'atem', name: 'ATEM', kategorie: 'Video Mixer', x: 18.5, y: 3.2 }],
+    })
+    expect(nach.geraete[0]).toMatchObject({ x: 18.5, y: 3.2 })
+  })
+
+  it('laesst die Stelle einer Kamera dem Kameraplan', () => {
+    const { seed: nach } = mergeSeedPatch(mit([{ id: 'cam1', name: 'CAM 1', kamera: {}, x: 4.2, y: 10.8 }]), {
+      domain: 'signal',
+      revision: 3,
+      geraete: [{ id: 'cam1', name: 'CAM 1', x: 9, y: 9 }],
+    })
+    expect(nach.geraete[0]).toMatchObject({ x: 4.2, y: 10.8 })
+  })
+
+  it('ohne Lage gemeldet heisst keine Aussage — die bisherige bleibt', () => {
+    const { seed: nach } = mergeSeedPatch(mit([{ id: 'hub', name: 'Hub', x: 2, y: 3 }]), {
+      domain: 'signal',
+      revision: 3,
+      geraete: [{ id: 'hub', name: 'Videohub' }],
+    })
+    expect(nach.geraete[0]).toMatchObject({ name: 'Videohub', x: 2, y: 3 })
+  })
+
+  it('nimmt keine halbe Lage', () => {
+    const { seed: nach } = mergeSeedPatch(mit([{ id: 'hub', name: 'Hub' }]), {
+      domain: 'signal',
+      revision: 3,
+      geraete: [{ id: 'hub', name: 'Hub', x: 2 }],
+    })
+    expect(nach.geraete[0].x).toBeUndefined()
+  })
+})

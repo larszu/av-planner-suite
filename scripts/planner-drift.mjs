@@ -319,13 +319,13 @@ const DEAD_UPSTREAM = {
   'light-planner': [
     'components/MenuBar.tsx', // App.tsx nutzt TopBar
     'components/Toolbar.tsx', // App.tsx nutzt ToolRail
-    // Die Kommandopalette haengt upstream IN der MenuBar und liest ihr
-    // Menue-Modell — beides gibt es hier nicht, weil hier die TopBar
-    // bedient. Sie zu vendorieren hiesse, zwei Dateien mitzuschleppen, die
-    // nichts mountet. Eingebettet gehoert Strg/Cmd+K ohnehin der Shell
-    // (siehe die OVERLAY-Kommentare in cable- und multicam-App).
-    'components/CommandPalette.tsx',
-    'components/menuModel.ts',
+    // Hier standen bis 2026-09-25 auch `CommandPalette.tsx` und
+    // `menuModel.ts` — mit der Begruendung, nichts mounte sie. Das stimmte
+    // nicht mehr: die TopBar der Kopie baut ihre Menues aus `menuModel`, und
+    // die Palette haengt daran. Der Eintrag war schlimmer als nutzlos: das
+    // Nachziehen uebersprang die Datei als toten Code, und der Menuepunkt
+    // „Lager/Bestand" (light#124) fehlte, waehrend der Knopf dafuer schon
+    // entfernt war.
   ],
 }
 

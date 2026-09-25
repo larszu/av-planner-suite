@@ -17,10 +17,15 @@ describe('Kameratypen — Befund A, nachgerechnet', () => {
     // fielen dem Wächter „kein Modell steht unter zwei Ids" auf — sie hätten
     // sonst doppelt im Katalog gestanden, einmal mit Ports und einmal ohne.
     //
-    // Die übrigen 365 haben im Cable-Planer keine Entsprechung. Das war der
+    // Am 2026-09-25 kamen VIER dazu (multicam#148): Blackmagic-Modelle, die
+    // der Katalog-Abzug nicht fand, weil der Cable-Planer sie unter dem
+    // vollen Namen fuehrt („Pocket Cinema Camera 6K G2" gegen „Pocket Cinema
+    // 6K G2"). Von Hand und mit Datenblatt-Nummer zugeordnet, also sechzehn.
+    //
+    // Die übrigen 361 haben im Cable-Planer keine Entsprechung. Das war der
     // Befund: sie gab es dort gar nicht.
-    expect(KAMERA_TYPEN.filter((t) => !istAbgeleitet(t.id))).toHaveLength(12)
-    expect(KAMERA_TYPEN.filter((t) => istAbgeleitet(t.id))).toHaveLength(365)
+    expect(KAMERA_TYPEN.filter((t) => !istAbgeleitet(t.id))).toHaveLength(16)
+    expect(KAMERA_TYPEN.filter((t) => istAbgeleitet(t.id))).toHaveLength(361)
   })
 
   it('und sie bringt ihre Datenblätter mit', () => {

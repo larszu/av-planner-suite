@@ -11,9 +11,10 @@
  * ein Lager-Artikel einen **festen** Code (QR ODER Barcode), der über alle
  * Projekte hinweg denselben Artikel meint (touring-tauglich).
  */
-import type { TransportSpec } from './transport'
 
 /** Eigentumsverhältnis — gleiche Werte wie `EquipmentItem.ownership`. */
+import type { TransportSpec } from './transport'
+
 export type InventoryOwnership = 'owned' | 'rented' | 'subhire'
 
 /** Etiketten-Codeart eines Lager-Artikels/Cases. */

@@ -28,15 +28,21 @@ import { useInventoryStore } from '../domain/store/inventoryStore'
 import { useCheckoutStore } from '../domain/store/checkoutStore'
 import { Kopfzeile } from './Kopfzeile'
 import { Bestand } from './Bestand'
+import { Lagerbaum } from './Lagerbaum'
 import { Ausgabescheine } from './Ausgabescheine'
 import { SubHire } from './SubHire'
 import { Inventur } from './Inventur'
+import { Stapeln } from './Stapeln'
+import { Caseausbau } from './Caseausbau'
+import { Fahrzeuge } from './Fahrzeuge'
+import { Ladung } from './Ladung'
 import { Bericht } from './Bericht'
 import { WerteUndSchaeden } from './WerteUndSchaeden'
 import { Wareneingang } from './Wareneingang'
 import { PlanBedarf } from './PlanBedarf'
+import { Bibliothek } from './Bibliothek'
 
-type Reiter = 'bestand' | 'eingang' | 'inventur' | 'ausgabe' | 'subhire' | 'bericht' | 'werte' | 'plan'
+type Reiter = 'bestand' | 'lager' | 'eingang' | 'inventur' | 'ausgabe' | 'subhire' | 'bericht' | 'werte' | 'stapeln' | 'cases' | 'fahrzeuge' | 'ladung' | 'bibliothek' | 'plan'
 
 type UebersetzFn = (key: string, en: string) => string
 
@@ -48,12 +54,18 @@ type UebersetzFn = (key: string, en: string) => string
  */
 const reiterListe = (t: UebersetzFn): { id: Reiter; titel: string; frage: string }[] => [
   { id: 'bestand', titel: t('tab.stock', 'Stock'), frage: t('tab.stock.q', 'What is here, how much of it, and where does it sit?') },
+  { id: 'lager', titel: t('tab.storage', 'Storage'), frage: t('tab.storage.q', 'Where does it sit — and what is inside what?') },
   { id: 'eingang', titel: t('tab.receiving', 'Receiving'), frage: t('tab.receiving.q', 'What arrived — and what does that do to the stock?') },
   { id: 'inventur', titel: t('tab.audit', 'Stocktake'), frage: t('tab.audit.q', 'Is what should be here actually here?') },
   { id: 'ausgabe', titel: t('tab.checkouts', 'Checkout notes'), frage: t('tab.checkouts.q', 'What is out, with whom, and since when?') },
   { id: 'bericht', titel: t('tab.report', 'Report'), frage: t('tab.report.q', 'What is inside — and how does it get out of here?') },
   { id: 'werte', titel: t('tab.values', 'Values & damage'), frage: t('tab.values.q', 'What is it worth, what is broken, and what is committed?') },
   { id: 'subhire', titel: t('tab.subhire', 'Sub-hire'), frage: t('tab.subhire.q', 'What is not ours — and when must it go back?') },
+  { id: 'stapeln', titel: t('tab.stack', 'Stacking'), frage: t('tab.stack.q', 'Does this case go on that one — and how high does the stack get?') },
+  { id: 'cases', titel: t('tab.cases', 'Cases'), frage: t('tab.cases.q', 'How does it lie inside — and what has to be in there?') },
+  { id: 'fahrzeuge', titel: t('tab.vehicles', 'Vehicles'), frage: t('tab.vehicles.q', 'What fits in — and who is allowed to drive it?') },
+  { id: 'ladung', titel: t('tab.load', 'Load'), frage: t('tab.load.q', 'What travels — and does the vehicle carry it?') },
+  { id: 'bibliothek', titel: t('tab.library', 'Device library'), frage: t('tab.library.q', 'Which device types does the shared library know — and which of ours are missing there?') },
   { id: 'plan', titel: t('tab.plan', 'Plan demand'), frage: t('tab.plan.q', 'What does the plan need — and how much of it is here?') },
 ]
 
@@ -143,6 +155,7 @@ export function App() {
       <main className="inhalt">
         <p className="frage">{aktiv.frage}</p>
         {reiter === 'bestand' && <Bestand />}
+        {reiter === 'lager' && <Lagerbaum />}
         {reiter === 'eingang' && <Wareneingang />}
         {reiter === 'inventur' && <Inventur />}
         {reiter === 'ausgabe' && <Ausgabescheine />}
@@ -150,6 +163,11 @@ export function App() {
         {reiter === 'werte' && <WerteUndSchaeden />}
         {reiter === 'subhire' && <SubHire />}
         {reiter === 'plan' && <PlanBedarf />}
+        {reiter === 'stapeln' && <Stapeln />}
+        {reiter === 'cases' && <Caseausbau />}
+        {reiter === 'fahrzeuge' && <Fahrzeuge />}
+        {reiter === 'ladung' && <Ladung />}
+        {reiter === 'bibliothek' && <Bibliothek />}
       </main>
       {/* Die Statusleiste des Rahmens (ADR-007 Abschnitt 6). Links steht,
           welche Frage gerade offen ist, rechts ihre Zahl. */}

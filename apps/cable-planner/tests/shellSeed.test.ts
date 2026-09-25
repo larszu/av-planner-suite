@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { SUITE_SEED_KIND, SUITE_SEED_VERSION, type SeedGeraet, type SuiteSeed } from '@avplan/ui/embed'
-import { SEED_BELEG, cableToSeedPatch, katalogTemplate, seedToCable } from '../src/renderer/lib/shellSeed'
+import { SEED_BELEG, cableToSeedPatch, katalogTemplate, raumLageAusPlan, seedToCable } from '../src/renderer/lib/shellSeed'
 import { listDeviceTypes } from '../src/renderer/lib/deviceTypeRegistry'
 import type { EquipmentItem } from '../src/renderer/types/equipment'
+import type { Grundriss } from '../src/renderer/types/grundriss'
 
 // ───────────────────────────────────────────────────────────────────────────
 // SUITE-OVERLAY-TEST: der Projekt-Seed der Shell im Cable-Planer.
@@ -419,5 +420,66 @@ describe('shellSeed — ein erneuter Seed nimmt nichts weg', () => {
     const danach = equipment.find((e) => e.id === 'n_atem')
     expect(danach?.inputs.some((p) => p.type === 'LC-Duplex')).toBe(false)
     expect(ausgelassen.map((a) => a.id)).toContain('k9')
+  })
+})
+
+describe('Die Lage im Raum aus dem Hallenplan', () => {
+  const geraet = (id: string, name: string) =>
+    ({ id, name, category: 'Video Mixer', inputs: [], outputs: [] }) as unknown as EquipmentItem
+  // Plan bei (100|50) auf dem Canvas, 1000 px breit = 40 m, also 4 cm je Pixel.
+  const plan = (over: Partial<Grundriss> = {}): Grundriss => ({
+    src: 'data:,',
+    naturalWidth: 1000,
+    naturalHeight: 500,
+    x: 100,
+    y: 50,
+    width: 1000,
+    height: 500,
+    deckkraft: 0.6,
+    kalibrierung: { art: 'zweiPunkt', a: { x: 100, y: 50 }, b: { x: 1100, y: 50 }, meter: 40 },
+    ...over,
+  })
+  const knoten = { x: 580, y: 280, width: 40, height: 40 } // Mitte (600|300)
+
+  it('rechnet die Knotenmitte in Meter um, vom Bildursprung aus', () => {
+    expect(raumLageAusPlan(knoten, plan())).toEqual({ x: 20, y: 10 })
+  })
+
+  it('legt den Versatz des Bildes im Raum dazu', () => {
+    expect(raumLageAusPlan(knoten, plan({ fremdVersatzM: { x: 2, y: -1.5 } }))).toEqual({ x: 22, y: 8.5 })
+  })
+
+  it('sagt nichts ohne Plan, ohne Massstab oder mit Vier-Punkt-Massstab', () => {
+    expect(raumLageAusPlan(knoten, undefined)).toBeUndefined()
+    expect(raumLageAusPlan(knoten, plan({ kalibrierung: undefined }))).toBeUndefined()
+    const rechteck = {
+      art: 'rechteck' as const,
+      ecken: [{ x: 100, y: 50 }, { x: 1100, y: 50 }, { x: 1100, y: 550 }, { x: 100, y: 550 }] as [
+        { x: number; y: number },
+        { x: number; y: number },
+        { x: number; y: number },
+        { x: number; y: number },
+      ],
+      breiteM: 40,
+      tiefeM: 20,
+    }
+    expect(raumLageAusPlan(knoten, plan({ kalibrierung: rechteck }))).toBeUndefined()
+  })
+
+  it('sagt nichts fuer ein Geraet neben dem Plan — das steht in der Regie, nicht am Hallenrand', () => {
+    expect(raumLageAusPlan({ ...knoten, x: 1300 }, plan())).toBeUndefined()
+  })
+
+  it('reist im Rueckweg mit, und nur dort, wo der Plan sie kennt', () => {
+    const [drauf, daneben] = cableToSeedPatch({
+      equipment: [
+        { ...geraet('atem', 'ATEM'), ...knoten } as EquipmentItem,
+        { ...geraet('hub', 'Hub'), ...knoten, x: 1300 } as EquipmentItem,
+      ],
+      grundriss: plan(),
+    }).geraete
+    expect(drauf).toMatchObject({ x: 20, y: 10 })
+    expect(daneben.x).toBeUndefined()
+    expect(daneben.y).toBeUndefined()
   })
 })

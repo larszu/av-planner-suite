@@ -7,11 +7,13 @@ import { moveRefusal } from '../lib/storageMoves'
 import { nodePathLabel } from '../lib/storageTree'
 import { useStorageMoveStore } from './storageMoveStore'
 import type { MoveRefusal } from '../types/storageMove'
+import type { CastorKind, CaseOrientation, TransportSpec } from '../types/transport'
 import type {
   InventoryItem,
   InventoryCase,
   StorageNode,
   StorageNodeKind,
+  Stellplatz,
   InventorySet,
   SetComponent,
   InventoryUnit,
@@ -26,9 +28,7 @@ import type {
   Frist,
   FristArt,
   FristArtDef,
-  Stellplatz,
 } from '../types/inventory'
-import type { CastorKind, CaseOrientation, TransportSpec } from '../types/transport'
 import { normaliseFaultEvent } from '../lib/faultHistory'
 import type { BedarfsZeile } from '../types/bedarf'
 
@@ -71,9 +71,6 @@ const healDimensions = (raw: unknown): PhysicalDimensions | undefined => {
   }
   return d.widthMm || d.heightMm || d.depthMm || d.weightKg ? d : undefined
 }
-
-const CASTOR_KINDS = new Set<CastorKind>(['fixed', 'swivel', 'swivelAuto'])
-const ORIENTATIONS = new Set<CaseOrientation>(['upright', 'onSide', 'onEnd'])
 
 /**
  * Heilt die Transport-Angaben eines Containers (Ladeplanung).
@@ -149,40 +146,6 @@ const healTransport = (raw: unknown): TransportSpec | undefined => {
     : undefined
 }
 
-/**
- * Die Lage eines Lagerplatzes im Grundriss lesen.
- *
- * HALB VERMESSEN HEISST GAR NICHT — dieselbe Regel wie bei der halb
- * vermessenen Ladeöffnung, der halb gesetzten Lage eines Ladungsstücks und
- * der halb angegebenen Kante des Laderaums. Ein Regal mit Breite, aber ohne
- * Tiefe stünde im Grundriss als Strich da und sähe aus wie eine Angabe über
- * die Halle.
- */
-export const healStellplatz = (raw: unknown): Stellplatz | undefined => {
-  if (!raw || typeof raw !== 'object') return undefined
-  const r = raw as Partial<Stellplatz>
-  const zahl = (v: unknown, minimum = 0): number | undefined =>
-    typeof v === 'number' && Number.isFinite(v) && v >= minimum ? v : undefined
-
-  const x = zahl(r.xMm)
-  const z = zahl(r.zMm)
-  const breite = zahl(r.breiteMm, 1)
-  const tiefe = zahl(r.tiefeMm, 1)
-  if (x === undefined || z === undefined || breite === undefined || tiefe === undefined) return undefined
-
-  const drehung = zahl(r.drehung)
-  const ebenen = zahl(r.ebenen, 1)
-  return {
-    xMm: x,
-    zMm: z,
-    breiteMm: breite,
-    tiefeMm: tiefe,
-    hoeheMm: zahl(r.hoeheMm, 1),
-    drehung: drehung === undefined ? undefined : drehung % 360,
-    ebenen: ebenen === undefined ? undefined : Math.round(ebenen),
-  }
-}
-
 const healCodeType = (v: unknown): InventoryItem['codeType'] =>
   v === 'qr' || v === 'barcode' ? v : undefined
 
@@ -253,6 +216,27 @@ const healItem = (raw: unknown): InventoryItem | null => {
       r.ownership === 'owned' || r.ownership === 'rented' || r.ownership === 'subhire'
         ? r.ownership
         : undefined,
+    /**
+     * Das Rueckgabedatum fremden Materials.
+     *
+     * ES STAND BIS 2026-09-20 NICHT HIER — und `healItem` baut jeden Artikel
+     * Feld fuer Feld neu auf. Das Feld gibt es im Typ, `subhireStatus`,
+     * `ownershipNote` und `overdueCheckouts` lesen es, die Oberflaeche
+     * schreibt es; nur ueberlebte es das naechste Laden nicht. Nach einem
+     * Neustart las jedes sub-gemietete Stueck „kein Rueckgabedatum", und
+     * genau das ist die Angabe, wegen der es die Spalte gibt.
+     *
+     * Aufgefallen beim Deckelblatt der Case-Inhaltsliste: dort stand es
+     * neben einem Artikel, der eines hatte.
+     *
+     * Geprueft wird die FORM und nicht die Gueltigkeit: `subhireStatus`
+     * vergleicht ISO-Zeichenketten, und ein „30.09.2026" verglichen sich
+     * still falsch. Was nicht wie ein ISO-Datum aussieht, ist keins.
+     */
+    returnDue:
+      typeof r.returnDue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.returnDue.trim())
+        ? r.returnDue.trim()
+        : undefined,
     code: typeof r.code === 'string' && r.code.trim() ? r.code.trim() : undefined,
     codeType: healCodeType(r.codeType),
     locationId: typeof r.locationId === 'string' && r.locationId ? r.locationId : undefined,
@@ -272,9 +256,46 @@ const healItem = (raw: unknown): InventoryItem | null => {
   }
 }
 
+const CASTOR_KINDS = new Set<CastorKind>(['fixed', 'swivel', 'swivelAuto'])
+const ORIENTATIONS = new Set<CaseOrientation>(['upright', 'onSide', 'onEnd'])
+
 const NODE_KINDS = new Set<StorageNodeKind>(['depot', 'room', 'shelf', 'bin', 'case', 'transportCase'])
 
 /** Heilt einen geladenen Lager-Knoten. */
+/**
+ * Die Lage eines Lagerplatzes im Grundriss lesen.
+ *
+ * HALB VERMESSEN HEISST GAR NICHT — dieselbe Regel wie bei der halb
+ * vermessenen Ladeöffnung, der halb gesetzten Lage eines Ladungsstücks und
+ * der halb angegebenen Kante des Laderaums. Ein Regal mit Breite, aber ohne
+ * Tiefe stünde im Grundriss als Strich da und sähe aus wie eine Angabe über
+ * die Halle.
+ */
+export const healStellplatz = (raw: unknown): Stellplatz | undefined => {
+  if (!raw || typeof raw !== 'object') return undefined
+  const r = raw as Partial<Stellplatz>
+  const zahl = (v: unknown, minimum = 0): number | undefined =>
+    typeof v === 'number' && Number.isFinite(v) && v >= minimum ? v : undefined
+
+  const x = zahl(r.xMm)
+  const z = zahl(r.zMm)
+  const breite = zahl(r.breiteMm, 1)
+  const tiefe = zahl(r.tiefeMm, 1)
+  if (x === undefined || z === undefined || breite === undefined || tiefe === undefined) return undefined
+
+  const drehung = zahl(r.drehung)
+  const ebenen = zahl(r.ebenen, 1)
+  return {
+    xMm: x,
+    zMm: z,
+    breiteMm: breite,
+    tiefeMm: tiefe,
+    hoeheMm: zahl(r.hoeheMm, 1),
+    drehung: drehung === undefined ? undefined : drehung % 360,
+    ebenen: ebenen === undefined ? undefined : Math.round(ebenen),
+  }
+}
+
 const healNode = (raw: unknown): StorageNode | null => {
   if (!raw || typeof raw !== 'object') return null
   const r = raw as Partial<StorageNode>

@@ -75,7 +75,9 @@ export const computeEquipmentLayout = (
   const greengoUser = findIntercomStationForEquipment(eq.id, intercom)
   const EXTRA_HEADER_LINE = GRID_SIZE
   const beltpackLine = greengoUser ? EXTRA_HEADER_LINE : 0
-  // #910 — die Optik-Zeile einer Kamera, wie im Knoten.
+  // #910 — die Optik-Zeile einer MultiCam-Kamera, wie im Knoten. Fehlte sie
+  // hier, lagen Kabel-Routing und Hindernisse eine Rasterzeile neben den
+  // echten Anschluessen.
   const optikLine = optikKurz(eq.optik) ? EXTRA_HEADER_LINE : 0
   const headerHeight =
     (eq.ipAddress

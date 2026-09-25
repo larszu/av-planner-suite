@@ -8,6 +8,10 @@ const ACCOUNT_NAME = 'rentman-api-token'
 const NETBOX_ACCOUNT_NAME = 'netbox-api-token'
 // Lexware-Office-API-Key im selben OS-Credential-Store, eigener Account.
 const LEXWARE_ACCOUNT_NAME = 'lexware-api-key'
+/** #872 — das Paarungs-Token des MCP-Servers. Es liegt im Schluesselbund
+ *  und nicht in den Einstellungen: wer es hat, darf den ganzen Plan lesen,
+ *  und eine JSON-Datei im Benutzerordner ist keine Stelle fuer so etwas. */
+const MCP_ACCOUNT_NAME = 'mcp-pairing-token'
 
 /** Tokens kommen fast immer aus Copy-Paste (Mail, PDF, Browser) und
  *  schleppen unsichtbare Zeichen mit: BOM, NBSP, Zero-Width-Spaces,
@@ -116,6 +120,33 @@ const accountFor = (destinationId: string): string => {
     throw new Error('Invalid destination id.')
   }
   return STREAM_KEY_PREFIX + destinationId
+}
+
+/**
+ * #872 — das Paarungs-Token fuer den lokalen MCP-Server.
+ *
+ * `ensure()` legt eines an, wenn keines da ist, und gibt das vorhandene
+ * sonst unveraendert zurueck: ein Token, das sich bei jedem Start aendert,
+ * zwaenge den Nutzer, seine Claude-Konfiguration jedes Mal neu zu schreiben.
+ */
+export const mcpTokenService = {
+  async get(): Promise<string | null> {
+    return keytar.getPassword(SERVICE_NAME, MCP_ACCOUNT_NAME)
+  },
+
+  async ensure(erzeuge: () => string): Promise<string> {
+    const vorhanden = await keytar.getPassword(SERVICE_NAME, MCP_ACCOUNT_NAME)
+    if (vorhanden) return vorhanden
+    const neu = sanitizeToken(erzeuge())
+    await keytar.setPassword(SERVICE_NAME, MCP_ACCOUNT_NAME, neu)
+    return neu
+  },
+
+  async reset(erzeuge: () => string): Promise<string> {
+    const neu = sanitizeToken(erzeuge())
+    await keytar.setPassword(SERVICE_NAME, MCP_ACCOUNT_NAME, neu)
+    return neu
+  },
 }
 
 export const streamKeyService = {

@@ -37,7 +37,79 @@ MultiCam Planner is designed for quick, intuitive camera planning with essential
 - 11+ mounts: B4, EF, E, PL, MFT, RF, FZ, L, M12, integrated, universal
 - Adapter system: automatic adapter detection with T-stop light loss, sensor crop info, Speed Booster support (e.g., EF→MFT)
 - Custom lens support: create and save your own lenses
+- **Custom cameras and lenses travel with the project:** the ones the placed
+  cameras use are written into the `.mcplan` (and the `.avplan` cameras slot)
+  and added to the local library when the project is opened on another
+  machine. An entry that already exists there with the same id but different
+  data is never overwritten — the local one is kept, and a notice names it.
 - Favorites: star cameras and lenses for quick access
+- **Connectors in the Cable Planner:** a camera whose manufacturer and model
+  match an entry of the Cable Planner's camera catalog *exactly* (case, spaces
+  and dashes aside) carries that entry's device-type GUID, and the Cable
+  Planner resolves it to the real connector panel. Similar names do not count —
+  a wrong GUID would be trusted blindly over there. Four Blackmagic bodies
+  whose names differ only by wording (*Pocket Cinema 6K G2* / *Pocket Cinema
+  Camera 6K G2* and the like) are assigned by hand, with the reason next to
+  them in `cameras.ts`. Today 16 of 377 cameras (the catalog lists 20
+  devices). A custom camera can pick a catalog device as its **port template**.
+  The catalog identities are a frozen snapshot in
+  `src/data/cableCameraCatalogIds.ts`; `npm run katalog:cable-ids` refreshes it
+  from a `cable-planner` checkout next to this repo, and `npm test` then names
+  every camera whose GUID has to be added or removed.
+
+### 🗄 Device library (devices.zumpelars.de)
+- **Settings → Device library**: server address (default
+  `https://devices.zumpelars.de`, changeable, *Reset* returns to it), sign-in
+  with email or username and password, a second step for the two-factor code,
+  sign-out, and links to *Create account* / *Forgot password* on the library's
+  website (registration happens there, not in the planner). Every build talks
+  to the default server unless the address is changed.
+- **Sync**: on start (while signed in) and on *Sync now*. Incremental — only
+  what changed since the last `latestSeq`. Library cameras appear in the camera
+  list under *Device library*, library lenses in the lens list with
+  *· library*; both are read-only (editing creates a local *modified* copy,
+  like a built-in). A device marked `removed` leaves the catalog. Every entry
+  goes through the same check as cameras/lenses carried in a project file; one
+  that fails is skipped and counted in the sync line. The cache lives in local
+  storage and survives sign-out, so placed library cameras keep working
+  offline. Under the selector a library entry shows its status, its number of
+  confirmations and a link to its page.
+  Library entries do **not** travel inside the project file (custom ones do):
+  a project that uses one needs the library, or its cache, on the other
+  machine as well.
+- **Submit**: a custom camera or lens (or a modified built-in) has *Submit to
+  device library…*. A datasheet link is required (pre-filled from the entry's
+  manufacturer URL); the proposal goes into moderation. Not signed in, the
+  dialog leads to the sign-in. A device whose manufacturer and model are
+  already in the library is refused (`exists`); changed community guidelines
+  (`guidelines-outdated`) have to be accepted again on the website — the
+  message links to `<server>/guidelines`.
+- **Facet format** (the `multicam` part of a library device, identical for
+  submit and import):
+  `{ kind: 'camera', version: 1, camera: <Camera without id> }` or
+  `{ kind: 'lens', version: 1, lens: <Lens without id and isCustom> }` — the
+  planner's native catalog entry, including `deviceTypeId` (the device-type
+  GUID the Cable Planner resolves to ports), `manufacturerUrl` and
+  `specSource` (datasheet evidence per field). Nested, because the server
+  strips top-level private keys such as `id` and `notes` from every facet.
+  Imported entries get the id `devlib-<slug>`; the core's `category` is
+  `Camera` or `Lens`. Mapping: `src/library/facet.ts`.
+- **Token storage**: the desktop app keeps the sign-in token in the system
+  keychain (`safeStorage`, via `electron/preload.cjs`); without a keychain it
+  is kept for the session only, never in plain text. The web build uses local
+  storage — a browser offers a page nothing safer; signing out revokes the
+  token on the server. The token is never written to a project file, the
+  autosave or a log.
+- **Another server**: the content security policy (`index.html`,
+  `electron/main.cjs`) allows only `https://devices.zumpelars.de`. A different
+  address must be added there, otherwise every request is blocked and the
+  settings report the server as unreachable. Changing the address signs out
+  at the old server, forgets the token (it must never reach another server)
+  and starts an empty cache. Only `https://` is accepted (`http://` for
+  localhost).
+- Client: `src/utils/deviceLibraryClient.ts`, an unchanged copy of
+  `larszu/av-device-library` `clients/deviceLibraryClient.ts` — changes go
+  there first.
 
 ### 🗺 2D Venue Planner
 - Top-down drag & drop camera placement with real-time FOV cones
@@ -49,6 +121,7 @@ MultiCam Planner is designed for quick, intuitive camera planning with essential
 ### ⚡ 3D Venue View
 - Interactive 3D venue visualization with FOV pyramids
 - FPS-style controls (WASD + mouse look, Space/Shift up/down, Ctrl sprint)
+- **Touch: one finger looks around, two fingers pinch to move forward/back and drag to slide sideways and up/down** — no keyboard needed on a phone or tablet
 - Drag cameras in space, visualize stage meshes & venue boundaries
 - Background floor plan projection, floor grid with metric labels
 
@@ -56,15 +129,43 @@ MultiCam Planner is designed for quick, intuitive camera planning with essential
 - Live viewfinder simulation with accurate perspective
 - Ground grid, sky/horizon, stage outlines, reference silhouettes
 - Overlays: rule of thirds, safe areas, crosshair, data HUD
-- Pan/tilt using mouse drag
+- Pan/tilt by dragging — with the mouse or one finger; pinch with two fingers to zoom the lens
+- On a narrow window the data readout moves **below** the image instead of taking a fixed column beside it: the picture gets the full width
 
 ### 📐 FOV & DoF Calculator
 - 9 sensor sizes (Full Frame, Super 35, APS-C, MFT, 1", 2/3", 1/2", 1/3", 1/2.3")
 - Controls for focal length, aperture, distance, extenders
 - Outputs: horizontal/vertical/diagonal FOV, image dimensions at distance, 35mm equivalent, DoF near/far/total, hyperfocal distance, person height in frame
+- **Depth of field in the floor plan** — the sharp zone drawn as a band inside
+  the FOV cone, so "is the band inside camera 3's focus range?" is a look
+  instead of a calculation. Toggled next to the FOV eye in the camera list.
+  The band deliberately reaches past the cone: the cone ends at the focus
+  distance because it shows the frame width there — sharpness does not. A
+  dashed outer edge means the band continues beyond the drawn area, which is
+  the normal case once focus sits at or past the hyperfocal distance.
 
 ### 💾 Project & Layout
 - Save/load projects as JSON with version tracking and unsaved changes detection
+- **Autosave:** the open project is kept in the browser's local storage one
+  second after the last change (and at once when the page is left) and comes
+  back on the next start — including whether it has unsaved changes. The start
+  screen then offers *Continue last project*; opening a file or starting a new
+  project replaces it, and asks first if it has unsaved changes. If the storage is full, the
+  status bar says so; the project stays open and can still be saved as a file.
+- **Stable project id:** every project gets a UUID when it is created and keeps
+  it through every save. An older file without one gets an id derived from the
+  file (save time and venue name), so opening the same file twice gives the
+  same id. The
+  Cable Planner uses it to recognise a project it has seen before.
+- **Camera list for the Cable Planner** (`*.cameras.json`, format `camera-list`
+  v2): every placed camera with manufacturer, model, device-type GUID, position
+  and height, the active mount, the set focal length, an engaged extender and
+  the lens (manufacturer, model, zoom range, mount). A field MultiCam does not
+  know stays out — no default that would read like a measurement over there.
+  v1 files are still read. The `.avplan` export carries the same list inside
+  MultiCam's own slot (`domains.cameras.cameraList`), so the Cable Planner
+  does not need to know MultiCam's project format; it is rebuilt on every
+  export and dropped on import.
 - Dockable panel system (FlexLayout): drag, split, tab, resize
 - Layout modes: Focus (single tab) and Grid (2×2)
 - Customizable layout presets (save/load/delete)
@@ -150,6 +251,8 @@ page. It can also be triggered manually via the Actions tab for testing.
 | npm run dist:mac   | Build macOS DMG + ZIP (x64 + arm64, host = macOS) |
 | npm run preview    | Preview production build                          |
 | npm run lint       | Run ESLint linter                                 |
+| npm run ci:complete| Assert every `*:check` script is actually run by CI |
+| npm run katalog:cable-ids | Refresh the snapshot of the Cable Planner camera catalog (GUIDs) |
 
 ---
 

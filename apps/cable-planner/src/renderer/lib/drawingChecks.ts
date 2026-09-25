@@ -24,8 +24,11 @@ import { deriveDrumChannels } from './drumMicing'
 import { labelTargetIssues } from './labelDerivation'
 import { beurteileAdapter } from '../types/adapter'
 import { anschlussBefunde, type AnschlussLeitung } from '../types/conductor'
+import { breakoutBefunde, polaritaetsBefunde } from '../types/fiber'
+import { wandSumme } from './ledWall'
 import { beurteileBild } from '../types/displayCapability'
 import { gruppenBefunde } from './portGroups'
+import { durchBlenden, gegenendenJePort } from './patchPanel'
 import { pruefeAdressen, type DmxGeraet } from './dmx'
 import { tr, format } from './i18n'
 export type { CheckSeverity, CheckFinding } from '../types/checkFinding'
@@ -77,6 +80,15 @@ export interface DrawingCheckInput {
   /** B-45 — die Anschluesse und die gewaehlten Farbnormen. */
   anschlussListe?: import('../types/conductor').Anschluss[]
   farbnormen?: import('../types/conductor').Farbnorm[]
+  /** #885 — die Polaritaets-Methoden und die fuer dieses Projekt gewaehlte.
+   *  Ohne eine gewaehlte bleibt die Polaritaet ungeprueft, und die Pruefung
+   *  sagt das, statt zu schweigen. */
+  polaritaetsnormen?: import('../types/fiber').Polaritaetsnorm[]
+  polaritaetsnormId?: string
+  /** #881 — die LED-Waende und ihre Panel-Typen. Ihre Last haengt am
+   *  Anschlusspunkt des Hauses wie die eines Geraets. */
+  ledWalls?: import('../types/ledWall').LedWall[]
+  ledPanelTypes?: import('../types/ledWall').LedPanelType[]
   /** B-47 — das Format, das gilt, wo das Kabel keines nennt. */
   defaultVideoFormat?: import('../types/videoFormat').VideoFormatId
   /**
@@ -110,6 +122,10 @@ export const runDrawingChecks = (
     sourceIdentities,
     anschlussListe,
     farbnormen,
+    polaritaetsnormen,
+    polaritaetsnormId,
+    ledWalls,
+    ledPanelTypes,
     defaultVideoFormat,
     hausAuskunft,
   }: DrawingCheckInput,
@@ -569,6 +585,7 @@ export const runDrawingChecks = (
   // Ethernet angeschlossenen PoE-fähigen Verbraucher (≤ 90 W = 802.3bt Typ 4;
   // größere Geräte haben eigene Stromversorgung und zählen nicht).
   const POE_MAX_W = 90
+  const kabelEnden = gegenendenJePort(cables)
   for (const sw of equipment) {
     const budgetRaw = sw.categoryProps?.poeBudgetW
     const budget = typeof budgetRaw === 'number' ? budgetRaw : Number(budgetRaw)
@@ -578,16 +595,20 @@ export const runDrawingChecks = (
     const seen = new Set<string>()
     for (const c of cables) {
       let swPortId: string | undefined
-      let otherId: string | undefined
+      let fern: { equipmentId: string; portId: string } | undefined
       if (c.fromEquipmentId === sw.id) {
         swPortId = c.fromPortId
-        otherId = c.toEquipmentId
+        fern = { equipmentId: c.toEquipmentId, portId: c.toPortId }
       } else if (c.toEquipmentId === sw.id) {
         swPortId = c.toPortId
-        otherId = c.fromEquipmentId
+        fern = { equipmentId: c.fromEquipmentId, portId: c.fromPortId }
       } else continue
       const swPort = portById.get(swPortId)
       if (!swPort || swPort.connectorType !== 'Ethernet/RJ45') continue
+      // Durch Patchfeld und Wanddose zum Verbraucher: sonst zaehlt eine
+      // PoE-Kamera hinter einer Blende nicht mit, und das Budget sieht in
+      // jeder Festinstallation leer aus.
+      const otherId = durchBlenden(fern, eqById, kabelEnden).ende.equipmentId
       if (!otherId || seen.has(otherId)) continue
       const consumer = eqById.get(otherId)
       if (!consumer) continue
@@ -684,7 +705,13 @@ export const runDrawingChecks = (
     const to = portById.get(c.toPortId)
     const a = from?.fiberConnector
     const b = to?.fiberConnector
-    if (a && b && a !== b) {
+    // #885 — ein BREAKOUT ist kein Mismatch. Wo eine Seite die Buchse in
+    // Fasern aufteilt (opticalCON QUAD aussen, LC innen), sind zwei
+    // verschiedene Steckverbinder genau die Bauform und kein Fehler; diese
+    // Pruefung haette sie als einen gemeldet und damit jeden Breakout im
+    // Plan rot gefaerbt.
+    const breakout = (from?.fasern?.length ?? 0) > 0 || (to?.fasern?.length ?? 0) > 0
+    if (a && b && a !== b && !breakout) {
       findings.push({
         id: `fiber-conn:${c.id}`,
         severity: 'warning',
@@ -698,6 +725,83 @@ export const runDrawingChecks = (
         ),
         cableId: c.id,
       })
+    }
+  }
+
+  // — Check 16c: Breakout unvollstaendig / doppelt belegt (#885) -------------
+  // Der strukturelle Nachbar von 16b: dort sind es N Buchsen fuer EIN Bild,
+  // hier ist es EINE Buchse mit N Fasern. Die Rechnung steht in
+  // `types/fiber.ts` und nicht hier — sie gehoert zum Modell, und die
+  // Eigenschaften-Leiste stellt dieselbe Frage.
+  for (const e of equipment) {
+    for (const p of [...e.inputs, ...e.outputs]) {
+      if (!p.fasern || p.fasern.length === 0) continue
+      const belegungen = cables
+        .filter((c) => c.fromPortId === p.id || c.toPortId === p.id)
+        .map((c) => ({
+          cableId: c.id,
+          bezeichnung: c.cableNumber || c.name || c.id,
+          position: c.fromPortId === p.id ? c.faserVon : c.faserNach,
+        }))
+      for (const b of breakoutBefunde({ id: p.id, name: `${e.name} · ${p.name}`, fasern: p.fasern }, belegungen)) {
+        findings.push({
+          id: `fibre-breakout:${p.id}:${b.art}`,
+          // Doppelt belegt ist ein FEHLER und nicht bloss ein Hinweis: im
+          // Plan sind es zwei Verbindungen, in der Anlage eine — eine davon
+          // fuehrt kein Licht, und welche steht nirgends.
+          severity: b.art === 'faser-doppelt' || b.art === 'faser-unbekannt' ? 'error' : 'warning',
+          category: 'Fibre breakout',
+          message: format(tr(b.schluessel, b.text), b.werte),
+          equipmentId: e.id,
+          cableId: b.cableId,
+        })
+      }
+    }
+  }
+
+  // — Check 17c: Faser-Polaritaet (#885) -------------------------------------
+  // Sie laeuft NUR ueber Kabel, deren beide Enden eine Faser nennen: nur dort
+  // gibt es ueberhaupt eine Polaritaet zu pruefen. Und sie urteilt nur mit
+  // gewaehlter Methode — ohne sie steht EIN Befund je Plan („ungeprueft"),
+  // nicht einer je Kabel, sonst erschlaegt die Auskunft die Liste.
+  const polNorm = polaritaetsnormen?.find((n) => n.id === polaritaetsnormId)
+  const faserKabel = cables.filter((c) => c.faserVon !== undefined && c.faserNach !== undefined)
+  if (faserKabel.length > 0 && !polNorm) {
+    findings.push({
+      id: 'fibre-polarity:no-method',
+      severity: 'info',
+      category: 'Fibre polarity',
+      message: format(
+        tr(
+          'check.fibreNoPolarityMethod',
+          '{n} fibre links carry a strand number, but no polarity method is chosen - their direction is unchecked. Which method applies to this installation is not in the program.',
+        ),
+        { n: faserKabel.length },
+      ),
+    })
+  }
+  if (polNorm) {
+    for (const c of faserKabel) {
+      const von = portById.get(c.fromPortId)?.fasern?.find((f) => f.position === c.faserVon)
+      const nach = portById.get(c.toPortId)?.fasern?.find((f) => f.position === c.faserNach)
+      if (!von && !nach) continue
+      for (const b of polaritaetsBefunde(
+        { id: c.id, bezeichnung: c.cableNumber || c.name || c.id },
+        von,
+        nach,
+        polNorm,
+      )) {
+        findings.push({
+          id: `fibre-polarity:${c.id}:${b.art}`,
+          // Verdreht ist ein Fehler — es geht kein Licht. „Rolle offen" ist
+          // eine Luecke in der Angabe und faerbt deshalb nicht rot; gruen
+          // wird sie trotzdem nicht.
+          severity: b.art === 'polaritaet-verdreht' ? 'error' : 'info',
+          category: 'Fibre polarity',
+          message: format(tr(b.schluessel, b.text), b.werte),
+          cableId: c.id,
+        })
+      }
     }
   }
 
@@ -1174,6 +1278,38 @@ export const runDrawingChecks = (
         }
       }
 
+      // — Check 25: eine DALI-Adresse, deren ART das Haus nicht nennt ------
+      //
+      // Der Rechner dafuer steht im Gebaeude-Werkzeug (`adresseMehrdeutig`,
+      // facility Issue #2) und meldete bis hierher NUR dort — also dem, der
+      // die Auskunft pflegt, und nicht dem, der die Adresse benutzt.
+      //
+      // Bei DALI heisst „3" je nach Art etwas voellig anderes: Kurzadresse 3
+      // ist EIN Vorschaltgeraet, Gruppe 3 koennen dreissig Leuchten sein,
+      // Broadcast ist alles am Bus — auch das Notlicht des Hauses. Wer eine
+      // Gruppenadresse fuer eine Kurzadresse haelt, schaltet im Zweifel den
+      // halben Saal und merkt es, wenn es dunkel ist.
+      //
+      // WARNUNG UND KEIN FEHLER: die Adresse ist nicht falsch, ihre Art ist
+      // nicht angegeben. Und nur fuer DALI — bei KNX, Crestron und Vissonic
+      // ist die Adresse aus sich heraus eindeutig, dort fehlt nichts.
+      const klinke = e.hausKlinkeId ? klinkeById.get(e.hausKlinkeId) : undefined
+      if (klinke && klinke.system === 'dali' && klinke.adressart === undefined) {
+        findings.push({
+          id: `haus-klinke-mehrdeutig:${e.id}`,
+          severity: 'warning',
+          category: 'House control',
+          message: format(
+            tr(
+              'check.haus.klinkeMehrdeutig',
+              '{name} uses the DALI address {adresse}, and the building statement does not say what kind it is. Short address, group or broadcast are three different things - the last one is the whole bus, emergency lighting included.',
+            ),
+            { name: e.name, adresse: klinke.adresse },
+          ),
+          equipmentId: e.id,
+        })
+      }
+
       if (e.hausKlinkeId && !klinkeById.has(e.hausKlinkeId)) {
         findings.push({
           id: `haus-klinke-fehlt:${e.id}`,
@@ -1187,6 +1323,144 @@ export const runDrawingChecks = (
             { name: e.name, stand: hausAuskunft.gelesenAm.slice(0, 10) },
           ),
           equipmentId: e.id,
+        })
+      }
+    }
+
+    // — Check 26: die Hausstrecken an den Kabeln (facility#15) ---------------
+    //
+    // Ein Kabel, das eine Hausstrecke benutzt, die das Haus nicht mehr nennt,
+    // zeigt ins Leere — dieselbe Regel wie bei der Dose. Zwei Kabel auf
+    // derselben Ader sind zwei Signale in einem Leiter; eine Ader, die das
+    // Haus auf der Strecke nicht kennt, ist ein Tippfehler oder ein Umbau.
+    const streckeById = new Map(hausAuskunft.strecken.map((s) => [s.id, s]))
+    const aufAder = new Map<string, string[]>()
+    for (const c of cables) {
+      if (!c.hausStreckeId) continue
+      const strecke = streckeById.get(c.hausStreckeId)
+      const kabelName = c.cableNumber || c.name
+      if (!strecke) {
+        findings.push({
+          id: `haus-strecke-fehlt:${c.id}`,
+          severity: 'error',
+          category: 'House run',
+          message: format(
+            tr(
+              'check.haus.streckeFehlt',
+              'Cable {name} is planned on a house run that the building statement of {stand} no longer lists.',
+            ),
+            { name: kabelName, stand: hausAuskunft.gelesenAm.slice(0, 10) },
+          ),
+          cableId: c.id,
+        })
+        continue
+      }
+      const ader = c.hausAder?.trim()
+      if (!ader) continue
+      if (strecke.adern && !strecke.adern.some((a) => a.nr === ader)) {
+        findings.push({
+          id: `haus-ader-unbekannt:${c.id}`,
+          severity: 'warning',
+          category: 'House run',
+          message: format(
+            tr('check.haus.aderUnbekannt', 'Cable {name} uses core "{ader}" of {strecke}, which the building does not list.'),
+            { name: kabelName, ader, strecke: strecke.bezeichnung },
+          ),
+          cableId: c.id,
+        })
+        continue
+      }
+      const key = `${strecke.id}\u0000${ader}`
+      aufAder.set(key, [...(aufAder.get(key) ?? []), c.id])
+    }
+    for (const [key, ids] of aufAder) {
+      if (ids.length < 2) continue
+      const [streckeId, ader] = key.split('\u0000')
+      const namen = ids.map((id) => {
+        const c = cables.find((x) => x.id === id)
+        return c ? c.cableNumber || c.name : id
+      })
+      findings.push({
+        id: `haus-ader-doppelt:${streckeId}:${ader}`,
+        severity: 'warning',
+        category: 'House run',
+        message: format(
+          tr('check.haus.aderDoppelt', 'Core "{ader}" of {strecke} is used by several cables: {kabel}.'),
+          { ader, strecke: streckeById.get(streckeId)?.bezeichnung ?? streckeId, kabel: namen.join(', ') },
+        ),
+        cableId: ids[0],
+      })
+    }
+
+    // — Check 26: die LED-Waende an ihrem Anschlusspunkt (#881) -------------
+    //
+    // Das letzte offene Kriterium aus #881 („Anbindung an Stromkreise und
+    // Stueckliste"). Die Waende sind keine Geraete und standen deshalb in
+    // KEINER Stromrechnung — eine 60-Panel-Wand zog im Plan null Watt.
+    //
+    // DIE DAUERLEISTUNG geht in dieselbe Summe wie die der Geraete, die
+    // SPITZE bekommt einen eigenen Befund: die Sicherung wird nach der Spitze
+    // gewaehlt, und eine LED-Wand zieht im Weissbild ein Vielfaches ihres
+    // Mittels. Beide in eine Zahl zu werfen hiesse, entweder dauerhaft zu
+    // ueberzeichnen oder die Sicherung zu unterschaetzen.
+    const panelById = new Map((ledPanelTypes ?? []).map((t) => [t.id, t]))
+    for (const wand of ledWalls ?? []) {
+      if (!wand.hausPunktId) continue
+      const punkt = punktById.get(wand.hausPunktId)
+      if (!punkt) {
+        findings.push({
+          id: `haus-wand-punkt-fehlt:${wand.id}`,
+          severity: 'error',
+          category: 'House outlet',
+          message: format(
+            tr(
+              'check.haus.wandPunktFehlt',
+              '{name} hangs on a building outlet that the statement of {stand} no longer lists.',
+            ),
+            { name: wand.name, stand: hausAuskunft.gelesenAm.slice(0, 10) },
+          ),
+        })
+        continue
+      }
+      const panel = panelById.get(wand.panelTypeId)
+      if (!panel) continue
+      const summe = wandSumme(panel, wand.columns, wand.rows)
+      if (summe.powerAvgW === undefined) {
+        // Nicht schweigen: die Summe am Punkt saehe sonst vollstaendig aus,
+        // und diese Wand waere darin mit null Watt enthalten.
+        findings.push({
+          id: `haus-wand-ohne-leistung:${wand.id}`,
+          severity: 'info',
+          category: 'House outlet',
+          message: format(
+            tr(
+              'check.haus.wandOhneLeistung',
+              '{name} carries no power figure at its panel type - its load is NOT part of the sum at {punkt}. The figure is on the datasheet; this program does not guess it.',
+            ),
+            { name: wand.name, punkt: punkt.bezeichnung },
+          ),
+        })
+        continue
+      }
+      lastJePunkt.set(punkt.id, (lastJePunkt.get(punkt.id) ?? 0) + summe.powerAvgW)
+
+      if (punkt.dauerleistungW && summe.powerMaxW && summe.powerMaxW > punkt.dauerleistungW) {
+        findings.push({
+          id: `haus-wand-spitze:${wand.id}`,
+          severity: 'warning',
+          category: 'House outlet',
+          message: format(
+            tr(
+              'check.haus.wandSpitze',
+              '{name} peaks at {spitze} W on a white frame; {punkt} is rated {grenze} W continuous. The breaker is chosen by the peak, not by the average.',
+            ),
+            {
+              name: wand.name,
+              spitze: summe.powerMaxW,
+              punkt: punkt.bezeichnung,
+              grenze: punkt.dauerleistungW,
+            },
+          ),
         })
       }
     }

@@ -62,7 +62,7 @@ const HARMLOS = new Set(
     // Englisch und Bezeichner, die als Text auftauchen
     'venueexchange', 'importvenueexchange', 'parsevenueexchange', 'venue',
     'returndue', 'due', 'value', 'values', 'postovalue', 'valuetopos',
-    'cornflowerblue', 'blue', 'true', 'issue', 'unique', 'query', 'request',
+    'cornflowerblue', 'blue', 'true', 'issue', 'unique', 'query', 'request', 'requested',
     'does', 'goes', 'sequence', 'continue', 'guess', 'guessed', 'guesses',
     // Ein Paar fuer sich ist nie ein deutsches Wort — es kommt aus einer
     // UUID, einer Farbe oder einem Pfad.
@@ -122,6 +122,9 @@ const scanne = (): { befunde: Befund[]; literale: number } => {
       if (spanne) {
         const text = src.slice(node.getStart(sf) + spanne[0], node.getEnd() + spanne[1]);
         literale += 1;
+        // URLs (manufacturerUrl-Belege, Quelle-Links) sind keine deutsche
+        // Prosa: „ue/oe/ae" darin (discontinued, truelens, juegos) sind keine
+        // Umlaut-Ersatzformen. Vor der Wortpruefung herausnehmen.
         const ohnePlatzhalter = text.replace(/\{[^}]*\}/g, ' ').replace(/https?:\/\/\S+/g, ' ');
         if (!KENNUNGEN.has(text.trim())) {
           // CamelCase AUSEINANDER, bevor ein Wort geprueft wird.

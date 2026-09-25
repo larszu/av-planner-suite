@@ -176,11 +176,117 @@ describe('Der Plan-Check fragt die Auskunft', () => {
     expect(r.findings.some((x) => x.id.startsWith('haus-last'))).toBe(false)
   })
 
+  it('7. eine DALI-Adresse OHNE Art ist eine Warnung (facility #2)', () => {
+    // Bei DALI heisst „3" je nach Art etwas anderes: ein Vorschaltgeraet,
+    // dreissig Leuchten oder der ganze Bus samt Notlicht. Der Rechner dafuer
+    // stand im Gebaeude-Werkzeug und meldete nur dem, der die Auskunft
+    // pflegt — nicht dem, der die Adresse benutzt.
+    const mitLuecke = leseHausDatei(
+      datei({
+        ...HAUS,
+        klinken: [
+          { id: 'k3', system: 'dali', adresse: '3', richtung: 'schalten', bedeutung: 'Saallicht' },
+        ],
+      }),
+      { quelle: 'x.avfacility', gelesenAm: '2026-09-10T10:00:00.000Z' },
+    )!
+    const r = checks([geraet({ id: 'dim', name: 'Dimmer', hausKlinkeId: 'k3' })], mitLuecke)
+    const f = r.findings.find((x) => x.id === 'haus-klinke-mehrdeutig:dim')
+    expect(f?.severity).toBe('warning')
+    expect(f?.message).toContain('3')
+  })
+
+  it('8. bei KNX fehlt nichts, wenn die Art leer bleibt', () => {
+    // Eine KNX-Gruppenadresse ist aus sich heraus eindeutig. Dort zu warnen
+    // hiesse, ein Feld zu verlangen, das nur eine moegliche Antwort hat.
+    const r = checks([geraet({ id: 'frei', hausKlinkeId: 'k2' })], auskunft())
+    expect(r.findings.some((x) => x.id.startsWith('haus-klinke-mehrdeutig'))).toBe(false)
+  })
+
+  it('9. eine DALI-Adresse MIT Art schweigt ebenfalls', () => {
+    const r = checks([geraet({ id: 'ok', hausKlinkeId: 'k1' })], auskunft())
+    expect(r.findings.some((x) => x.id.startsWith('haus-klinke-mehrdeutig'))).toBe(false)
+  })
+
   it('6. ohne hinterlegte Auskunft schweigen ALLE Haus-Checks', () => {
     // Kein „nicht geprüft", kein Hinweis. Die meisten Pläne stehen in einer
     // Halle, über die niemand eine Datei hat — ein Befund, den man nicht
     // beheben kann, macht die Liste unlesbar.
     const r = checks([geraet({ id: 'srv', hausPunktId: 'p2', hausKlinkeId: 'weg' })])
     expect(r.findings.filter((x) => x.category.startsWith('House'))).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// #881, letztes Kriterium — die LED-Wand am Anschlusspunkt.
+//
+// Bis hierher standen die Waende in KEINER Stromrechnung: eine 60-Panel-Wand
+// zog im Plan null Watt. Sie sind keine Geraete, und `effectiveWatts` sieht
+// nur Geraete.
+// ---------------------------------------------------------------------------
+describe('Die LED-Wand haengt am Haus (#881)', () => {
+  const panel = {
+    id: 'pt1',
+    name: 'P2.6 500x500',
+    pixelPitchMm: 2.6,
+    pixels: { x: 192, y: 192 },
+    sizeMm: { w: 500, h: 500 },
+    powerAvgW: 100,
+    powerMaxW: 400,
+  }
+  const wand = (teil: Record<string, unknown> = {}) => ({
+    id: 'w1',
+    name: 'Bühnenwand',
+    panelTypeId: 'pt1',
+    columns: 4,
+    rows: 2,
+    ...teil,
+  })
+  const mitWand = (w: Record<string, unknown>, p = panel) =>
+    runDrawingChecks({
+      equipment: [],
+      cables: [],
+      hausAuskunft: auskunft(),
+      ledPanelTypes: [p] as never,
+      ledWalls: [w] as never,
+    })
+
+  it('zaehlt die DAUERleistung in die Last des Punkts', () => {
+    // p1 ist mit 3000 W angegeben; acht Panels a 100 W sind 800 W — kein
+    // Befund. Zwoelf Reihen waeren 4800 W und einer.
+    expect(mitWand(wand({ hausPunktId: 'p1' })).findings.some((f) => f.id === 'haus-last:p1')).toBe(
+      false,
+    )
+    const viel = mitWand(wand({ hausPunktId: 'p1', rows: 12 }))
+    expect(viel.findings.find((f) => f.id === 'haus-last:p1')?.severity).toBe('error')
+  })
+
+  it('meldet die SPITZE getrennt — danach wird die Sicherung gewaehlt', () => {
+    // Acht Panels: 800 W im Mittel, 3200 W im Weissbild. Der Punkt traegt
+    // 3000 W Dauerleistung. Die Summe ist in Ordnung, die Spitze nicht.
+    const r = mitWand(wand({ hausPunktId: 'p1' }))
+    const f = r.findings.find((x) => x.id === 'haus-wand-spitze:w1')
+    expect(f?.severity).toBe('warning')
+    expect(f?.message).toContain('3200')
+  })
+
+  it('sagt es, wenn der Panel-Typ keine Leistung traegt — statt null zu zaehlen', () => {
+    const ohne = { ...panel, powerAvgW: undefined, powerMaxW: undefined }
+    const r = mitWand(wand({ hausPunktId: 'p1' }), ohne as never)
+    expect(r.findings.find((x) => x.id === 'haus-wand-ohne-leistung:w1')?.severity).toBe('info')
+    expect(r.findings.some((x) => x.id === 'haus-last:p1')).toBe(false)
+  })
+
+  it('meldet einen Punkt, den die Auskunft nicht mehr fuehrt', () => {
+    const r = mitWand(wand({ hausPunktId: 'weg' }))
+    expect(r.findings.find((x) => x.id === 'haus-wand-punkt-fehlt:w1')?.severity).toBe('error')
+  })
+
+  it('schweigt ueber eine Wand ohne Anschlusspunkt', () => {
+    // „Nicht angegeben" ist keine Frage, die der Plan stellen muss: die
+    // meisten Waende haengen an einem Verteiler, ueber den das Haus nichts
+    // sagt.
+    const r = mitWand(wand())
+    expect(r.findings.some((x) => x.id.startsWith('haus-wand'))).toBe(false)
   })
 })

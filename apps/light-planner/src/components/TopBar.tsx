@@ -43,6 +43,8 @@ interface Props {
   // actions
   onUploadFloorPlan: (f: File) => void;
   onOpenSchedule: () => void;
+  /** Lager/Bestand oeffnen — seit #124 ein Menuepunkt unter „Tools". */
+  onOpenInventory: () => void;
   onExport: (format: 'png' | 'jpg' | 'pdf') => void;
   onExportPlot: () => void;
   onNew: () => void;
@@ -106,6 +108,7 @@ const TopBar: React.FC<Props> = (p) => {
       onPaste: p.onPaste,
       onDuplicate: p.onDuplicate,
       onOpenSchedule: p.onOpenSchedule,
+      onOpenInventory: p.onOpenInventory,
       onViewModeChange: (v) => p.onSetMode(v),
       onToggleHeatMap: p.onToggleHeatMap,
       onToggleSnap: p.onToggleSnap,
@@ -170,9 +173,12 @@ const TopBar: React.FC<Props> = (p) => {
 
       {/* ── center: mode switch ── */}
       <div className="tb-modeswitch" role="tablist" aria-label={t('menu.view', 'View')}>
-        <button className={m === '2d' ? 'on' : ''} onClick={() => p.onSetMode('2d')}><Icon name="plan2d" size={15} />{t('menu.plan2d', '2D plan')}</button>
-        <button className={m === '3d' ? 'on' : ''} onClick={() => p.onSetMode('3d')}><Icon name="cube3d" size={15} />{t('topbar.mode3d', '3D')}</button>
-        <button className={m === 'photo' ? 'on' : ''} onClick={() => p.onSetMode('photo')} title={t('topbar.renderModeTitle', 'Render: photorealistic preview of the 3D scene (real fixtures, shadows, light cones, realistic people)')}><Icon name="photo" size={15} />{t('topbar.render', 'Render')}</button>
+        {/* `title` UND `aria-label`: unter 980 px blendet die Stilvorlage die
+            Beschriftung aus (#124). Ohne beides waere der Knopf danach fuer
+            einen Screenreader namenlos und fuer die Maus stumm. */}
+        <button className={m === '2d' ? 'on' : ''} onClick={() => p.onSetMode('2d')} title={t('menu.plan2d', '2D plan')} aria-label={t('menu.plan2d', '2D plan')}><Icon name="plan2d" size={15} />{t('menu.plan2d', '2D plan')}</button>
+        <button className={m === '3d' ? 'on' : ''} onClick={() => p.onSetMode('3d')} title={t('topbar.mode3d', '3D')} aria-label={t('topbar.mode3d', '3D')}><Icon name="cube3d" size={15} />{t('topbar.mode3d', '3D')}</button>
+        <button className={m === 'photo' ? 'on' : ''} onClick={() => p.onSetMode('photo')} aria-label={t('topbar.render', 'Render')} title={t('topbar.renderModeTitle', 'Render: photorealistic preview of the 3D scene (real fixtures, shadows, light cones, realistic people)')}><Icon name="photo" size={15} />{t('topbar.render', 'Render')}</button>
       </div>
 
       {/* ── right: display toggles, render settings, actions ── */}

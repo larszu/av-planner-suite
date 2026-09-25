@@ -6,6 +6,28 @@ export type CableType = Exclude<ConnectorType, 'DIN' | 'DisplayPort' | 'USB'> | 
 
 export type CableRouting = 'orthogonal' | 'straight' | 'curved'
 
+/**
+ * Eine verfuegbare Lagerlaenge eines Kabeltyps (#875).
+ *
+ * WARUM DAS AM PROJEKT HAENGT UND NICHT IM LAGER. ADR-006 hat den Bestand in
+ * ein eigenes Werkzeug ausgelagert; der cable-planner kennt kein Lager-Modell
+ * und soll keins bekommen. Die verfuegbaren Laengen sind deshalb eine ANGABE
+ * AM PROJEKT — von Hand gepflegt oder spaeter aus dem Lager uebernommen.
+ *
+ * `count` ist eine WARNUNG und keine Schranke: die Rechnung sucht die beste
+ * Stueckelung aus den verfuegbaren LAENGEN, und danach wird geprueft, ob der
+ * Bestand sie hergibt. Fehlt die Zahl, ist das nicht „keine" — es heisst,
+ * dass niemand gezaehlt hat, und dann gibt es keine Warnung, weil es keinen
+ * Bestand gibt, gegen den man warnen koennte.
+ */
+export interface CableStockEntry {
+  type: CableType
+  /** Laenge eines Stuecks in Metern. */
+  lengthM: number
+  /** Wie viele davon vorhanden sind. Fehlt die Angabe: nicht gezaehlt. */
+  count?: number
+}
+
 export interface CableWaypoint {
   x: number
   y: number
@@ -163,6 +185,14 @@ export interface Cable {
    *  nicht mit zu konfektionierenden Kabeln vermischt werden. Undefined =
    *  normales (Show-)Kabel. */
   isTieLine?: boolean
+  /** #916/facility#15 — welche Hausstrecke des Gebaeudes (`HausAuskunft.strecken[].id`)
+   *  diese Verbindung benutzt. Eine ERKLAERUNG des Plans, wie `hausPunktId` am
+   *  Geraet: der Verweis zeigt auf die Auskunft des Hauses oder ins Leere, und
+   *  ins Leere zeigt der Plan-Check an. Keine Abschrift von Raeumen und Blenden. */
+  hausStreckeId?: string
+  /** Welche Ader/welcher Port der Hausstrecke (`adern[].nr`). Fehlt = die
+   *  ganze Strecke, ohne Angabe der Ader. */
+  hausAder?: string
   /** #221 — Off-Page-/Pfeil-Connector (EAGLE/ECAD-Stil). Wenn true wird das
    *  Kabel NICHT als durchgehende Linie gezeichnet, sondern an jedem Ende als
    *  kompaktes benanntes Connector-Symbol (Pfeil + Netzname + Gegenstück).
@@ -198,6 +228,19 @@ export interface Cable {
   /** Festinstallation — Terminierung je Ende (T568A/B, LC/SC/MPO …). */
   terminationFrom?: string
   terminationTo?: string
+  /**
+   * #885 — WELCHE Faser der Buchse dieses Kabel belegt, je Ende (1-basiert).
+   *
+   * Sie steht hier und nicht als eigenes Kabel je Faser: der Breakout ist
+   * eine Eigenschaft der Buchse (`port.fasern`), das Kabel belegt davon
+   * eine. Die Begruendung in voller Laenge im Kopf von `types/fiber.ts`.
+   *
+   * Undefined heisst „nicht gesagt" — bei einer Buchse ohne Breakout ist
+   * das die richtige Antwort, bei einer QUAD eine Luecke, und der Plan-Check
+   * sagt welche.
+   */
+  faserVon?: number
+  faserNach?: number
   /** Festinstallation — Mess-/Zertifikats-Ergebnis (TIA-568/1152, OLTS/OTDR). */
   testResult?: CableTestResult
   /** Festinstallation — kurze stabile QR-/Lookup-ID (druckbar, ≥ 1,6 cm).
@@ -246,4 +289,11 @@ export interface DerivedLengthOrigin {
    *  genauso überholt wie nach einem Verschieben — die Zahl hängt an beidem. */
   metersPer100px: number
   slackPercent: number
+  /** Die Knickpunkte, ueber die gerechnet wurde. Ein neu gerouteter Weg
+   *  macht die Laenge ebenso ueberholt wie ein verschobenes Geraet. Die
+   *  Punkte selbst und kein Textschluessel: die Raster-Heilung beim Laden
+   *  zieht sie mit den Knickpunkten des Kabels gleich. */
+  weg?: CableWaypoint[]
+  /** Die Hallenplan-Kalibrierung, mit der gerechnet wurde. */
+  massstabSchluessel?: string
 }

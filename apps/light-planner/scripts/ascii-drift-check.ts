@@ -23,9 +23,13 @@
 //     nachgeschlagen; ein Umlaut darin bringt die Klammer in den Dialog.
 //   * DIE ALIAS-LISTE in `consolePatch` — sie NIMMT „geraetetyp" von fremden
 //     Pult-Exporten ENTGEGEN. Wer sie „korrigiert", verliert die Spalte.
-//   * ZWEI DATEINAMEN von Ausgaben (`geraeteliste.csv`, `rueckweg-pult.csv`).
-//     Ein Umlaut im Dateinamen laeuft ueber drei Betriebssysteme
-//     unterschiedlich; sie sind Kennungen, keine Anzeige.
+//   * DATEINAMEN von Ausgaben (`geraeteliste.csv`, `geraeteliste.pdf`,
+//     `rueckweg-pult.csv`). Ein Umlaut im Dateinamen laeuft ueber drei
+//     Betriebssysteme unterschiedlich; sie sind Kennungen, keine Anzeige.
+//     `geraeteliste.pdf` kam mit #123 dazu — dieselbe Liste, anderes Format,
+//     und sie heisst deshalb gleich. Der Check hat sie beim ersten Lauf
+//     gemeldet, und das ist die richtige Beweislast: eine neue Ausnahme wird
+//     eingetragen, nicht stillschweigend mitgenommen.
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -64,13 +68,21 @@ const HARMLOS = new Set(
     // im Quelltext.
     'zuschauer', 'quelle', 'quellsprache',
     'quellen', 'steuer', 'steuerung', 'sequenz', 'frequenz', 'zuerst', 'quer',
+    // 2026-09-18: „Querformat" kam mit dem Lichtplan-Druck (#123) dazu.
+    // „quer" stand schon hier; das Wort wird nur dann geteilt, wenn im
+    // Innern ein Grossbuchstabe steht, und ein zusammengesetztes deutsches
+    // Wort hat keinen.
+    'querformat',
     'aktuellen', 'aktueller', 'aktuelles', 'aktuell',
     // Englisch, Bezeichner und Farben, die als Text auftauchen
     'marquee', 'parquet', 'colvalue', 'value', 'values', 'venue', 'venues',
     'venueexchange', 'issues',
     'exportvenue', 'exportvenuehint', 'importvenue', 'importvenuehint',
     'coefficient', 'rogue', 'blue', 'true', 'due', 'issue', 'unique', 'query',
-    'request', 'does', 'goes', 'guess', 'continue', 'sequence',
+    // 2026-09-25: „requested" steht im Kopf `x-requested-with` des
+    // Bibliotheks-Clients — einer unveraenderten Kopie aus
+    // larszu/av-device-library, die hier nicht umgeschrieben werden darf.
+    'request', 'requested', 'does', 'goes', 'guess', 'continue', 'sequence',
     // Ein Paar fuer sich ist nie ein deutsches Wort — es kommt aus einer UUID,
     // einer Farbe oder einem Pfad.
     'ae', 'oe', 'ue',
@@ -78,7 +90,7 @@ const HARMLOS = new Set(
 );
 
 /** Kennungen: Dateinamen von Ausgaben und Alias-Eintraege fremder Formate. */
-const KENNUNGEN = new Set(['geraeteliste.csv', 'rueckweg-pult.csv', 'geraetetyp']);
+const KENNUNGEN = new Set(['geraeteliste.csv', 'geraeteliste.pdf', 'rueckweg-pult.csv', 'geraetetyp']);
 
 const istHex = (wort: string) => /^[0-9a-f]+$/i.test(wort);
 

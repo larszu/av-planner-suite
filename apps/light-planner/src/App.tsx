@@ -29,6 +29,7 @@ import { saveVersion, versionsFor } from './utils/versionStore';
 import { planContentFingerprint, stampForStand } from './core/documentStamp';
 import FloorPlanPanel from './components/FloorPlanPanel';
 import ScaleDialog from './components/ScaleDialog';
+import PlotExportDialog, { type PlotExportWahl } from './components/PlotExportDialog';
 import ScheduleDialog from './components/ScheduleDialog';
 import { autoPatch, findPatchConflicts } from './core/patch';
 import { generate3PointLighting, generateAreaLighting } from './core/autoLighting';
@@ -37,6 +38,7 @@ import AreaLightDialog from './components/AreaLightDialog';
 import type { Scene3DHandle } from './components/Scene3D';
 import { loadFloorPlanFile, renderPdfPage } from './utils/floorPlanLoader';
 import { jpegToPdfBlob, dataUrlToBytes } from './utils/pdfExport';
+import { seitenLayout } from './utils/plotPage';
 import { composePlot } from './utils/plotExport';
 import AboutDialog from './components/AboutDialog';
 import { Icon } from './components/Icon';
@@ -1454,9 +1456,27 @@ const App: React.FC = () => {
   // The 2D plan's current draw scale (backing px per metre), reported by
   // PlanCanvas — used to size an accurate scale bar in the printed plot.
   const planPxPerMeterRef = useRef(40);
-  const handleExportPlot = useCallback(async () => {
-    const srcCanvas = document.querySelector('.plan-canvas') as HTMLCanvasElement | null;
-    if (viewMode !== '2d' || !srcCanvas) { await alertDialog(t('app.alert.plotNeed2d', 'Lighting plot print: please run this in the 2D plan view.')); return; }
+  // ─── DER PLAN-DRUCK FRAGT JETZT NACH DEM BLATT (#123) ────────────────
+  // Der Menuepunkt oeffnet den Einstellungs-Dialog; gedruckt wird erst nach
+  // der Auswahl. Vorher ging beides in einem Klick, und die Seitengroesse
+  // war die des Fensters — bei jedem Nutzer eine andere.
+  const [plotDialogOffen, setPlotDialogOffen] = useState(false);
+  const [plotWahl, setPlotWahl] = useState<PlotExportWahl>({
+    papier: 'a3', ausrichtung: 'quer', randMm: 10, titelblock: true,
+  });
+  const planCanvas = (): HTMLCanvasElement | null =>
+    document.querySelector('.plan-canvas') as HTMLCanvasElement | null;
+
+  const handleExportPlot = useCallback(() => {
+    if (viewMode !== '2d' || !planCanvas()) { void alertDialog(t('app.alert.plotNeed2d', 'Lighting plot print: please run this in the 2D plan view.')); return; }
+    setPlotDialogOffen(true);
+  }, [viewMode, t]);
+
+  const handlePlotExportieren = useCallback(async (wahl: PlotExportWahl) => {
+    setPlotWahl(wahl);
+    setPlotDialogOffen(false);
+    const srcCanvas = planCanvas();
+    if (!srcCanvas) return;
     // Stand-Angabe fuer das Blatt (ADR-004). Fuer den PLAN-Ausdruck zaehlen
     // auch Positionen — sie sind darauf zu sehen; eine verschobene Leuchte
     // macht ein anderes Blatt. Der Vergleichswert kommt aus dem juengsten
@@ -1479,13 +1499,22 @@ const App: React.FC = () => {
         : undefined,
       now: new Date(),
     });
-    const out = composePlot(srcCanvas, planPxPerMeterRef.current, fixtures, {
-      projectName: projectMeta?.name || t('app.defaultProject.name', 'Lighting plan'), author: projectMeta?.author, stamp,
-    });
+    // Ohne Titelblock geht die Zeichenflaeche unveraendert aufs Blatt. Das
+    // ist kein Sparmodus, sondern der Fall „der Plan kommt in ein fremdes
+    // Layout" — ein zweiter Titelblock daneben waere dort falsch.
+    const out = wahl.titelblock
+      ? composePlot(srcCanvas, planPxPerMeterRef.current, fixtures, {
+          projectName: projectMeta?.name || t('app.defaultProject.name', 'Lighting plan'), author: projectMeta?.author, stamp,
+        })
+      : srcCanvas;
     const base = `${projectMeta?.name || t('app.defaultProject.name', 'Lighting plan')} Plan ${String(exportCounterRef.current++).padStart(3, '0')}`;
     const bytes = dataUrlToBytes(out.toDataURL('image/jpeg', 0.92));
-    await host.exportFile(jpegToPdfBlob(bytes, out.width, out.height), `${base}.pdf`, { 'application/pdf': ['.pdf'] });
-  }, [viewMode, fixtures, trusses, walls, persons, stageElements, projectId, projectMeta, host, t]);
+    const layout = seitenLayout({
+      bildBreitePx: out.width, bildHoehePx: out.height,
+      papier: wahl.papier, ausrichtung: wahl.ausrichtung, randMm: wahl.randMm,
+    });
+    await host.exportFile(jpegToPdfBlob(bytes, out.width, out.height, layout), `${base}.pdf`, { 'application/pdf': ['.pdf'] });
+  }, [fixtures, trusses, walls, persons, stageElements, projectId, projectMeta, host, t]);
 
   // Current project document as a single object (used by version snapshots).
   const buildCurrentDoc = useCallback((): ProjectData => {
@@ -1783,6 +1812,7 @@ const App: React.FC = () => {
         onToggleFocusNotes={handleToggleFocusNotes}
         onUploadFloorPlan={handleUploadFloorPlan}
         onOpenSchedule={() => setScheduleOpen(true)}
+        onOpenInventory={() => setInventoryOpen(true)}
         onExport={handleExport}
         onExportPlot={handleExportPlot}
         onNew={handleNew}
@@ -2094,6 +2124,15 @@ const App: React.FC = () => {
           onCancel={() => setShowThreePointDialog(false)}
         />
       )}
+      {plotDialogOffen && (
+        <PlotExportDialog
+          bildBreitePx={planCanvas()?.width ?? 1600}
+          bildHoehePx={planCanvas()?.height ?? 1000}
+          vorgabe={plotWahl}
+          onApply={handlePlotExportieren}
+          onCancel={() => setPlotDialogOffen(false)}
+        />
+      )}
       {pendingCalibration && (
         <ScaleDialog
           measuredMeters={pendingCalibration.meters}
@@ -2193,18 +2232,9 @@ const App: React.FC = () => {
         />
       )}
       {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
-      {/* Der Lager-Knopf fehlte in der Suite-Kopie: die drei Dateien unter
-          `src/inventory/` waren vendort, die vier Zeilen, die sie erreichbar
-          machen, nicht. Upstream und in beiden Schwester-Apps (multicam,
-          cable) ist der Dialog verdrahtet — hier war er toter Code. */}
-      <button
-        type="button"
-        onClick={() => setInventoryOpen(true)}
-        title={t('app.inventoryTitle', 'Inventory / stock')}
-        style={{ position: 'fixed', bottom: 16, left: 16, zIndex: 150, display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 999, cursor: 'pointer' }}
-      >
-        <Icon name="library" size={16} /> {t('app.inventory', 'Inventory')}
-      </button>
+      {/* Der fixierte „Lager"-Knopf unten links ist mit #124 weg — er lag mit
+          `zIndex: 150` ueber allem. Das Lager oeffnet jetzt ueber
+          Werkzeuge > Lager/Bestand. */}
       {inventoryOpen && <InventoryDialog onClose={() => setInventoryOpen(false)} />}
       <Onboarding onUploadFloorPlan={handleUploadFloorPlan} />
     </div>

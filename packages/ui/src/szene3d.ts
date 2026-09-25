@@ -50,6 +50,12 @@ export interface Szene3D {
   kabel: Szene3DKabel[]
   /** Geraete ohne Lage im Raum — nicht gezeichnet. */
   nichtPlatziert: number
+  /**
+   * Davon Signalgeraete. Eigens gezaehlt, weil ihr Weg in den Raum ein
+   * anderer ist: Kamera und Leuchte platziert ihr Plan, ein Mischer steht
+   * erst im Raum, wenn er im Signalplan auf dem Hallenplan mit Massstab liegt.
+   */
+  nichtPlatziertSignal: number
   /** Kabel mit mindestens einem nicht platzierten Ende. */
   kabelOhneLage: number
   mitte: Punkt3D
@@ -80,12 +86,14 @@ export function szeneAusSeed(seed: Pick<SuiteSeed, 'venue' | 'geraete' | 'cables
 
   const geraete: Szene3DGeraet[] = []
   let nichtPlatziert = 0
+  let nichtPlatziertSignal = 0
   for (const g of seed.geraete) {
+    const gewerk = hauptGewerk(g)
     if (!endlich(g.x) || !endlich(g.y)) {
       nichtPlatziert += 1
+      if (gewerk === 'signal') nichtPlatziertSignal += 1
       continue
     }
-    const gewerk = hauptGewerk(g)
     const haenge = gewerk === 'licht' && endlich(g.licht?.rigHeightM) ? g.licht!.rigHeightM! : undefined
     geraete.push({
       id: g.id,
@@ -120,6 +128,7 @@ export function szeneAusSeed(seed: Pick<SuiteSeed, 'venue' | 'geraete' | 'cables
     geraete,
     kabel,
     nichtPlatziert,
+    nichtPlatziertSignal,
     kabelOhneLage,
     mitte: { x: mitteVon(xs), y: mitteVon(ys), z: mitteVon(zs) },
     groesse: Math.max(5, spanne(xs), spanne(zs), spanne(ys)),

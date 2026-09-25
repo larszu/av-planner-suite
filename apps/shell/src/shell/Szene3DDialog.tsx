@@ -126,6 +126,17 @@ export default function Szene3DDialog({ szene, onClose }: { szene: Szene3D; onCl
           { geraete: szene.geraete.length, kabel: szene.kabel.length, offen: szene.nichtPlatziert, kabelOffen: szene.kabelOhneLage },
         )}
       </p>
+      {szene.nichtPlatziertSignal > 0 && (
+        <p className="mt-1 text-[11px] text-av-text-muted">
+          {format(
+            t(
+              'overview.raum3d.signalOhneLage',
+              '{n} Signalgeräte ohne Lage im Raum — sie erscheinen, sobald sie im Signalplan auf dem Hallenplan mit Maßstab liegen.',
+            ),
+            { n: szene.nichtPlatziertSignal },
+          )}
+        </p>
+      )}
       {ohneHoehe > 0 && (
         <p className="mt-1 text-[11px] text-av-text-muted">
           {format(t('overview.raum3d.noHeight', '{n} Leuchten ohne Hänge-Höhe stehen auf dem Boden — angegeben ist sie nicht.'), { n: ohneHoehe })}

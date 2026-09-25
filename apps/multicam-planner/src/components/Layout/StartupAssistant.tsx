@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { FiUpload, FiPlus, FiX, FiArrowRight, FiCheck } from 'react-icons/fi';
 import { WelcomeDialog, createOnboardingState } from '@avplan/onboarding-core';
+import { confirmDialog } from '@avplan/ui';
 import { useStore } from '../../store/useStore';
 import type { EditMode } from '../../types';
 import { useTranslation } from '../../i18n';
@@ -50,20 +51,41 @@ export default function StartupAssistant() {
 
   const dismiss = useCallback(() => { markSeen(); setPhase('done'); }, [markSeen]);
 
-  const startWizard = useCallback(() => {
+  const startWizard = useCallback(async () => {
+    // Seit der automatischen Sicherung (cable-planner#908) steht hier beim
+    // Start das zuletzt bearbeitete Projekt, nicht mehr ein leeres. „Neuer
+    // Plan" muss es deshalb wirklich ersetzen — und fragen, wenn dabei
+    // Arbeit verlorenginge, die in keiner Datei liegt.
+    // `hasUnsavedChanges` vergleicht Projektstaende und sieht damit JEDE
+    // Aenderung seit dem letzten Speichern — auch eine, die nur Buehnen oder
+    // Raummasse betrifft. Eine Inhaltsliste daneben uebersah genau die.
+    const s = useStore.getState();
+    // `confirmDialog` statt `window.confirm` (suite `dialogs:native`): der
+    // native Dialog kann keinen roten Knopf, und hier wird Arbeit verworfen.
+    if (s.hasUnsavedChanges()
+      && !(await confirmDialog(t('header.new.confirm', 'New project — the current one is replaced. Continue?'), { destructive: true }))) return;
+    s.newProject();
     markSeen();
     setStepIndex(0);
     setEditMode(WIZARD_STEPS[0].mode);
     setPhase('wizard');
-  }, [markSeen, setEditMode, WIZARD_STEPS]);
+  }, [markSeen, setEditMode, WIZARD_STEPS, t]);
 
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    // Derselbe Schutz wie bei „Neuer Plan": seit der automatischen Sicherung
+    // steht hier das zuletzt bearbeitete Projekt, und ein Laden ohne Frage
+    // ueberschriebe eine Sekunde spaeter auch die Sicherung.
+    if (file && useStore.getState().hasUnsavedChanges()
+      && !(await confirmDialog(t('header.open.confirm', 'Open a plan — the current one is replaced and it has unsaved changes. Continue?'), { destructive: true }))) {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
     if (file) await loadProject(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
     setEditMode('cameras'); // an existing plan jumps straight to camera editing
     dismiss();
-  }, [loadProject, setEditMode, dismiss]);
+  }, [loadProject, setEditMode, dismiss, t]);
 
   const nextStep = useCallback(() => {
     setStepIndex((i) => {
@@ -113,7 +135,12 @@ export default function StartupAssistant() {
     );
   }
 
-  // phase === 'choose' — suite-einheitlicher Welcome-Dialog
+  // phase === 'choose' — suite-einheitlicher Welcome-Dialog.
+  // Wiederhergestellt aus der automatischen Sicherung und nicht leer: dann
+  // ist Weiterarbeiten die naheliegende Wahl und steht oben.
+  const st = useStore.getState();
+  const fortsetzen =
+    st.cameras.length > 0 || st.persons.length > 0 || st.walls.length > 0 || st.backgroundPlan !== null || st.hasUnsavedChanges();
   return (
     <>
       <WelcomeDialog
@@ -125,6 +152,21 @@ export default function StartupAssistant() {
         intro={t('header.welcome.intro', 'How would you like to start?')}
         onDismiss={dismiss}
         actions={[
+          ...(fortsetzen
+            ? [
+                {
+                  id: 'continue',
+                  title: t('header.welcome.continue.title', 'Continue last project'),
+                  description: t(
+                    'header.welcome.continue.desc',
+                    'The project you last worked on, restored from the automatic backup',
+                  ),
+                  icon: <FiArrowRight size={20} />,
+                  accent: '#3b82f6',
+                  onSelect: dismiss,
+                },
+              ]
+            : []),
           {
             id: 'load',
             title: t('header.welcome.load.title', 'Load Plan'),

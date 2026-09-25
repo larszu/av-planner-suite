@@ -96,8 +96,12 @@ are named, not silently passed.
 
 **Room in 3D** (overview card) puts every planner into one picture: the venue and stage, placed
 cameras, fixtures at their trim height, signal devices and the cables between them — straight
-from the shared project. Devices without a position are counted, not dropped at the origin. The
-per-floor building view lives in the cable planner (*3D* in its toolbar).
+from the shared project. A mixer, router or switch gets its spot from the signal plan: if it sits
+on the scaled floor plan there (two-point scale), it stands at the same place in the room; one
+placed beside the plan stays off the picture, because it is in the control room, not at the edge
+of the hall. Cameras and fixtures keep the position their own plan gives them. Devices without a
+position are counted, not dropped at the origin. The per-floor building view lives in the cable
+planner (*3D* in its toolbar).
 
 Two people can work on the same board over their own network: one opens a window, the others
 join from a browser on the same network with nothing to install. Nothing travels over machines

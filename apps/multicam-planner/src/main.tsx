@@ -9,6 +9,8 @@ import { initShellSettings } from './shellSettings';
 import App from './App';
 import './index.css';
 import { loadZoom, applyZoom } from './utils/uiZoom';
+import { restoreAutosave, startAutosave } from './store/autosave';
+import { useDeviceLibrary } from './library/store';
 
 // Gespeicherten UI-Zoom vor dem ersten Render anwenden (kein Flash).
 applyZoom(loadZoom());
@@ -51,6 +53,24 @@ connectShellTheme({
 // MultiCam hat keine eigene Undo/Redo-Historie — der Shell melden, damit sie
 // ihre Undo/Redo-Schalter ausblendet statt sie dauerhaft grau zu zeigen.
 declareNoHistory();
+// Das zuletzt bearbeitete Projekt zurueckholen, BEVOR gerendert wird — sonst
+// zeigt die App kurz ein leeres Projekt. Die Sicherung laeuft erst danach
+// an, damit das Wiederherstellen sich nicht selbst noch einmal schreibt.
+//
+// NUR STANDALONE: eingebettet fuehrt die Shell das Projekt und reicht es als
+// Seed herein. Eine lokale Sicherung darueber zu legen hiesse, einen aelteren
+// Stand ueber `initShellSeed` in die Suite zurueckzumelden — und zwar vor dem
+// ersten Seed, also ueber den aktuellen Stand der anderen Planer hinweg.
+if (!isEmbedded) {
+  restoreAutosave();
+  const autosave = startAutosave();
+  window.addEventListener('pagehide', autosave.flush);
+}
+
+// Geraetebibliothek: gespeicherte Anmeldung pruefen und abgleichen. Laeuft
+// neben dem ersten Rendern; der Katalog traegt bis dahin den Cache.
+void useDeviceLibrary.getState().init();
+
 // Projekt der Shell uebernehmen und eigene Aenderungen zurueckmelden.
 initShellSeed();
 

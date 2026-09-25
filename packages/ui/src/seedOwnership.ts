@@ -388,13 +388,28 @@ function nurEigenes(alt: SeedGeraet, neu: SeedGeraet, domain: SeedDomain): SeedG
   if (domain === 'signal') {
     // Der Signalplan fuehrt das Geraet als solches: Name, Beschriftung,
     // Modell, Kategorie, Lage im Diagramm. Die Fachgruppen fasst er nicht an.
+    //
+    // DIE LAGE IM RAUM nur dort, wo sie niemand sonst fuehrt. Kamera und
+    // Leuchte stellt ihr Plan in den Raum — dort ist die Stelle gemessen
+    // (Sichtlinie, Haengepunkt), und ein Knoten auf dem Hallenplan des
+    // Signalplans ist dagegen eine Skizze. Mischer, Kreuzschiene und Switch
+    // stellt dagegen KEIN anderer Plan irgendwohin: ohne diesen Weg standen
+    // sie in „Raum in 3D" fuer immer unter „nicht platziert", auch wenn sie
+    // im Signalplan auf dem vermessenen Hallenplan lagen.
+    //
+    // Nur BEIDE Zahlen zusammen, und `undefined` loescht nicht (wie beim
+    // Raum): ein Signalplan ohne Massstab hat ueber die Lage nichts gesagt.
     const { kamera, licht, x, y, fachdaten, ...rest } = neu
     void kamera
     void licht
-    void x
-    void y
     void fachdaten
-    return { ...alt, ...rest, ...fachdatenZusammen(alt, neu, domain) }
+    const raumFrei = !imPlan(alt, 'kamera') && !imPlan(alt, 'licht')
+    return {
+      ...alt,
+      ...rest,
+      ...(raumFrei && x !== undefined && y !== undefined ? { x, y } : {}),
+      ...fachdatenZusammen(alt, neu, domain),
+    }
   }
   if (domain === 'cameras') {
     return {
