@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { FiUpload, FiPlus, FiX, FiArrowRight, FiCheck } from 'react-icons/fi';
 import { WelcomeDialog, createOnboardingState } from '@avplan/onboarding-core';
+import { confirmDialog } from '@avplan/ui';
 import { useStore } from '../../store/useStore';
 import type { EditMode } from '../../types';
 import { useTranslation } from '../../i18n';
@@ -50,7 +51,7 @@ export default function StartupAssistant() {
 
   const dismiss = useCallback(() => { markSeen(); setPhase('done'); }, [markSeen]);
 
-  const startWizard = useCallback(() => {
+  const startWizard = useCallback(async () => {
     // Seit der automatischen Sicherung (cable-planner#908) steht hier beim
     // Start das zuletzt bearbeitete Projekt, nicht mehr ein leeres. „Neuer
     // Plan" muss es deshalb wirklich ersetzen — und fragen, wenn dabei
@@ -59,8 +60,10 @@ export default function StartupAssistant() {
     // Aenderung seit dem letzten Speichern — auch eine, die nur Buehnen oder
     // Raummasse betrifft. Eine Inhaltsliste daneben uebersah genau die.
     const s = useStore.getState();
+    // `confirmDialog` statt `window.confirm` (suite `dialogs:native`): der
+    // native Dialog kann keinen roten Knopf, und hier wird Arbeit verworfen.
     if (s.hasUnsavedChanges()
-      && !window.confirm(t('header.new.confirm', 'New project — the current one is replaced. Continue?'))) return;
+      && !(await confirmDialog(t('header.new.confirm', 'New project — the current one is replaced. Continue?'), { destructive: true }))) return;
     s.newProject();
     markSeen();
     setStepIndex(0);
@@ -74,7 +77,7 @@ export default function StartupAssistant() {
     // steht hier das zuletzt bearbeitete Projekt, und ein Laden ohne Frage
     // ueberschriebe eine Sekunde spaeter auch die Sicherung.
     if (file && useStore.getState().hasUnsavedChanges()
-      && !window.confirm(t('header.open.confirm', 'Open a plan — the current one is replaced and it has unsaved changes. Continue?'))) {
+      && !(await confirmDialog(t('header.open.confirm', 'Open a plan — the current one is replaced and it has unsaved changes. Continue?'), { destructive: true }))) {
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
