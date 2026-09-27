@@ -105,6 +105,7 @@ Alle mit Exit 0 gelaufen:
 | Headless-Smoke der App | `npm run ui:smoke` | Fenster öffnet, 3 Planer-Protokolle liefern, 12 IPC-Module registrieren |
 | Vollständigkeit der Guard-Liste | `npm run ci:complete` | 11 von 11 Prüf-Läufen stehen im Workflow |
 | Planer-Drift | `npm run drift:check` | unverändert gegen die Baseline (Zahlen: `scripts/planner-drift-baseline.json`) |
+| Upstreams im Drift-Job | `npm run drift-upstreams:check` | 5 Planer unter `apps/`, jeder mit vollem Upstream-Checkout im Job `planner-drift` (seit 2026-09-28; vorher fehlten inventory und facility) |
 
 `ui:smoke` ist der erste Lauf, der die Suite überhaupt **startet**. Zwischen
 `npm run build` und dem Installer hat das bis 2026-09-05 nichts getan — und

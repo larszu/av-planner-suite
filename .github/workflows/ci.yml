@@ -25,32 +25,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      # Die beiden ausgelagerten Werkzeuge (E-26/E-27). Sie fehlten hier, und
-      # das war keine Kleinigkeit: `planner-drift.mjs` fuehrt fuenf Wurzeln,
-      # aber nur drei standen in CI zur Verfuegung — fuer die anderen beiden
-      # konnte der Guard nichts finden, egal wie weit ihre Kopien wegliefen.
-      # Beide Repos sind oeffentlich, der Checkout mit dem GITHUB_TOKEN der
-      # Suite geht also durch (anders als bei `sony-camera-bridge`, siehe
-      # unten).
-      - name: Checkout inventory-planner
-        uses: actions/checkout@v5
-        continue-on-error: true
-        with:
-          repository: larszu/inventory-planner
-          path: upstream/inventory-planner
-          # Volle Historie, aus demselben Grund wie oben: der Baseline-Sha
-          # muss im Upstream-Klon aufloesbar sein, sonst meldet der Guard
-          # "Stand nicht bekannt" — ausgerechnet im bewegten Fall.
-          fetch-depth: 0
-
-      - name: Checkout larszu-facility-planner
-        uses: actions/checkout@v5
-        continue-on-error: true
-        with:
-          repository: larszu/larszu-facility-planner
-          path: upstream/larszu-facility-planner
-          fetch-depth: 0
-
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
@@ -165,6 +139,12 @@ jobs:
       # beim Nutzer aufgefallen, im Log einer verschluckten Registrierung.
       - name: Suite-Paket enthaelt jede Laufzeit-Abhaengigkeit
         run: npm run deps:check
+
+      # Ein Planer unter apps/ ohne Upstream-Checkout im Drift-Job faellt dort
+      # nicht auf, sondern wird uebersprungen. Braucht selbst keinen
+      # Upstream, deshalb hier.
+      - name: Jeder vendorte Planer hat im Drift-Job seinen Upstream
+        run: npm run drift-upstreams:check
 
       # Ein Planer in der Modul-Leiste ohne Datenweg faellt von selbst nicht
       # auf: ein Modul, das nichts bekommt, sieht aus wie eines, in dem noch
@@ -335,6 +315,27 @@ jobs:
           # zwar in genau dem Fall, fuer den es die Pruefung gibt: bewegtem
           # Upstream. Ohne diese Zeile hat sie in CI keinen Weltzustand, in
           # dem sie etwas findet (nachgemessen 2026-09-04).
+          fetch-depth: 0
+
+      # Die beiden ausgelagerten Werkzeuge (E-26/E-27). Ihre Checkouts standen
+      # bis 2026-09-28 im Job `build-test` (unter `suite/upstream/`), wo
+      # nichts sie las — hier fehlten sie, und der Guard meldete fuer beide
+      # still „upstream checkout not found". `drift-upstreams:check` haelt
+      # diese Liste seither gegen apps/ und `APPS` im Drift-Skript.
+      - name: Checkout inventory-planner
+        uses: actions/checkout@v5
+        continue-on-error: true
+        with:
+          repository: larszu/inventory-planner
+          path: upstream/inventory-planner
+          fetch-depth: 0
+
+      - name: Checkout larszu-facility-planner
+        uses: actions/checkout@v5
+        continue-on-error: true
+        with:
+          repository: larszu/larszu-facility-planner
+          path: upstream/larszu-facility-planner
           fetch-depth: 0
 
       - name: Setup Node

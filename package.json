@@ -25,6 +25,7 @@
     "stamp:parity": "node --experimental-strip-types --import ./scripts/register-ts-ext.mjs scripts/document-stamp-parity.ts",
     "drift": "node scripts/planner-drift.mjs --upstream ..",
     "drift:check": "node scripts/planner-drift.mjs --upstream .. --check",
+    "drift-upstreams:check": "node scripts/drift-upstreams-check.mjs",
     "drift:report": "node scripts/planner-drift.mjs --upstream .. --report docs/research/repos/DRIFT-REPORT.md",
     "features:reachable": "node scripts/reachable-features.mjs",
     "dialogs:native": "node scripts/native-dialogs.mjs",
