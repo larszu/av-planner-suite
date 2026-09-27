@@ -612,6 +612,13 @@ export interface SeedHandoffRecord {
   domain: import('@avplan/ui/embed').SeedDomain
   /** Was sich dadurch am Shell-Projekt geaendert hat, zum Nachlesen. */
   zusammenfassung: { neu: number; geaendert: number; entfernt: number }
+  /**
+   * Die Ids hinter den Zahlen (Geraete als `g:<id>`, Kabel als `c:<id>`).
+   * Damit laesst sich eine weitere Meldung desselben Planers EINRECHNEN statt
+   * anhaengen — dieselbe Kamera zweimal geaendert ist eine Aenderung, nicht
+   * zwei. Fehlt bei Meldungen aus Projekten vor dem 2026-09-27.
+   */
+  ids?: { neu: string[]; geaendert: string[]; entfernt: string[] }
 }
 
 export const PROJECT: SuiteProject = {

@@ -287,18 +287,16 @@ export function applyPatchToSuite(
    * sehen will, steht im Planer. Ein Feld-fuer-Feld-Vergleich wuerde hier
    * eine Genauigkeit behaupten, die die Zahl gar nicht traegt.
    */
-  const zaehle = <T extends { id: string }>(vorherL: T[], nachherL: T[]) => {
+  const zaehle = <T extends { id: string }>(vorherL: T[], nachherL: T[], p: string) => {
     const v = new Map(vorherL.map((x) => [x.id, JSON.stringify(x)]))
     const n = new Map(nachherL.map((x) => [x.id, JSON.stringify(x)]))
-    let neu = 0
-    let geaendert = 0
+    const ids = { neu: [] as string[], geaendert: [] as string[], entfernt: [] as string[] }
     for (const [id, wert] of n) {
-      if (!v.has(id)) neu += 1
-      else if (v.get(id) !== wert) geaendert += 1
+      if (!v.has(id)) ids.neu.push(p + id)
+      else if (v.get(id) !== wert) ids.geaendert.push(p + id)
     }
-    let entfernt = 0
-    for (const id of v.keys()) if (!n.has(id)) entfernt += 1
-    return { neu, geaendert, entfernt }
+    for (const id of v.keys()) if (!n.has(id)) ids.entfernt.push(p + id)
+    return ids
   }
   // AUF DEM SEED GEZAEHLT UND NICHT AUF DEM SHELL-MODELL, und das ist kein
   // Detail: der erste Anlauf verglich `project.cameras` mit der neu gebauten
@@ -312,23 +310,92 @@ export function applyPatchToSuite(
   // Aenderung an ihr zweimal. „2 geaendert" bei einer geaenderten Kamera ist
   // keine Kleinigkeit — der Streifen ist die einzige Zahl, die der Nutzer
   // sieht, bevor er „Uebernehmen" drueckt.
-  const a = zaehle(vorher.geraete, seed.geraete)
-  const d = zaehle(vorher.cables, seed.cables)
-  const summe = {
-    neu: a.neu + d.neu,
-    geaendert: a.geaendert + d.geaendert,
-    entfernt: a.entfernt + d.entfernt,
+  const a = zaehle(vorher.geraete, seed.geraete, 'g:')
+  const d = zaehle(vorher.cables, seed.cables, 'c:')
+  const meldung = {
+    neu: [...a.neu, ...d.neu],
+    geaendert: [...a.geaendert, ...d.geaendert],
+    entfernt: [...a.entfernt, ...d.entfernt],
   }
-  const handoff: SeedHandoffRecord | undefined =
-    summe.neu + summe.geaendert + summe.entfernt > 0
-      ? { id: id(now() + 1000), seenAt: now(), domain: patch.domain, zusammenfassung: summe }
-      : undefined
+  const offen = project.seedHandoffs ?? []
+  const { liste, handoff } = meldungEinrechnen(offen, patch.domain, meldung, () => id(now() + 1000), now())
 
   return {
-    project: handoff ? { ...next, seedHandoffs: [...(project.seedHandoffs ?? []), handoff] } : next,
+    project: liste === offen ? next : { ...next, seedHandoffs: liste },
     conflicts: befunde,
     handoff,
   }
+}
+
+/**
+ * Eine Meldung in die offenen einrechnen — EINE offene Meldung je Planer.
+ *
+ * NUTZER-MELDUNG 2026-09-27: „die meldungen lassen sich nicht alle auf
+ * einmal schliessen und zerstoeren die ui". Bis dahin legte JEDE Meldung
+ * eines Planers eine eigene Zeile an; eine Stunde Arbeit im Kabel-Planer
+ * ergab 15 Zeilen „1 geaendert", der Streifen wuchs ueber die Arbeitsflaeche,
+ * und jede Zeile stellte dieselbe Frage. Die Frage IST aber eine je Planer:
+ * „Uebernehmen" gibt den Stand DIESES Planers weiter, nicht eine einzelne
+ * Aenderung.
+ *
+ * Gerechnet wird ueber die Ids, damit die Zahl stimmt: dieselbe Kamera
+ * zweimal geaendert ist eine Aenderung; neu und wieder geloescht ist nichts;
+ * neu und dann geaendert bleibt neu; geaendert und dann geloescht ist
+ * geloescht. Heben sich alle Aenderungen auf, verschwindet die Meldung.
+ *
+ * Meldungen aus aelteren Projekten tragen keine Ids — dort werden die Zahlen
+ * addiert. Das ueberzaehlt im Zweifel, verliert aber nichts.
+ */
+export function meldungEinrechnen(
+  offen: SeedHandoffRecord[],
+  domain: SeedHandoffRecord['domain'],
+  meldung: { neu: string[]; geaendert: string[]; entfernt: string[] },
+  neueId: () => string,
+  jetzt: number,
+): { liste: SeedHandoffRecord[]; handoff: SeedHandoffRecord | undefined } {
+  const leer = meldung.neu.length + meldung.geaendert.length + meldung.entfernt.length === 0
+  const alt = offen.filter((r) => r.domain === domain)
+  if (leer) return { liste: offen, handoff: undefined }
+
+  const neu = new Set<string>()
+  const geaendert = new Set<string>()
+  const entfernt = new Set<string>()
+  let altZahlen = { neu: 0, geaendert: 0, entfernt: 0 }
+  for (const r of alt) {
+    if (r.ids) {
+      r.ids.neu.forEach((x) => neu.add(x))
+      r.ids.geaendert.forEach((x) => geaendert.add(x))
+      r.ids.entfernt.forEach((x) => entfernt.add(x))
+    } else {
+      altZahlen = {
+        neu: altZahlen.neu + r.zusammenfassung.neu,
+        geaendert: altZahlen.geaendert + r.zusammenfassung.geaendert,
+        entfernt: altZahlen.entfernt + r.zusammenfassung.entfernt,
+      }
+    }
+  }
+  for (const x of meldung.neu) {
+    entfernt.delete(x)
+    neu.add(x)
+  }
+  for (const x of meldung.geaendert) if (!neu.has(x)) geaendert.add(x)
+  for (const x of meldung.entfernt) {
+    if (neu.delete(x)) continue
+    geaendert.delete(x)
+    entfernt.add(x)
+  }
+  const ids = { neu: [...neu], geaendert: [...geaendert], entfernt: [...entfernt] }
+  const zusammenfassung = {
+    neu: ids.neu.length + altZahlen.neu,
+    geaendert: ids.geaendert.length + altZahlen.geaendert,
+    entfernt: ids.entfernt.length + altZahlen.entfernt,
+  }
+  const ohne = offen.filter((r) => r.domain !== domain)
+  if (zusammenfassung.neu + zusammenfassung.geaendert + zusammenfassung.entfernt === 0) {
+    return { liste: ohne, handoff: undefined }
+  }
+  const handoff: SeedHandoffRecord = { id: alt[0]?.id ?? neueId(), seenAt: jetzt, domain, zusammenfassung, ids }
+  return { liste: [...ohne, handoff], handoff }
 }
 
 /**
