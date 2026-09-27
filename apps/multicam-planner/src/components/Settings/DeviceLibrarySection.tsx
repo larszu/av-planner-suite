@@ -11,6 +11,7 @@ import {
 import { useDeviceLibrary } from '../../library/store';
 import LibraryErrorLine from '../Library/LibraryErrorLine';
 import { usesKeychain } from '../../library/tokenStore';
+import { uploadBucket } from '../../library/upload';
 
 const feld = 'block w-full border border-bc-border bg-bc-dark text-xs text-bc-text-bright';
 const knopf = 'border border-bc-border text-xs text-bc-text transition-colors hover:bg-bc-panel-raised disabled:opacity-50';
@@ -26,7 +27,9 @@ export default function DeviceLibrarySection() {
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
 
-  const busy = lib.phase === 'signing-in' || lib.phase === 'checking' || lib.phase === 'syncing';
+  const busy = lib.phase === 'signing-in' || lib.phase === 'checking' || lib.phase === 'syncing' || lib.phase === 'uploading';
+  const records = Object.values(lib.uploads.records);
+  const zaehle = (bucket: ReturnType<typeof uploadBucket>) => records.filter((r) => uploadBucket(r) === bucket).length;
   const cameras = lib.cache.entries.filter((e) => e.kind === 'camera').length;
   const lenses = lib.cache.entries.length - cameras;
 
@@ -41,7 +44,7 @@ export default function DeviceLibrarySection() {
       <p className="text-xs text-bc-muted">
         {t(
           'library.intro',
-          'The shared device library adds cameras and lenses to the catalog as a read-only source, and takes your own entries as proposals. It needs an account.',
+          'The shared device library adds cameras and lenses to the catalog as a read-only source and keeps your own entries there too. It needs an account.',
         )}
       </p>
 
@@ -219,17 +222,44 @@ export default function DeviceLibrarySection() {
             )}
           </p>
         )}
+        {records.length > 0 && (
+          <p className="mt-1 text-xs text-bc-muted">
+            {format(
+              t('library.upload.summary', 'Own entries: {live} live, {waiting} waiting for moderation, {blocked} blocked, {failed} failed.'),
+              {
+                live: zaehle('live'),
+                waiting: zaehle('waiting'),
+                blocked: zaehle('blocked'),
+                failed: zaehle('failed'),
+              },
+            )}
+          </p>
+        )}
+        <label className="mt-2 flex items-center gap-2 text-xs text-bc-text">
+          <input type="checkbox" checked={lib.autoUpload} onChange={(e) => lib.setAutoUpload(e.target.checked)} />
+          {t('library.autoUpload', 'Upload own devices automatically')}
+        </label>
+        <p className="mt-1 text-xs text-bc-muted">
+          {t(
+            'library.autoUpload.hint',
+            'Own and modified cameras and lenses go up on start and a few seconds after each change; the library matches them by manufacturer and model.',
+          )}
+        </p>
         <button
           type="button"
           className={`${knopf} mt-2`}
           style={{ padding: '6px 12px' }}
           disabled={!lib.signedIn || busy}
-          onClick={() => void lib.syncNow()}
+          onClick={() => void lib.syncAll({ manual: true })}
         >
-          {lib.phase === 'syncing' ? t('library.syncing', 'Syncing…') : t('library.syncNow', 'Sync now')}
+          {lib.phase === 'uploading'
+            ? t('library.uploading', 'Uploading…')
+            : lib.phase === 'syncing'
+              ? t('library.syncing', 'Syncing…')
+              : t('library.syncNow', 'Sync now')}
         </button>
         <p className="mt-1 text-xs text-bc-muted">
-          {t('library.sync.hint', 'The app syncs on start while you are signed in. The cache stays when you sign out, so placed library cameras keep working offline.')}
+          {t('library.sync.hint', 'Sync now uploads your own entries first, then pulls updates. The app also syncs on start while you are signed in. The cache stays when you sign out, so placed library cameras keep working offline.')}
         </p>
       </section>
     </div>

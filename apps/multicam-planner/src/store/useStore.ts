@@ -39,7 +39,8 @@ import { pickUnknownDomains, type AvPlan } from '../utils/avplan';
 import { alertDialog } from '@avplan/ui';
 import type { AvPlanCamerasSlot } from './avplanExport';
 import { newProjectId, isProjectId, legacyProjectId } from '../utils/projectId';
-import { pickProjectLibrary, mergeProjectLibrary } from '../utils/projectLibrary';
+import { pickProjectLibrary, mergeProjectLibrary, readCarriedLibrary } from '../utils/projectLibrary';
+import { libraryCameras, libraryLenses, setProjectLibraryEntries } from '../library/registry';
 import { translate } from '../i18n';
 
 // Injected by Vite from package.json. In a release build that came through
@@ -109,7 +110,10 @@ export function buildProjectFile(s: {
       ? { personForeign: s.personForeign }
       : {}),
     // cable-planner#917 — die benutzten eigenen Kameras/Optiken reisen mit.
-    ...pickProjectLibrary(s.cameras, s.customCameras ?? [], s.customLenses ?? []),
+    ...pickProjectLibrary(s.cameras, s.customCameras ?? [], s.customLenses ?? [], {
+      cameras: libraryCameras(),
+      lenses: libraryLenses(),
+    }),
   };
 }
 
@@ -151,6 +155,7 @@ interface AppState {
   customLenses: Lens[];
   addCustomLens: (lens: Omit<Lens, 'id' | 'isCustom'>) => string;
   removeCustomLens: (id: string) => void;
+  updateCustomLens: (id: string, updates: Partial<Omit<Lens, 'id' | 'isCustom'>>) => void;
 
   // Custom cameras
   customCameras: Camera[];
@@ -671,6 +676,18 @@ export const useStore = create<AppState>((set, get) => ({
   removeCustomLens: (id) => {
     set((s) => {
       const updated = s.customLenses.filter((l) => l.id !== id);
+      return {
+        customLenses: updated,
+        projectVersion: s.projectVersion + 1,
+        libraryStorageFull: !saveCustomLensesStorage(updated),
+      };
+    });
+  },
+
+  updateCustomLens: (id, updates) => {
+    set((s) => {
+      if (!s.customLenses.some((l) => l.id === id)) return {};
+      const updated = s.customLenses.map((l) => (l.id === id ? { ...l, ...updates } : l));
       return {
         customLenses: updated,
         projectVersion: s.projectVersion + 1,
@@ -1303,6 +1320,10 @@ export const useStore = create<AppState>((set, get) => ({
       { customCameras: get().customCameras, customLenses: get().customLenses },
       project,
     );
+    // Mitgebrachte Eintraege der Geraetebibliothek: nur Lueckenfueller, der
+    // Cache bleibt, wie er ist. Jede Datei ersetzt die der vorigen.
+    const mitgebracht = readCarriedLibrary(project);
+    setProjectLibraryEntries(mitgebracht);
     let bibliothekVoll = get().libraryStorageFull;
     if (bibliothek.addedCameras > 0 || bibliothek.addedLenses > 0) {
       const kamerasOk = bibliothek.addedCameras === 0 || saveCustomCamerasStorage(bibliothek.customCameras);
@@ -1359,8 +1380,8 @@ export const useStore = create<AppState>((set, get) => ({
       customLenses: bibliothek.customLenses,
       libraryStorageFull: bibliothekVoll,
       lastLibraryMerge:
-        bibliothek.conflicts.length > 0 || bibliothek.invalid > 0
-          ? { conflicts: bibliothek.conflicts, invalid: bibliothek.invalid }
+        bibliothek.conflicts.length > 0 || bibliothek.invalid + mitgebracht.invalid > 0
+          ? { conflicts: bibliothek.conflicts, invalid: bibliothek.invalid + mitgebracht.invalid }
           : null,
     });
 

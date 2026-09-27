@@ -30,11 +30,11 @@ describe('Kameratypen — Befund A, nachgerechnet', () => {
 
   it('und sie bringt ihre Datenblätter mit', () => {
     const { typen } = fuehreZusammen([{ name: 'multicam', eintraege: KAMERA_TYPEN }])
-    // 372 von 377 tragen einen Herstellerlink. Die fünf ohne sind eine
-    // AUSSAGE und kein Schweigen — sie fallen hier auf, statt später im Plan
-    // wie ein belegter Eintrag auszusehen.
-    expect(ohneBeleg(typen)).toHaveLength(5)
-    expect(typen.length - ohneBeleg(typen).length).toBe(372)
+    // 376 von 377 tragen einen Herstellerlink (multicam#151). Der eine ohne
+    // ist eine AUSSAGE und kein Schweigen — er fällt hier auf, statt später
+    // im Plan wie ein belegter Eintrag auszusehen.
+    expect(ohneBeleg(typen)).toHaveLength(1)
+    expect(typen.length - ohneBeleg(typen).length).toBe(376)
   })
 
   it('jede Id kommt genau einmal vor', () => {

@@ -105,21 +105,17 @@ describe('Der Katalog der Suite', () => {
 
   it('„kein Datenblatt" ist eine Aussage und wird gezählt', () => {
     const ohne = ohneBeleg(alleTypen())
-    // 134 waren es, bevor die 835 Objektive dazukamen; 37 von ihnen führen
-    // keinen Herstellerlink.
-    expect(ohne.length).toBe(171)
-    expect(ohne.filter((t) => t.kategorie === 'Lenses')).toHaveLength(37)
-    // 45 aus dem Cable-Planer (467 − 422) und 5 aus der Kameraliste.
-    expect(ohne.filter((t) => t.quellen.includes('cable'))).toHaveLength(45)
+    // 171 waren es vor den Datenblatt-Nachträgen vom 2026-09-27 (cable#928/
+    // #929, multicam#151, light#132). Davon übrig: 6 Objektive, 26 aus dem
+    // Cable-Planer, 1 aus der Kameraliste und 15 Leuchten.
+    expect(ohne.length).toBe(48)
+    expect(ohne.filter((t) => t.kategorie === 'Lenses')).toHaveLength(6)
+    expect(ohne.filter((t) => t.quellen.includes('cable'))).toHaveLength(26)
 
-    // UND 84 AUS DEM LICHT-PLANER — seine ganze Fixture-Bibliothek. Sie führt
-    // keinen einzigen Herstellerlink; die Photometrie steht teils als
-    // gemessener Wert im Kommentar, aber nichts davon ist eine Fundstelle.
-    //
-    // Das ist der Befund, nicht der Fehler dieses Tests: die Zahl steht hier,
-    // damit sie jemand senken kann. Sie zu verstecken machte aus einem
-    // bekannten Loch ein unbekanntes.
-    expect(ohne.filter((t) => t.quellen.includes('light'))).toHaveLength(84)
+    // Die Leuchten führen seit light#132 `datasheetUrl` am Profil; 69 von 84
+    // tragen einen. Die Zahl steht hier, damit sie jemand senken kann. Sie zu
+    // verstecken machte aus einem bekannten Loch ein unbekanntes.
+    expect(ohne.filter((t) => t.quellen.includes('light'))).toHaveLength(15)
   })
 
   it('die Leuchten des Licht-Planers stehen im Katalog', () => {

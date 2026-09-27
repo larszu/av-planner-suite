@@ -221,11 +221,10 @@ ${eintraege.map(zeileCable).join('\n')}
  * Zuordnung macht `KATEGORIE_GEWERKE` in `@avplan/ui`, und die braucht
  * „gehoert in den Lichtplan" — nicht „ist ein Profiler".
  *
- * KEIN DATENBLATT: die Bibliothek fuehrt keinen einzigen Herstellerlink. Das
- * ist eine Aussage und kein Versehen dieses Skripts — `ohneBeleg` zaehlt die
- * 84 Eintraege, und die Zahl steht im Test. Wer sie senken will, traegt
- * Links ein; wer sie versteckt, macht aus einem bekannten Loch ein
- * unbekanntes.
+ * DATENBLATT: `datasheetUrl` am Profil (light#132). Wo es fehlt, fehlt es
+ * auch hier — `ohneBeleg` zaehlt diese Eintraege, und die Zahl steht im
+ * Test. Wer sie senken will, traegt Links ein; wer sie versteckt, macht aus
+ * einem bekannten Loch ein unbekanntes.
  */
 /**
  * Eine Zeile der Objektivliste -> ein Typ-Eintrag.
@@ -299,33 +298,39 @@ export function liesLicht(quelltext, bekannt = []) {
   const treffer = [...quelltext.matchAll(
     /id: '([^']+)', name: '([^']+)', manufacturer: '([^']+)'/g,
   )]
-  return treffer.map((m) => {
+  return treffer.map((m, i) => {
     const gleichnamig = jeName.get(normalisiere(`${m[3]} ${m[2]}`))
+    // Der Link steht im Profil hinter dem Kopf, also bis zum naechsten Kopf.
+    const rumpf = quelltext.slice(m.index, treffer[i + 1]?.index ?? quelltext.length)
+    const url = /datasheetUrl: '([^']+)'/.exec(rumpf)?.[1]
     return {
       id: gleichnamig ?? abgeleiteteTypId(m[3], m[2]),
       hersteller: m[3],
       modell: m[2],
       kategorie: 'Lights',
       quellRef: m[1],
+      ...(url ? { datenblattUrl: url } : {}),
     }
   })
 }
 
 const zeileLicht = (e) =>
   `  { id: ${JSON.stringify(e.id)}, hersteller: ${JSON.stringify(e.hersteller)}, ` +
-  `modell: ${JSON.stringify(e.modell)}, kategorie: 'Lights'` + refTeil(e) + ` },`
+  `modell: ${JSON.stringify(e.modell)}, kategorie: 'Lights'` +
+  (e.datenblattUrl ? `, datenblattUrl: ${JSON.stringify(e.datenblattUrl)}` : '') +
+  refTeil(e) + ` },`
 
 export function baueLicht(eintraege) {
   return `// ───────────────────────────────────────────────────────────────────────────
 // ERZEUGT von scripts/katalog-erzeugen.mjs aus
 // apps/light-planner/src/core/fixtureLibrary.ts — NICHT von Hand aendern.
 //
-// Nur die IDENTITAET: Id, Hersteller, Modell, Kategorie. Lichtstrom,
+// Nur die IDENTITAET: Id, Hersteller, Modell, Kategorie, Datenblatt. Lichtstrom,
 // Abstrahlwinkel, Photometrie und Bauform bleiben im Licht-Planer — sie
 // versteht sonst niemand.
 //
-// OHNE DATENBLATT-LINK, weil die Bibliothek keinen fuehrt. Das ist eine
-// Aussage: \`ohneBeleg\` zaehlt diese ${eintraege.length} Eintraege.
+// Datenblatt-Link, wo das Profil einen fuehrt. ${eintraege.filter((e) => !e.datenblattUrl).length} von ${eintraege.length} haben keinen;
+// das ist eine Aussage: \`ohneBeleg\` zaehlt sie.
 //
 // \`npm run katalog:parity\` besteht darauf, dass diese Datei noch aus jener
 // stammt.

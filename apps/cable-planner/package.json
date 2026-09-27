@@ -70,7 +70,8 @@
     "relay": "node scripts/signaling-server.mjs",
     "dist": "npm run build && electron-builder",
     "notices": "node scripts/generate-notices.mjs",
-    "actions:check": "node scripts/actions-node-runtime.mjs"
+    "actions:check": "node scripts/actions-node-runtime.mjs",
+    "library:publish": "node scripts/library-publish.mjs"
   },
   "dependencies": {
     "@avplan/crew-core": "1.0.0",
