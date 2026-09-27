@@ -64,10 +64,10 @@ gegen „C70"). Sie werden **gemeldet und nicht entschieden** — ein Mensch sag
 Zwölf weitere Meldungen waren keine: „Sony PMW-F5" in einem Feld gegen `manufacturer` + `model`
 getrennt ist dieselbe Angabe in zwei Auflösungen, und ADR-005 Regel 2 entscheidet sie ohne Befund.
 
-Der Licht-Planer ist seit demselben Tag drin: 84 Leuchtenmodelle. Dabei fiel ein eigener Befund
-an — **seine Fixture-Bibliothek führt keinen einzigen Herstellerlink**. Die Photometrie steht
-teils als gemessener Wert im Kommentar, aber nichts davon ist eine Fundstelle. Die Zahl steht im
-Test, damit sie jemand senken kann.
+Der Licht-Planer ist seit demselben Tag drin: 84 Leuchtenmodelle. Seine Fixture-Bibliothek führt
+den Herstellerlink als `datasheetUrl` am Profil; 69 von 84 tragen einen (light#132), 15 nicht.
+Katalogweit sind 48 Typen ohne Datenblatt. Die Zahlen stehen im Test, damit sie jemand senken
+kann.
 
 **Stand: 916 Gerätetypen**, eine Id je Modell. Der Cable-Planer bietet sie zur Auswahl an; was er
 nicht als Datenblatt führt, wird als solches benannt („Modell bekannt, Anschlüsse nicht") und

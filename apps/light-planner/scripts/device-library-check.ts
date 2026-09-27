@@ -30,11 +30,13 @@ import { readFileSync } from 'node:fs';
 import { fixtureLibrary } from '../src/core/fixtureLibrary.ts';
 import { validateFixtureProfile } from '../src/core/fixtureProfile.ts';
 import {
-  CORE_CATEGORY, LIBRARY_ID_PREFIX, applySync, connectSrcAllows, deviceToFixture, emptyCache,
-  fixtureToProposal, isDatasheetLink, normalizeServerUrl, readCache,
+  CORE_CATEGORY, LIBRARY_ID_PREFIX, applySync, applyUploadResults, connectSrcAllows, deviceToFixture, emptyCache,
+  emptyUploadLog, fixtureToProposal, fixtureToUploadItem, isDatasheetLink, normalizeServerUrl, planUpload, readCache,
+  readUploadLog, uploadHash, uploadStatus,
 } from '../src/core/deviceLibrary.ts';
+import { spawnSync } from 'node:child_process';
 import {
-  DEFAULT_DEVICE_LIBRARY_URL, LibraryError, propose, signIn, sync, verifySecondFactor,
+  DEFAULT_DEVICE_LIBRARY_URL, LibraryError, UPLOAD_BATCH, propose, signIn, sync, upload, verifySecondFactor,
   type LibraryErrorCode, type SyncDevice, type SyncResponse,
 } from '../src/core/deviceLibraryClient.ts';
 import { libraryErrorText } from '../src/components/deviceLibraryText.ts';
@@ -51,6 +53,41 @@ for (const f of fixtureLibrary) {
   assert.ok(r.ok, `Katalog-Eintrag ${f.id} faellt durch die Profilpruefung: ${r.ok ? '' : r.problems.join('; ')}`);
 }
 ok(`alle ${fixtureLibrary.length} Katalog-Eintraege bestehen die Profilpruefung`);
+
+// Datenblatt-Links im Katalog (2026-09-27 recherchiert, jeder Link abgerufen
+// und das Modell darauf gelesen). Die Bibliothek nimmt einen Link als Beleg;
+// ein Haendler- oder Spiegel-Link waere einer, der morgen auf ein anderes
+// Produkt zeigt. Deshalb: nur Domains des Herstellers.
+const HERSTELLER_DOMAINS: Record<string, string[]> = {
+  'ETC': ['etcconnect.com'],
+  'Robert Juliat': ['robertjuliat.com'],
+  'ARRI': ['arri.com'],
+  'Mole-Richardson': ['mole.com'],
+  'Philips / ColorKinetics': ['colorkinetics.com'],
+  'Robe': ['robe.cz'],
+  'Martin / Harman': ['martin.com'],
+  'Clay Paky': ['claypaky.it'],
+  'GLP': ['glp.de'],
+  'SGM': ['sgmlighting.com'],
+  'Ayrton': ['ayrton.eu'],
+  'Chauvet Professional': ['chauvetprofessional.com'],
+  'Astera': ['astera-led.com'],
+  'Elation': ['elationlighting.com'],
+  'ADJ': ['adj.com'],
+  'Cameo': ['cameolight.com'],
+  'Aputure': ['aputure.com'],
+};
+let belegt = 0;
+for (const f of fixtureLibrary) {
+  if (!f.datasheetUrl) continue;
+  belegt++;
+  assert.ok(isDatasheetLink(f.datasheetUrl) && f.datasheetUrl.startsWith('https://'), `${f.id}: kein https-Link`);
+  const host = new URL(f.datasheetUrl).hostname;
+  const erlaubt = HERSTELLER_DOMAINS[f.manufacturer] ?? [];
+  assert.ok(erlaubt.some((d) => host === d || host.endsWith(`.${d}`)), `${f.id}: ${host} ist keine Domain von ${f.manufacturer}`);
+}
+assert.ok(belegt >= 69, `nur ${belegt} Katalog-Profile mit Datenblatt-Link — ist ein Beleg verloren gegangen?`);
+ok(`${belegt} Katalog-Profile mit Datenblatt-Link, alle auf der Domain ihres Herstellers`);
 
 const MUSTER: Fixture = {
   id: 'custom-1727000000000',
@@ -73,6 +110,7 @@ const MUSTER: Fixture = {
     { id: 'm2', name: 'Mode 2', channels: 39, origin: 'gdtf' },
   ],
   specSource: { wattage: { value: '470', source: '„Power consumption: 470 W"' } },
+  datasheetUrl: 'https://www.robe.cz/megapointe/datasheet.pdf',
 };
 assert.ok(validateFixtureProfile(MUSTER).ok);
 
@@ -237,12 +275,113 @@ const store0 = lies('src/store/deviceLibraryStore.ts');
 assert.ok(!/guidelines-outdated'\)\s*await forgetSession/.test(store0), 'geaenderte Richtlinien sind kein Grund zum Abmelden');
 ok('Fehlercodes: exists (409), guidelines-outdated mit Link, klein geschriebene Codes, jeder Code mit eigenem Text');
 
+// ── 5b. Hochladen eigener Profile ───────────────────────────────────────────
+//
+// Der teure Fehler hier ist nicht ein fehlgeschlagener Upload, sondern einer,
+// der bei jedem Start wiederholt wird (unveraendert → der Server sagt
+// wieder dasselbe) oder einer, der eine Aenderung NICHT hochlaedt, weil der
+// Fingerabdruck an der Feldreihenfolge haengt statt am Inhalt.
+const eigen: Fixture = { ...MUSTER, id: 'custom-1' };
+const ohneLinkF: Fixture = { ...MUSTER, id: 'custom-2', datasheetUrl: undefined };
+const ausBibliothek: Fixture = { ...MUSTER, id: `${LIBRARY_ID_PREFIX}robe-megapointe` };
+const item = fixtureToUploadItem(eigen);
+assert.ok(item && item.localId === 'custom-1' && item.core.sourceUrl === MUSTER.datasheetUrl && !('id' in item.facet));
+assert.equal(fixtureToUploadItem(ohneLinkF), null);
+assert.equal(fixtureToUploadItem({ ...MUSTER, datasheetUrl: 'Datenblatt S. 4' }), null);
+
+const umgestellt = { core: { ...item.core }, facet: Object.fromEntries(Object.entries(item.facet).reverse()) };
+assert.equal(uploadHash(umgestellt), uploadHash(item), 'Fingerabdruck haengt an der Feldreihenfolge');
+assert.notEqual(uploadHash(fixtureToUploadItem({ ...eigen, beamAngle: 2 })!), uploadHash(item));
+
+let log = emptyUploadLog(S);
+const plan = planUpload([eigen, ohneLinkF, ausBibliothek], log);
+assert.deepEqual(plan.items.map((i) => i.localId), ['custom-1'], 'nur eigene Profile mit Link gehen hoch');
+assert.deepEqual(plan.needsSource, ['custom-2']);
+assert.equal(uploadStatus(eigen, log), 'new');
+log = applyUploadResults(log, plan, [{ localId: 'custom-1', state: 'created', slug: 'robe-megapointe' }], jetzt);
+assert.equal(log.items['custom-1'].state, 'created');
+assert.equal(log.items['custom-2'].state, 'needs-source');
+assert.equal(uploadStatus(ohneLinkF, log), 'needs-source');
+assert.equal(planUpload([eigen], log).items.length, 0, 'unveraendert darf nicht erneut hochgehen');
+assert.equal(planUpload([eigen], log, true).items.length, 1, 'ausdruecklich angefordert geht es trotzdem');
+const geaendert = { ...eigen, weight: 23 };
+assert.equal(uploadStatus(geaendert, log), 'changed');
+assert.equal(planUpload([geaendert], log).items.length, 1, 'eine Aenderung muss hochgehen');
+
+log = applyUploadResults(log, planUpload([geaendert], log), [{ localId: 'custom-1', state: 'blocked', findings: [{ kind: 'no-source', blocking: true }] }], jetzt);
+assert.deepEqual(log.items['custom-1'].findings, ['no-source']);
+assert.equal(log.items['custom-1'].slug, 'robe-megapointe', 'der Slug geht bei einem spaeteren Ergebnis nicht verloren');
+assert.equal(planUpload([geaendert], log).items.length, 0, 'blocked mit gleichem Inhalt wird nicht wiederholt');
+log = applyUploadResults(log, planUpload([geaendert], log, true), [], jetzt);
+assert.equal(log.items['custom-1'].state, 'error', 'ein Eintrag ohne Ergebnis ist ein Fehler, kein Erfolg');
+assert.equal(planUpload([geaendert], log).items.length, 1, 'nach einem Fehler wird es erneut versucht');
+// Moderationsstand: unveraendert, aber `pending` geht beim automatischen
+// Lauf mit; sobald `approved` gemeldet ist, nicht mehr.
+{
+  let m = emptyUploadLog(S);
+  const p0 = planUpload([eigen], m);
+  m = applyUploadResults(m, p0, [{ localId: 'custom-1', state: 'created', moderation: 'pending', slug: 's' }], jetzt);
+  assert.equal(uploadStatus(eigen, m), 'awaiting');
+  const p1 = planUpload([eigen], m);
+  assert.equal(p1.items.length, 1, 'pending muss beim naechsten Lauf mitgehen, sonst erfaehrt der Planer die Freigabe nie');
+  m = applyUploadResults(m, p1, [{ localId: 'custom-1', state: 'in-sync', moderation: 'approved', slug: 's' }], jetzt);
+  assert.equal(uploadStatus(eigen, m), 'approved');
+  assert.equal(planUpload([eigen], m).items.length, 0, 'approved und unveraendert geht nicht erneut');
+  m = applyUploadResults(m, planUpload([eigen], m, true), [{ localId: 'custom-1', state: 'blocked', findings: [] }], jetzt);
+  assert.equal(uploadStatus(eigen, m), 'blocked', 'blocked darf nicht als live erscheinen');
+}
+ok('Moderation: pending geht erneut mit, approved nicht; Anzeige folgt dem Moderationsstand');
+assert.ok(readUploadLog(JSON.parse(JSON.stringify(log)), S));
+assert.equal(readUploadLog(JSON.parse(JSON.stringify(log)), 'https://andere.example'), null);
+ok('Hochladen: nur eigene Profile mit Datenblatt-Link, Fingerabdruck unabhaengig von der Feldreihenfolge, unveraendert/blocked nicht wiederholt, Fehler erneut, Protokoll je Server');
+
+aufrufe.length = 0;
+const viele = Array.from({ length: UPLOAD_BATCH + 50 }, (_, i) => ({ ...item, localId: `c${i}` }));
+antworten.push(
+  new Response(JSON.stringify({ planner: 'light', results: viele.slice(0, UPLOAD_BATCH).map((x) => ({ localId: x.localId, state: 'created' })) }), { status: 200 }),
+  new Response(JSON.stringify({ planner: 'light', results: viele.slice(UPLOAD_BATCH).map((x) => ({ localId: x.localId, state: 'in-sync' })) }), { status: 200 }),
+);
+const erg = await upload(S, 'tok-1', 'light', viele);
+assert.equal(aufrufe.length, 2);
+assert.ok(aufrufe[0].url.endsWith('/api/upload'));
+const koerper = JSON.parse(String(aufrufe[0].init.body)) as { planner: string; items: unknown[] };
+assert.equal(koerper.planner, 'light');
+assert.equal(koerper.items.length, UPLOAD_BATCH);
+assert.equal(erg.length, viele.length);
+ok(`Client: upload teilt in Stapel zu ${UPLOAD_BATCH}, planner=light`);
+
+const ohneKommentar = (x: string) => x.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+// Verdrahtung: erst hoch, dann runter; automatisch ist die Vorgabe; die App
+// meldet ihre eigenen Profile und reicht den Schluesselbund des Hosts durch.
+const storeSrc = ohneKommentar(lies('src/store/deviceLibraryStore.ts'));
+const syncAll = /syncAll: async[\s\S]*?\n {4}\},/.exec(storeSrc)?.[0] ?? '';
+assert.ok(syncAll.indexOf('uploadNow') >= 0 && syncAll.indexOf('uploadNow') < syncAll.indexOf('syncNow'), 'Abgleich: erst hoch, dann runter');
+assert.ok(/getItem\(AUTO_KEY\) !== 'off'/.test(storeSrc), 'automatisches Hochladen ist Vorgabe AN');
+assert.ok(/UPLOAD_DEBOUNCE_MS\)/.test(storeSrc), 'Hochladen nach Aenderung ist entprellt');
+const app = ohneKommentar(lies('src/App.tsx'));
+assert.ok(/setLocalFixtures\(customFixtures\)/.test(app), 'App meldet die eigenen Profile nicht');
+assert.ok(/init\(host\.deviceLibraryToken\)/.test(app), 'App reicht den Token-Speicher des Hosts nicht durch');
+assert.ok(/deviceLibraryToken\?:/.test(lies('src/integration/hostAdapter.ts')));
+ok('Verdrahtung: syncAll laedt erst hoch, Auto-Upload Vorgabe AN und entprellt, App meldet Profile, Host-Schluesselbund');
+
+// Katalog-Veroeffentlichung: ohne Schluessel nur Liste und Erfolg; der
+// Workflow faehrt sie auf main und von Hand, und nur mit Secret.
+const pub = spawnSync(process.execPath, ['--experimental-strip-types', '--import', './scripts/register-ts-ext.mjs', 'scripts/library-publish.ts'], {
+  cwd: new URL('.', wurzel).pathname, env: { ...process.env, DEVICE_LIBRARY_KEY: '' }, encoding: 'utf8',
+});
+assert.equal(pub.status, 0, `library:publish ohne Schluessel scheitert: ${pub.stderr}`);
+assert.ok(pub.stdout.includes(`Katalog: ${fixtureLibrary.length} Profile`));
+const wf = lies('.github/workflows/library-publish.yml');
+assert.ok(/workflow_dispatch/.test(wf) && /branches: \[main\]/.test(wf) && /paths:/.test(wf), 'library-publish.yml: Ausloeser');
+assert.ok(/secrets\.DEVICE_LIBRARY_KEY/.test(wf) && /library:publish/.test(wf), 'library-publish.yml: Secret und Lauf');
+ok('Katalog: library:publish ohne Schluessel = Liste + Erfolg; Workflow auf main (Pfadfilter) und von Hand');
+
 // ── 6. Wo das Token NICHT stehen darf ───────────────────────────────────────
 const store = lies('src/store/deviceLibraryStore.ts');
 const code = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 for (const datei of [
   'src/store/deviceLibraryStore.ts', 'src/core/deviceLibrary.ts', 'src/components/DeviceLibrarySettings.tsx',
-  'src/components/DeviceLibraryProposeDialog.tsx', 'electron/main.cjs', 'electron/preload.cjs',
+  'src/components/DeviceLibraryUploadDialog.tsx', 'electron/main.cjs', 'electron/preload.cjs',
 ]) {
   assert.ok(!/console\.\w+\(/.test(code(lies(datei))), `${datei}: keine Log-Zeile in der Anbindung (Token-Gefahr)`);
 }

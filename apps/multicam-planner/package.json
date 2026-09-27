@@ -26,7 +26,8 @@
     "kopfzeile:check": "node scripts/kopfzeile-check.mjs",
     "farben:check": "node scripts/rohe-farben-check.mjs",
     "form:check": "node scripts/marken-form-check.mjs",
-    "kontrast:check": "node scripts/kontrast-check.mjs"
+    "kontrast:check": "node scripts/kontrast-check.mjs",
+    "library:publish": "node scripts/library-publish.mjs"
   },
   "build": {
     "appId": "com.larszu.multicamplanner",

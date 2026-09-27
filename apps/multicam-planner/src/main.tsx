@@ -11,6 +11,7 @@ import './index.css';
 import { loadZoom, applyZoom } from './utils/uiZoom';
 import { restoreAutosave, startAutosave } from './store/autosave';
 import { useDeviceLibrary } from './library/store';
+import { startAutoSync } from './library/autoSync';
 
 // Gespeicherten UI-Zoom vor dem ersten Render anwenden (kein Flash).
 applyZoom(loadZoom());
@@ -67,8 +68,10 @@ if (!isEmbedded) {
   window.addEventListener('pagehide', autosave.flush);
 }
 
-// Geraetebibliothek: gespeicherte Anmeldung pruefen und abgleichen. Laeuft
-// neben dem ersten Rendern; der Katalog traegt bis dahin den Cache.
+// Geraetebibliothek: eigene Eintraege anmelden, gespeicherte Anmeldung
+// pruefen, hochladen und abgleichen. Laeuft neben dem ersten Rendern; der
+// Katalog traegt bis dahin den Cache.
+startAutoSync();
 void useDeviceLibrary.getState().init();
 
 // Projekt der Shell uebernehmen und eigene Aenderungen zurueckmelden.

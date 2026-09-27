@@ -62,7 +62,8 @@
     "pdf:check": "node --experimental-strip-types --import ./scripts/register-ts-ext.mjs scripts/pdf-table-check.ts",
     "plot:check": "node --experimental-strip-types --import ./scripts/register-ts-ext.mjs scripts/plot-page-check.ts",
     "ascii:check": "node --experimental-strip-types --import ./scripts/register-ts-ext.mjs scripts/ascii-drift-check.ts",
-    "devport:check": "node --experimental-strip-types --import ./scripts/register-ts-ext.mjs scripts/dev-port-single-source.ts"
+    "devport:check": "node --experimental-strip-types --import ./scripts/register-ts-ext.mjs scripts/dev-port-single-source.ts",
+    "library:publish": "node --experimental-strip-types --import ./scripts/register-ts-ext.mjs scripts/library-publish.ts"
   },
   "dependencies": {
     "@avplan/device-catalog": "1.0.0",
