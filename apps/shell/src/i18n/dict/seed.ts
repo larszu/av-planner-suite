@@ -30,6 +30,11 @@ export const seed: Record<string, string> = {
   'seed.handoff.count': '{n} open reports',
   'seed.handoff.acceptAll': 'Hand over all',
   'seed.handoff.dismissAll': 'Keep all here',
+  'seed.handoff.header': 'Reported by {quelle}: {was}',
+  'seed.handoff.countPlanners': 'Reports from {n} planners',
+  'seed.from.cameras': 'the camera planner',
+  'seed.from.fixtures': 'the lighting planner',
+  'seed.from.signal': 'the cabling planner',
 
   // ── Die Kamera aus dem Signalplan, die im Kameraplan fehlt
   //    (Nutzer-Auftrag 2026-09-19) ──

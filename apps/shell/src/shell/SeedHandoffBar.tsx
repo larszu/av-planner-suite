@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Icon } from '@avplan/ui'
 import type { SeedDomain } from '@avplan/ui/embed'
 import type { SeedHandoffRecord } from '../data/project'
@@ -47,9 +48,11 @@ import { format, useT } from '../i18n'
  * NUTZER-MELDUNG 2026-09-20: „die Meldung … muss man auch alle auf einmal
  * akzeptieren oder ablehnen können und rückgängig machen können."
  *
- * Wer eine Stunde im Licht-Planer gearbeitet hat, findet hier nicht eine
- * Zeile, sondern sechs — und beantwortet dann sechsmal dieselbe Frage. Der
- * Kopf trägt deshalb ab der zweiten Zeile beide Sammelknöpfe.
+ * Wer eine Stunde im Licht-Planer gearbeitet hat, fand hier nicht eine
+ * Zeile, sondern sechs — und beantwortete sechsmal dieselbe Frage. Seit dem
+ * 2026-09-27 gibt es je Planer nur noch EINE Meldung (`meldungEinrechnen`),
+ * und der Kopf trägt die Sammelknöpfe immer; der Streifen lässt sich
+ * einklappen und wird nie höher als vier Zeilen.
  *
  * Sie stehen NEBEN den einzelnen und nicht an ihrer Stelle: die Meldungen
  * kommen aus verschiedenen Planern, und „alle aus dem Licht-Planer ja, die
@@ -84,63 +87,81 @@ export function SeedHandoffBar({
   onDismiss: (ids: string[]) => void
 }) {
   const t = useT()
+  const [zu, setZu] = useState(false)
   if (handoffs.length === 0) return null
 
+  // EINE ZEILE JE PLANER (Nutzer-Meldung 2026-09-27: 18 Zeilen „1 geaendert"
+  // ueberdeckten die Arbeitsflaeche). Neue Meldungen werden schon beim
+  // Eintreffen eingerechnet (`meldungEinrechnen`); die Gruppierung hier fasst
+  // zusaetzlich zusammen, was in aelteren Projekten noch einzeln steht.
+  const gruppen: { domain: SeedDomain; records: SeedHandoffRecord[]; menge: SeedHandoffRecord['zusammenfassung'] }[] = []
+  for (const r of handoffs) {
+    const g = gruppen.find((x) => x.domain === r.domain)
+    if (g) {
+      g.records.push(r)
+      g.menge = {
+        neu: g.menge.neu + r.zusammenfassung.neu,
+        geaendert: g.menge.geaendert + r.zusammenfassung.geaendert,
+        entfernt: g.menge.entfernt + r.zusammenfassung.entfernt,
+      }
+    } else gruppen.push({ domain: r.domain, records: [r], menge: { ...r.zusammenfassung } })
+  }
+
+  const knopf = 'av-focus rounded-av-control border border-av-border px-2 py-0.5 text-av-text hover:bg-av-surface-3'
   return (
     <section
-      className="flex flex-col gap-1 border-t border-av-border bg-av-surface-2 px-3 py-2"
+      className="flex shrink-0 flex-col gap-1 border-t border-av-border bg-av-surface-2 px-3 py-2"
       aria-label={t('seed.handoff.region', 'Angebotene Übergaben an die anderen Planer')}
     >
-      {handoffs.length > 1 && (
-        <div className="flex flex-wrap items-center gap-2 border-b border-av-border-muted pb-1.5 text-[13px] text-av-text-muted">
-          <span>
-            {format(t('seed.handoff.count', '{n} offene Meldungen'), { n: handoffs.length })}
-          </span>
-          <span className="ml-auto flex gap-1">
-            <button
-              type="button"
-              className="av-focus rounded-av-control border border-av-border px-2 py-0.5 text-av-text hover:bg-av-surface-3"
-              onClick={() => onAccept(handoffs)}
-            >
-              {t('seed.handoff.acceptAll', 'Alle übernehmen')}
-            </button>
-            <button
-              type="button"
-              className="av-focus rounded-av-control border border-av-border px-2 py-0.5 text-av-text hover:bg-av-surface-3"
-              onClick={() => onDismiss(handoffs.map((r) => r.id))}
-            >
-              {t('seed.handoff.dismissAll', 'Alle nur hier')}
-            </button>
-          </span>
+      <div className="flex flex-wrap items-center gap-2 text-[13px] text-av-text-muted">
+        <button
+          type="button"
+          className="av-focus flex items-center gap-1 rounded-av-control px-1 hover:bg-av-surface-3"
+          aria-expanded={!zu}
+          onClick={() => setZu(!zu)}
+        >
+          <Icon name="nodes" size={14} style={{ color: 'var(--av-accent)' }} />
+          {gruppen.length === 1
+            ? format(t('seed.handoff.header', 'Meldung aus {quelle}: {was}'), {
+                quelle: appLabelAus(t, gruppen[0].domain),
+                was: mengeLabel(t, gruppen[0].menge),
+              })
+            : format(t('seed.handoff.countPlanners', 'Meldungen aus {n} Planern'), { n: gruppen.length })}
+          <span aria-hidden>{zu ? '▸' : '▾'}</span>
+        </button>
+        <span className="ml-auto flex gap-1">
+          <button type="button" className={knopf} onClick={() => onAccept(handoffs)}>
+            {gruppen.length === 1 ? t('seed.handoff.accept', 'Übernehmen') : t('seed.handoff.acceptAll', 'Alle übernehmen')}
+          </button>
+          <button type="button" className={knopf} onClick={() => onDismiss(handoffs.map((r) => r.id))}>
+            {gruppen.length === 1 ? t('seed.handoff.dismiss', 'Nur hier') : t('seed.handoff.dismissAll', 'Alle nur hier')}
+          </button>
+        </span>
+      </div>
+      {!zu && gruppen.length > 1 && (
+        // Hoechstens so hoch wie vier Zeilen: der Streifen darf die
+        // Arbeitsflaeche nicht verdraengen — genau das war die Meldung.
+        <div className="max-h-32 overflow-y-auto border-t border-av-border-muted pt-1">
+          {gruppen.map((g) => (
+            <div key={g.domain} className="flex flex-wrap items-center gap-2 py-0.5 text-[13px] text-av-text">
+              <span>
+                {format(t('seed.handoff.line', 'Meldung aus {quelle}: {was} — an die anderen Planer übergeben?'), {
+                  quelle: appLabelAus(t, g.domain),
+                  was: mengeLabel(t, g.menge),
+                })}
+              </span>
+              <span className="ml-auto flex gap-1">
+                <button type="button" className={knopf} onClick={() => onAccept(g.records)}>
+                  {t('seed.handoff.accept', 'Übernehmen')}
+                </button>
+                <button type="button" className={knopf} onClick={() => onDismiss(g.records.map((r) => r.id))}>
+                  {t('seed.handoff.dismiss', 'Nur hier')}
+                </button>
+              </span>
+            </div>
+          ))}
         </div>
       )}
-      {handoffs.map((r) => (
-        <div key={r.id} className="flex flex-wrap items-center gap-2 text-[13px] text-av-text">
-          <Icon name="nodes" size={14} style={{ color: 'var(--av-accent)' }} />
-          <span>
-            {format(t('seed.handoff.line', 'Meldung aus {quelle}: {was} — an die anderen Planer übergeben?'), {
-              quelle: appLabel(t, r.domain),
-              was: mengeLabel(t, r.zusammenfassung),
-            })}
-          </span>
-          <span className="ml-auto flex gap-1">
-            <button
-              type="button"
-              className="av-focus rounded-av-control border border-av-border px-2 py-0.5 hover:bg-av-surface-3"
-              onClick={() => onAccept([r])}
-            >
-              {t('seed.handoff.accept', 'Übernehmen')}
-            </button>
-            <button
-              type="button"
-              className="av-focus rounded-av-control border border-av-border px-2 py-0.5 hover:bg-av-surface-3"
-              onClick={() => onDismiss([r.id])}
-            >
-              {t('seed.handoff.dismiss', 'Nur hier')}
-            </button>
-          </span>
-        </div>
-      ))}
     </section>
   )
 }
@@ -170,8 +191,11 @@ function mengeLabel(
  * ist eine Dublette, bei der beim Zusammenfuegen der letzte gewinnt — und
  * dann steht im einen Streifen, was im anderen gemeint war.
  */
-function appLabel(t: (k: string, d: string) => string, d: SeedDomain): string {
-  if (d === 'cameras') return t('seed.writer.cameras', 'der Kamera-Planer')
-  if (d === 'fixtures') return t('seed.writer.fixtures', 'der Licht-Planer')
-  return t('seed.writer.signal', 'der Kabel-Planer')
+function appLabelAus(t: (k: string, d: string) => string, d: SeedDomain): string {
+  // „aus dem Kabel-Planer": nach „aus" steht der Dativ. Eigene Schluessel,
+  // weil die Nominativ-Form (`seed.writer.*`) im Konflikt-Streifen gebraucht
+  // wird und ein Schluessel mit zwei Faellen im Deutschen nicht geht.
+  if (d === 'cameras') return t('seed.from.cameras', 'dem Kamera-Planer')
+  if (d === 'fixtures') return t('seed.from.fixtures', 'dem Licht-Planer')
+  return t('seed.from.signal', 'dem Kabel-Planer')
 }
