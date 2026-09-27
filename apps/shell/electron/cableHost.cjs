@@ -18,27 +18,42 @@ const { pathToFileURL } = require('node:url')
 const CABLE_URL = 'planner-signal://app/index.html'
 
 // Cables IPC-Registrierungen (parameterlos, registrieren globale ipcMain.handle).
-// Reihenfolge wie in cable-planner/src/main/index.ts.
+// Reihenfolge und Umfang wie in cable-planner/src/main/index.ts; der Test
+// `apps/shell/test/cableHostIpc.test.ts` haelt beide Listen gegeneinander.
+// Bis 2026-09-27 fehlten hier acht Module (netbox, attachment, mcp u. a.) —
+// der eingebettete Planer zeigte die Knoepfe, und der Aufruf endete mit
+// „No handler registered". Alle Kanaele tragen Cables Praefixe; die Shell
+// selbst registriert nur `suiteHost:*`, eine Kollision ist also ausgeschlossen.
 const IPC_MODULES = [
   ['credentialsIpc.js', 'registerCredentialsIpc'],
   ['rentmanIpc.js', 'registerRentmanIpc'],
+  ['netboxIpc.js', 'registerNetboxIpc'],
   ['deviceLibraryIpc.js', 'registerDeviceLibraryIpc'],
-  // E-12: KEIN lexwareIpc mehr. Lexware ist seit dieser Entscheidung eine
-  // eigene Shell-Domaene (`lexware.cjs`), und die laeuft in BEIDEN
-  // Betriebsarten. Cables Handler hier zusaetzlich zu registrieren gaebe zwei
-  // Wege zu derselben API — und im nativen Modus haette der Nutzer je nach
-  // Fenster einen anderen Beleg-Weg unter denselben Knoepfen.
   ['projectIpc.js', 'registerProjectIpc'],
   ['atemIpc.js', 'registerAtemIpc'],
   ['videohubIpc.js', 'registerVideohubIpc'],
+  ['switcherIpc.js', 'registerSwitcherIpc'],
   ['logIpc.js', 'registerLogIpc'],
+  ['documentLogIpc.js', 'registerDocumentLogIpc'],
+  ['receiptIpc.js', 'registerReceiptIpc'],
+  ['attachmentIpc.js', 'registerAttachmentIpc'],
+  ['showControlIpc.js', 'registerShowControlIpc'],
+  ['tallyIpc.js', 'registerTallyIpc'],
   ['syncIpc.js', 'registerSyncIpc'],
   ['graphmlIpc.js', 'registerGraphmlIpc'],
   ['mobileShareIpc.js', 'registerMobileShareIpc'],
+  // Nur die Handler; der MCP-Server startet erst, wenn jemand ihn in den
+  // Einstellungen einschaltet (`mcp:start`) — wie in der Einzel-App.
+  ['mcpIpc.js', 'registerMcpIpc'],
   ['collabDiscoveryIpc.js', 'registerCollabDiscoveryIpc'],
   ['printIpc.js', 'registerPrintIpc'],
   ['libraryIpc.js', 'registerLibraryIpc'],
   ['signalingIpc.js', 'registerSignalingIpc'],
+  // E-12: KEIN lexwareIpc. Lexware ist eine eigene Shell-Domaene
+  // (`lexware.cjs`), und die laeuft in BEIDEN Betriebsarten. Cables Handler
+  // hier zusaetzlich zu registrieren gaebe zwei Wege zu derselben API — und
+  // im nativen Modus haette der Nutzer je nach Fenster einen anderen
+  // Beleg-Weg unter denselben Knoepfen.
 ]
 
 function mainDir() {
