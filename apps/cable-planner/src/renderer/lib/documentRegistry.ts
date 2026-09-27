@@ -38,6 +38,14 @@ import { costComparisonTable } from './costComparison'
 import { renameSetTable } from './namingScheme'
 import { signalwegeTable } from './signalwegListe'
 import { hausStreckenTable } from './hausStrecken'
+import { durchgaengeTable, trassenplanStandTable } from './trassenplan'
+import { abnahmeStandTable, maengelTable } from './abnahme'
+import { wartungsplanTable } from './wartungsplan'
+import { konfigVorgabenTable } from './konfigVorgaben'
+import { steckbriefStandTable } from './steckbrief'
+import { bedienUebersichtStandTable } from './bedienUebersicht'
+import { anhaengeTable } from './anhaenge'
+import { kameraPositionsblattStandTable } from './kameraPositionsblatt'
 import type { CsvTable } from './csv'
 
 const ofTable =
@@ -182,6 +190,20 @@ export const DOCUMENT_STANDS: Record<string, (project: CablePlannerProject) => s
   // aus Geraeten, Kabeln, Rahmen, Etagen und der Hausauskunft folgen.
   signalwege: ofTable(signalwegeTable),
   hausstrecken: ofTable(hausStreckenTable),
+  durchgaenge: ofTable(durchgaengeTable),
+  trassenplan: ofTable(trassenplanStandTable),
+  // Festinstallation — die Betreiber-Blätter der Übergabe. Jedes führt als
+  // Stand genau das, was es druckt (Kopf, Umfang, jede Zeile).
+  abnahmeprotokoll: ofTable(abnahmeStandTable),
+  maengelliste: ofTable(maengelTable),
+  wartungsplan: ofTable(wartungsplanTable),
+  'konfig-vorgaben': ofTable(konfigVorgabenTable),
+  steckbrief: ofTable(steckbriefStandTable),
+  'bedien-uebersicht': ofTable(bedienUebersichtStandTable),
+  // Das Verzeichnis führt, was im PROJEKT steht — nicht, ob die Datei auf
+  // diesem Rechner im Ordner liegt. Sonst hinge der Stand am Rechner.
+  anhaenge: ofTable(anhaengeTable),
+  'kamera-positionen': ofTable(kameraPositionsblattStandTable),
 }
 
 /**
@@ -287,6 +309,16 @@ export const DOCUMENT_LABELS: Record<string, string> = {
   stueckliste: 'Stückliste',
   signalwege: 'Signalwege',
   hausstrecken: 'Hausstrecken-Belegung',
+  durchgaenge: 'Durchgänge (Brandschutz)',
+  trassenplan: 'Trassenplan',
+  abnahmeprotokoll: 'Abnahmeprotokoll',
+  maengelliste: 'Mängelliste',
+  wartungsplan: 'Wartungs- und Prüfplan',
+  'konfig-vorgaben': 'Konfigurationsvorgaben',
+  steckbrief: 'Geräte-Steckbrief',
+  'bedien-uebersicht': 'Bedien-Kurzübersicht',
+  anhaenge: 'Anhänge-Verzeichnis',
+  'kamera-positionen': 'Kamera-Positionsblatt',
 }
 
 /**
