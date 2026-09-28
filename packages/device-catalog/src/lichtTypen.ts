@@ -6,7 +6,7 @@
 // Abstrahlwinkel, Photometrie und Bauform bleiben im Licht-Planer — sie
 // versteht sonst niemand.
 //
-// Datenblatt-Link, wo das Profil einen fuehrt. 15 von 84 haben keinen;
+// Datenblatt-Link, wo das Profil einen fuehrt. 10 von 84 haben keinen;
 // das ist eine Aussage: `ohneBeleg` zaehlt sie.
 //
 // `npm run katalog:parity` besteht darauf, dass diese Datei noch aus jener
@@ -23,16 +23,16 @@ export const LICHT_TYPEN: readonly TypEingabe[] = [
   { id: "abgeleitet:etc:source-four-zoom-15-30", hersteller: "ETC", modell: "Source Four Zoom 15–30°", kategorie: 'Lights', datenblattUrl: "https://www.etcconnect.com/WorkArea/DownloadAsset.aspx?id=10737460417", quellRef: "etc-s4-zoom-15-30" },
   { id: "abgeleitet:etc:source-four-zoom-25-50", hersteller: "ETC", modell: "Source Four Zoom 25–50°", kategorie: 'Lights', datenblattUrl: "https://www.etcconnect.com/WorkArea/DownloadAsset.aspx?id=10737460396", quellRef: "etc-s4-zoom-25-50" },
   { id: "abgeleitet:etc:source-four-led-s3", hersteller: "ETC", modell: "Source Four LED S3", kategorie: 'Lights', datenblattUrl: "https://www.etcconnect.com/Products/Entertainment-Fixtures/Source-Four-LED-Series-3/Features.aspx", quellRef: "etc-s4led-s3" },
-  { id: "abgeleitet:robert-juliat:714sx2-suiveur-2-5kw", hersteller: "Robert Juliat", modell: "714SX2 Suiveur 2,5kW", kategorie: 'Lights', datenblattUrl: "https://www.robertjuliat.com/Product_Specifications/Fiches_EN/Standard/DSEN074_714SX2.pdf", quellRef: "robert-juliat-714" },
+  { id: "abgeleitet:robert-juliat:714sx2", hersteller: "Robert Juliat", modell: "714SX2", kategorie: 'Lights', datenblattUrl: "https://www.robertjuliat.com/Product_Specifications/Fiches_EN/Standard/DSEN074_714SX2.pdf", quellRef: "robert-juliat-714" },
   { id: "abgeleitet:generic:1-kw-fresnel", hersteller: "Generic", modell: "1 kW Fresnel", kategorie: 'Lights', quellRef: "fresnel-1kw" },
   { id: "abgeleitet:generic:2-kw-fresnel", hersteller: "Generic", modell: "2 kW Fresnel", kategorie: 'Lights', quellRef: "fresnel-2kw" },
-  { id: "abgeleitet:etc:colorsource-fresnel", hersteller: "ETC", modell: "ColorSource Fresnel", kategorie: 'Lights', quellRef: "etc-cs-fresnel" },
+  { id: "abgeleitet:etc:colorsource-fresnel-v", hersteller: "ETC", modell: "ColorSource Fresnel V", kategorie: 'Lights', datenblattUrl: "https://www.etcconnect.com/Products/Entertainment-Fixtures/ColorSource-Fresnel-V/Features.aspx", quellRef: "etc-cs-fresnel" },
   { id: "abgeleitet:generic:par64-cp62-nsp", hersteller: "Generic", modell: "PAR64 CP62 (NSP)", kategorie: 'Lights', quellRef: "par64-cp62-nsp" },
   { id: "abgeleitet:generic:par64-cp61-mfl", hersteller: "Generic", modell: "PAR64 CP61 (MFL)", kategorie: 'Lights', quellRef: "par64-cp61-mfl" },
   { id: "abgeleitet:generic:par64-cp60-wfl", hersteller: "Generic", modell: "PAR64 CP60 (WFL)", kategorie: 'Lights', quellRef: "par64-cp60-wfl" },
   { id: "abgeleitet:generic:par56-mfl-300w", hersteller: "Generic", modell: "PAR56 MFL 300W", kategorie: 'Lights', quellRef: "par56-mfl" },
   { id: "abgeleitet:adj:mega-hex-par", hersteller: "ADJ", modell: "Mega HEX Par", kategorie: 'Lights', datenblattUrl: "https://www.adj.com/mega-hex-par", quellRef: "adj-mega-hex-par" },
-  { id: "abgeleitet:chauvet-professional:colordash-par-h18ip", hersteller: "Chauvet Professional", modell: "COLORdash Par H18IP", kategorie: 'Lights', quellRef: "chauvet-colordash-h18ip" },
+  { id: "abgeleitet:chauvet-professional:colordash-par-h18-xip", hersteller: "Chauvet Professional", modell: "COLORdash PAR H18 XIP", kategorie: 'Lights', datenblattUrl: "https://chauvetprofessional.com/product/colordash-par-h18-xip/", quellRef: "chauvet-colordash-h18ip" },
   { id: "abgeleitet:elation:sixpar-300", hersteller: "Elation", modell: "SixPar 300", kategorie: 'Lights', datenblattUrl: "https://www.elationlighting.com/sixpar-300", quellRef: "elation-sixpar-300" },
   { id: "abgeleitet:generic:led-par-54-3-w-rgbw", hersteller: "Generic", modell: "LED PAR 54×3 W RGBW", kategorie: 'Lights', quellRef: "generic-led-par-54x3" },
   { id: "abgeleitet:etc:colorsource-par", hersteller: "ETC", modell: "ColorSource PAR", kategorie: 'Lights', datenblattUrl: "https://www.etcconnect.com/Products/Entertainment-Fixtures/ColorSource-PAR/Features.aspx", quellRef: "etc-cs-par" },
@@ -58,7 +58,7 @@ export const LICHT_TYPEN: readonly TypEingabe[] = [
   { id: "abgeleitet:etc:colorsource-spot", hersteller: "ETC", modell: "ColorSource Spot", kategorie: 'Lights', datenblattUrl: "https://www.etcconnect.com/Products/Lighting-Fixtures/ColorSource-Spot/Features.aspx", quellRef: "etc-colorsource-spot" },
   { id: "abgeleitet:chauvet-professional:maverick-storm-1-wash", hersteller: "Chauvet Professional", modell: "Maverick Storm 1 Wash", kategorie: 'Lights', datenblattUrl: "https://chauvetprofessional.com/product/maverick-storm-1-wash/", quellRef: "chauvet-maverick-storm-1-wash" },
   { id: "abgeleitet:elation:proteus-maximus", hersteller: "Elation", modell: "Proteus Maximus", kategorie: 'Lights', datenblattUrl: "https://www.elationlighting.com/proteus-maximus", quellRef: "elation-proteus-maximus" },
-  { id: "abgeleitet:robe:iforte-ltx", hersteller: "Robe", modell: "iForte LTX", kategorie: 'Lights', quellRef: "robe-iforte-ltx" },
+  { id: "abgeleitet:robe:iforte-ltx-wb", hersteller: "Robe", modell: "iFORTE LTX WB", kategorie: 'Lights', datenblattUrl: "https://www.robe.cz/iforte-ltx-wb", quellRef: "robe-iforte-ltx" },
   { id: "abgeleitet:martin-harman:mac-encore-performance-cld", hersteller: "Martin / Harman", modell: "MAC Encore Performance CLD", kategorie: 'Lights', datenblattUrl: "https://www.martin.com/en/products/mac-encore-performance-cld", quellRef: "martin-mac-encore-perf-cld" },
   { id: "abgeleitet:martin-harman:mac-aura-xip", hersteller: "Martin / Harman", modell: "MAC Aura XIP", kategorie: 'Lights', datenblattUrl: "https://www.martin.com/en/products/mac-aura-xip", quellRef: "martin-mac-aura-xip" },
   { id: "abgeleitet:elation:fuze-max-profile", hersteller: "Elation", modell: "Fuze Max Profile", kategorie: 'Lights', datenblattUrl: "https://www.elationlighting.com/fuze-max-profile", quellRef: "elation-fuze-max-profile" },
@@ -92,10 +92,10 @@ export const LICHT_TYPEN: readonly TypEingabe[] = [
   { id: "abgeleitet:philips-colorkinetics:colorblast-12", hersteller: "Philips / ColorKinetics", modell: "ColorBlast 12", kategorie: 'Lights', datenblattUrl: "https://www.docs.colorkinetics.com/support/datasheets/ColorBlast12.pdf", quellRef: "philips-colorblast-12" },
   { id: "abgeleitet:robert-juliat:cyrano-2500w", hersteller: "Robert Juliat", modell: "Cyrano 2500W", kategorie: 'Lights', datenblattUrl: "https://www.robertjuliat.com/followspots/cyrano.html", quellRef: "robert-juliat-cyrano" },
   { id: "abgeleitet:aputure:ls-600x-pro", hersteller: "Aputure", modell: "LS 600x Pro", kategorie: 'Lights', datenblattUrl: "https://www.aputure.com/products/ls-600x-pro", quellRef: "aputure-ls-600x-pro" },
-  { id: "abgeleitet:aputure:ls-300x-ii", hersteller: "Aputure", modell: "LS 300x II", kategorie: 'Lights', quellRef: "aputure-ls-300x-ii" },
+  { id: "abgeleitet:aputure:ls-300x", hersteller: "Aputure", modell: "LS 300x", kategorie: 'Lights', datenblattUrl: "https://aputure.com/en-US/products/ls-300x", quellRef: "aputure-ls-300x-ii" },
   { id: "abgeleitet:elation:kl-fresnel-8-fc", hersteller: "Elation", modell: "KL Fresnel 8 FC", kategorie: 'Lights', datenblattUrl: "https://www.elationlighting.com/kl-fresnel-8-fc", quellRef: "elation-kl-fresnel-8-fc" },
   { id: "abgeleitet:elation:kl-fresnel-6-fc", hersteller: "Elation", modell: "KL Fresnel 6 FC", kategorie: 'Lights', datenblattUrl: "https://www.elationlighting.com/kl-fresnel-6-fc", quellRef: "elation-kl-fresnel-6-fc" },
-  { id: "abgeleitet:elation:kl-panel-fc", hersteller: "Elation", modell: "KL Panel FC", kategorie: 'Lights', quellRef: "elation-kl-panel-fc" },
+  { id: "abgeleitet:elation:kl-panel", hersteller: "Elation", modell: "KL Panel", kategorie: 'Lights', datenblattUrl: "https://www.elationlighting.com/products/kl-panel", quellRef: "elation-kl-panel-fc" },
   { id: "abgeleitet:elation:kl-profile-fc", hersteller: "Elation", modell: "KL Profile FC", kategorie: 'Lights', datenblattUrl: "https://www.elationlighting.com/products/kl-profile-fc", quellRef: "elation-kl-profile-fc" },
   { id: "abgeleitet:elation:kl-par-fc", hersteller: "Elation", modell: "KL PAR FC", kategorie: 'Lights', datenblattUrl: "https://www.elationlighting.com/products/kl-par-fc", quellRef: "elation-kl-par-fc" },
   { id: "abgeleitet:elation:fuze-wash-z350", hersteller: "Elation", modell: "Fuze Wash Z350", kategorie: 'Lights', datenblattUrl: "https://www.elationlighting.com/products/fuze-wash-z350", quellRef: "elation-fuze-wash-z350" },

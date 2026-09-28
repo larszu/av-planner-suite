@@ -29,6 +29,8 @@ const IPC_MODULES = [
   ['rentmanIpc.js', 'registerRentmanIpc'],
   ['netboxIpc.js', 'registerNetboxIpc'],
   ['deviceLibraryIpc.js', 'registerDeviceLibraryIpc'],
+  ['streamPreviewIpc.js', 'registerStreamPreviewIpc'],
+  ['cloudIpc.js', 'registerCloudIpc'],
   ['projectIpc.js', 'registerProjectIpc'],
   ['atemIpc.js', 'registerAtemIpc'],
   ['videohubIpc.js', 'registerVideohubIpc'],

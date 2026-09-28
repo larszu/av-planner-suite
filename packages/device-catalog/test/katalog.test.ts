@@ -106,16 +106,17 @@ describe('Der Katalog der Suite', () => {
   it('„kein Datenblatt" ist eine Aussage und wird gezählt', () => {
     const ohne = ohneBeleg(alleTypen())
     // 171 waren es vor den Datenblatt-Nachträgen vom 2026-09-27 (cable#928/
-    // #929, multicam#151, light#132). Davon übrig: 6 Objektive, 26 aus dem
-    // Cable-Planer, 1 aus der Kameraliste und 15 Leuchten.
-    expect(ohne.length).toBe(48)
+    // #929, multicam#151, light#132). Davon übrig: 6 Objektive, 17 aus dem
+    // Cable-Planer (26 bis zum Cable-Sync vom 2026-09-28), 1 aus der
+    // Kameraliste und 10 Leuchten (15 bis light#133).
+    expect(ohne.length).toBe(34)
     expect(ohne.filter((t) => t.kategorie === 'Lenses')).toHaveLength(6)
-    expect(ohne.filter((t) => t.quellen.includes('cable'))).toHaveLength(26)
+    expect(ohne.filter((t) => t.quellen.includes('cable'))).toHaveLength(17)
 
-    // Die Leuchten führen seit light#132 `datasheetUrl` am Profil; 69 von 84
+    // Die Leuchten führen seit light#132 `datasheetUrl` am Profil; 74 von 84
     // tragen einen. Die Zahl steht hier, damit sie jemand senken kann. Sie zu
     // verstecken machte aus einem bekannten Loch ein unbekanntes.
-    expect(ohne.filter((t) => t.quellen.includes('light'))).toHaveLength(15)
+    expect(ohne.filter((t) => t.quellen.includes('light'))).toHaveLength(10)
   })
 
   it('die Leuchten des Licht-Planers stehen im Katalog', () => {
