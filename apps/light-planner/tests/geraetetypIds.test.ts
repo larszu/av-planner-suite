@@ -64,9 +64,9 @@ describe('der Beleg reist mit', () => {
   it('die Bibliothek ist belegt — und es ist gezaehlt', () => {
     // Vor dem 2026-09-24 trug KEIN einziger Eintrag einen Beleg. Die Zahl steht
     // hier, damit sie nicht lautlos wieder sinkt; steigt sie, faellt diese Zeile
-    // und wird nachgezogen.
+    // und wird nachgezogen. 74 seit light#133.
     const mit = fixtureLibrary.filter((f) => f.datasheetUrl).length;
-    expect(mit).toBe(69);
+    expect(mit).toBe(74);
     expect(fixtureLibrary.length).toBe(84);
   });
 
