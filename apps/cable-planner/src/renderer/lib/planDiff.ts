@@ -200,6 +200,9 @@ export const EQUIPMENT_FIELD_CLASS: Record<string, FieldClass> = {
   inputs: 'substantive',
   outputs: 'substantive',
   portsUnknown: 'substantive',
+  // #906 — offen in der Bestandsaufnahme oder abgehakt: eine Aussage ueber
+  // den Stand der Doku, die ein Vergleich zeigen soll.
+  erfasst: 'substantive',
   modes: 'substantive',
   activeModeId: 'substantive',
   categoryProps: 'substantive',
@@ -288,6 +291,8 @@ export const EQUIPMENT_FIELD_CLASS: Record<string, FieldClass> = {
   // und welche Adresse dort erwartet wird. Beides steht auf den Listen, die
   // schon draussen sind.
   networkInterfaces: 'substantive',
+  // #946 — eine geaenderte Stream-Adresse steht auf jedem Zettel am Encoder.
+  streams: 'substantive',
   primaryInterfaceRole: 'substantive',
   mgmtUrl: 'substantive',
   firmware: 'substantive',

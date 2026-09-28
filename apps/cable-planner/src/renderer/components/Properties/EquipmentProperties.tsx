@@ -29,6 +29,7 @@ import { DisplayPropertiesBlock } from './sections/DisplayPropertiesBlock'
 import { CategoryPropsSection } from './sections/CategoryPropsSection'
 import { DeviceConfigsBlock } from './sections/DeviceConfigsBlock'
 import { NetworkAccessSection } from './sections/NetworkAccessSection'
+import { StreamsSection } from './sections/StreamsSection'
 import { DeviceKindCards } from './sections/DeviceKindCards'
 import { OptionalFieldsSection } from './sections/OptionalFieldsSection'
 import { FotoSection } from './sections/FotoSection'
@@ -36,8 +37,10 @@ import { DisplayFlagsSection } from './sections/DisplayFlagsSection'
 import { RentmanSyncBadge } from './sections/RentmanSyncBadge'
 import { PortsSection } from './sections/PortsSection'
 import { LibrarySaveSection } from './sections/LibrarySaveSection'
+import { CatalogueSection } from './sections/CatalogueSection'
 import { PrintSection } from './sections/PrintSection'
 import { RackSection } from './sections/RackSection'
+import { SectionFilterBar } from './SectionFilterBar'
 import { IdentityBlock } from './sections/IdentityBlock'
 import { NetworkConfigSection } from './sections/NetworkConfigSection'
 import { ModesSection } from './sections/ModesSection'
@@ -119,6 +122,10 @@ export const EquipmentProperties = () => {
   return (
     <DndContext sensors={dragSensors} collisionDetection={closestCenter} onDragEnd={handleSectionDragEnd}>
     <SortableContext items={sectionOrder} strategy={verticalListSortingStrategy}>
+    {/* #903 — der Weg zu EINEM Abschnitt. Ausserhalb des `fieldset`, damit
+        auch im gesperrten Projekt gesucht werden kann: Lesen ist keine
+        Aenderung. */}
+    <SectionFilterBar />
     <fieldset
       disabled={projectIsLocked}
       className="flex flex-col gap-3 text-cp-xs disabled:cursor-default disabled:opacity-50"
@@ -157,6 +164,7 @@ export const EquipmentProperties = () => {
       <SourceIdentitySection equipment={equipment} />
 
       <NetworkAccessSection equipment={equipment} />
+      <StreamsSection equipment={equipment} />
 
       <LifecycleSection equipment={equipment} />
       {/* BEDARF 103 — Faehigkeiten je Modell. Rendert sich an Nicht-Kameras
@@ -195,6 +203,8 @@ export const EquipmentProperties = () => {
       <RackSection equipment={equipment} />
 
       <LibrarySaveSection equipment={equipment} />
+
+      <CatalogueSection equipment={equipment} />
 
       <ReplaceDeviceSection equipment={equipment} />
 

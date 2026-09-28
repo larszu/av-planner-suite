@@ -7,6 +7,7 @@ import type { Cable } from '../types/cable'
 import type { EquipmentItem, EquipmentTemplate, GroupPreset, Port } from '../types/equipment'
 import type { Floor, LocationFrame } from '../types/location'
 import { etageVon, heileEtagen } from '../lib/etagen'
+import { geraeteUmbenannt, kabelUmbenannt, type StammdatenArt } from '../lib/stammdaten'
 import type { CablePlannerProject } from '../types/project'
 import { useUiStore } from './uiStore'
 import { defaultProject, isProjectLocked, sanitizePort, touchProject } from './projectStoreHelpers'
@@ -24,6 +25,7 @@ import { createConductorSlice } from './slices/conductorSlice'
 import { createCrewSlice } from './slices/crewSlice'
 import { createAddressTemplateSlice } from './slices/addressTemplateSlice'
 import { createRevisionSlice } from './slices/revisionSlice'
+import { createCloudSlice } from './slices/cloudSlice'
 import { createMobileSyncSlice } from './slices/mobileSyncSlice'
 import { createTemplateSlice } from './slices/templateSlice'
 import { createGroupPresetSlice } from './slices/groupPresetSlice'
@@ -47,6 +49,7 @@ import {
   persistCategoryTranslations,
 } from '../lib/categoryTranslations'
 import { heileSteckertyp } from '../lib/connectorRenames'
+import { DEVICE_TYPE_ALIASES } from '../lib/deviceTypeAliases'
 import { loadGroupPresets } from './groupPresetsPersist'
 import { createDemoProject } from '../lib/demoProject'
 import { DEMO_RACK_PRESET_ID, createDemoRackPreset } from '../lib/demoRack'
@@ -55,6 +58,7 @@ import { scheduleProjectAutosave } from './projectAutosave'
 import { EINGEBAUTER_KATALOG } from '../lib/eingebauterKatalog'
 import { detectLayerForConnector } from '../lib/cableLayers'
 import { heileVorlagenName } from '../lib/templateRenames'
+import { mitKatalogTyp } from '../lib/deviceTypeMatch'
 import { upsertCachedRentmanTemplate } from '../lib/rentmanTemplateCache'
 import type { GreenGoConfig } from '../types/greengo'
 import type { IntercomPlan } from '../types/intercomPlan'
@@ -90,6 +94,7 @@ import { normaliseAddressLayers } from '../lib/addressTemplate'
 import { normaliseVenueAnswers } from '../lib/venueAnswers'
 import { normaliseAnhaenge } from '../lib/anhaenge'
 import { isNetworkInterfaceRole, normaliseNetworkInterface } from '../lib/networkInterfaces'
+import { normaliseStreams } from '../lib/streamEndpoints'
 import type { NetworkInterface } from '../types/network'
 import { istCircuitKind } from '../types/circuit'
 import { normalisePatternChecks } from '../types/patternCheck'
@@ -143,8 +148,17 @@ const runLibraryMigration = () => {
     )
     let added = false
     for (const t of EINGEBAUTER_KATALOG) {
-      if (!byName.has(t.name)) {
+      const vorhanden = byName.get(t.name)
+      if (!vorhanden) {
         byName.set(t.name, t)
+        added = true
+      } else if (!vorhanden.deviceTypeId && t.deviceTypeId) {
+        // 2026-09-28 — Vorlagen, die geseedet wurden, bevor der Katalog
+        // Geraetetyp-Ids trug, blieben ohne: der Abgleich oben laesst eine
+        // vorhandene Vorlage stehen. Jedes daraus platzierte Geraet kam ohne
+        // Katalog-Typ auf den Plan. Nur die Id wird nachgetragen; was der
+        // Nutzer an der Vorlage geaendert hat, bleibt.
+        byName.set(t.name, { ...vorhanden, deviceTypeId: t.deviceTypeId })
         added = true
       }
     }
@@ -467,6 +481,10 @@ export interface ProjectState {
   removeCustomTemplate: (name: string) => void
   setCustomTemplateCategory: (name: string, category: string) => void
   renameCustomCategory: (oldCategory: string, newCategory: string) => void
+  /** #917 — eigenen Stecker/Standard/Ebene umbenennen: zieht Ports, Kabel und
+   *  Bibliotheks-Vorlagen im offenen Projekt mit. Liefert die Zahl der
+   *  geaenderten Geraete, Kabel und Vorlagen. */
+  renameStammdatum: (art: StammdatenArt, oldName: string, newName: string) => number
   /** Update name and/or category of an existing library template. */
   updateCustomTemplate: (currentName: string, patch: { name?: string; category?: string }) => void
   /** v7.9.13 — Markiert ein Library-Template permanent als 19"-Rack-
@@ -763,6 +781,12 @@ export interface ProjectState {
   /** v7.9.3 — Setzt Viewer-Session-Author (beim ersten Öffnen einer
    *  .cpviewer-Datei). */
   setViewerSession: (session: { author: string; startedAt: string } | undefined) => void
+  /** #871 — Cloud-Verbindung setzen oder loesen. Kein neuer Undo-Schritt
+   *  im Plan: die Verbindung ist Ablage-Zustand, kein Planinhalt. */
+  setCloudBinding: (binding: import('../types/project').CloudBinding | undefined) => void
+  /** #871 — das zusammengefuehrte Ergebnis eines Cloud-Abgleichs oder eine
+   *  wiederhergestellte Cloud-Revision uebernehmen. Die Datei bleibt dieselbe. */
+  applyCloudProject: (project: CablePlannerProject) => void
   /** #412 — Revisionen/Snapshots. */
   commitRevision: (label: string, note: string, asBuilt: boolean) => void
   restoreRevision: (id: string) => void
@@ -1201,6 +1225,17 @@ const healProjectPositions = (
     ...(intercom ? { intercom } : {}),
     equipment: project.equipment.map((item) => {
       item = clearDanglingIdentity(item, identityIds)
+      // 2026-09-27 — ein Katalog-Eintrag, der in einem anderen aufgegangen
+      // ist (USW-16 -> USW-16-PoE), traegt im Projekt noch die alte Id. Sie
+      // loest ueber den Alias weiter auf; hier wird sie auf die heutige
+      // gehoben, damit Lager-Deckung und Stueckliste dieselbe Id vergleichen.
+      if (item.deviceTypeId && DEVICE_TYPE_ALIASES[item.deviceTypeId]) {
+        item = { ...item, deviceTypeId: DEVICE_TYPE_ALIASES[item.deviceTypeId] }
+      }
+      // 2026-09-28 — alte Projekte: Geraete ohne Katalog-Typ bekommen ihn,
+      // wenn der Name eindeutig genau einen Eintrag trifft. Bei mehreren
+      // Treffern bleibt das Feld leer (lib/deviceTypeMatch).
+      item = mitKatalogTyp(item)
 
       // #822 — die Geraetekategorie von Deutsch auf die Quellsprache.
       //
@@ -1502,6 +1537,13 @@ const healProjectPositions = (
 
       if (item.videohubRouting !== undefined) {
         item = { ...item, videohubRouting: normaliseVideohubRouting(item.videohubRouting) }
+      }
+
+      // #946 — Streams am Geraet. Nur angefasst, wenn das Geraet welche
+      // fuehrt. Die Normalisierung entfernt dabei auch Zugangsdaten, die eine
+      // aeltere oder fremde Datei in der Adresse mitbringt.
+      if (item.streams !== undefined) {
+        item = { ...item, streams: normaliseStreams(item.streams) }
       }
 
       // #422 — Legacy-Dimensions-Migration: dimensionHmm/Wmm/Dmm waren das
@@ -1932,6 +1974,7 @@ const buildProjectStore = (
   ...createCrewSlice(set, get, store),
   ...createAddressTemplateSlice(set, get, store),
   ...createRevisionSlice(set, get, store),
+  ...createCloudSlice(set, get, store),
   ...createMobileSyncSlice(set, get, store),
   ...createTemplateSlice(set, get, store),
   ...createGroupPresetSlice(set, get, store),
@@ -2223,7 +2266,7 @@ const buildProjectStore = (
       return {
         project: touchProject({
           ...state.project,
-          equipment: [...baseEquipment, ...insertedEquipment],
+          equipment: [...baseEquipment, ...insertedEquipment.map((e) => mitKatalogTyp(e))],
           cables: [...baseCables, ...insertedCables],
           canvasState,
         }),
@@ -2331,6 +2374,31 @@ const buildProjectStore = (
       return { customLibrary: healed }
     })
     return addedOrPatched
+  },
+  renameStammdatum: (art, oldName, newName) => {
+    const alt = oldName.trim()
+    const neu = newName.trim()
+    if (!alt || !neu || alt === neu) return 0
+    let n = 0
+    set((state) => {
+      const lib = geraeteUmbenannt(state.customLibrary, art, alt, neu)
+      if (lib.n > 0) persistCustomLibrary(lib.liste)
+      n += lib.n
+      // Ein gesperrtes Projekt bleibt, wie es ist; die Bibliothek gehoert
+      // nicht zum Projekt und wird trotzdem nachgezogen.
+      if (isProjectLocked(state)) return lib.n > 0 ? { customLibrary: lib.liste } : {}
+      const geraete = geraeteUmbenannt(state.project.equipment, art, alt, neu)
+      const kabel = kabelUmbenannt(state.project.cables, art, alt, neu)
+      n += geraete.n + kabel.n
+      const projektGeaendert = geraete.n + kabel.n > 0
+      return {
+        ...(lib.n > 0 ? { customLibrary: lib.liste } : {}),
+        ...(projektGeaendert
+          ? { project: touchProject({ ...state.project, equipment: geraete.liste, cables: kabel.liste }) }
+          : {}),
+      }
+    })
+    return n
   },
   renameCustomCategory: (oldCategory, newCategory) =>
     set((state) => {

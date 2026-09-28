@@ -66,7 +66,7 @@ getrennt ist dieselbe Angabe in zwei Auflösungen, und ADR-005 Regel 2 entscheid
 
 Der Licht-Planer ist seit demselben Tag drin: 84 Leuchtenmodelle. Seine Fixture-Bibliothek führt
 den Herstellerlink als `datasheetUrl` am Profil; 74 von 84 tragen einen (light#132, #133), 10 nicht.
-Katalogweit sind 43 Typen ohne Datenblatt. Die Zahlen stehen im Test, damit sie jemand senken
+Katalogweit sind 34 Typen ohne Datenblatt. Die Zahlen stehen im Test, damit sie jemand senken
 kann.
 
 **Stand: 916 Gerätetypen**, eine Id je Modell. Der Cable-Planer bietet sie zur Auswahl an; was er
