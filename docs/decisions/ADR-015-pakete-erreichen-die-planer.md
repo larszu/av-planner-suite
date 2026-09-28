@@ -33,7 +33,8 @@ Vier Bestandsaufnahmen über alle Repos, festgehalten in
 
 **Die Quelle eines gemeinsamen Moduls ist `av-planner-suite/packages/<name>/src`.** Jeder Planer,
 der es nutzt, trägt eine **zeichengleiche Kopie** in einem festen Ordner `…/avplan/<name>/` mit
-einem `MANIFEST.json` (SHA-256 je Datei).
+einem `MANIFEST.json` (SHA-256 je Datei) und einer `.gitattributes` (`eol=lf` — die Wächter vergleichen
+Bytes, und ein Windows-Checkout mit `core.autocrlf` machte sonst jede Kopie rot).
 
 - **Verteilen:** `npm run pakete:verteilen` (`scripts/pakete-verteilen.mjs`) kopiert jedes Paket
   in die Planer, die in `ZIELE` stehen, und schreibt das Manifest. Eine Zeile je Kopie, sonst

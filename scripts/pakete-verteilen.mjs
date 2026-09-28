@@ -78,6 +78,11 @@ for (const [paket, ziele] of Object.entries(ZIELE)) {
     dateien: Object.fromEntries(dateien.map((d) => [d.rel, sha(d.text)])),
   }
   const manifestText = `${JSON.stringify(manifest, null, 2)}\n`
+  // Die Wächter vergleichen Bytes. Ein Windows-Checkout mit `core.autocrlf`
+  // machte aus jeder Kopie CRLF und damit jeden Wächter rot, ohne dass
+  // jemand etwas geändert hat. Eine eigene `.gitattributes` im Kopie-Ordner
+  // haelt die Zeilenenden fest, in jedem Repo gleich.
+  const attributeText = '# Kopie eines Suite-Pakets (ADR-015): Zeilenenden fest, der Waechter vergleicht Bytes.\n* text eol=lf\n'
 
   for (const [repo, zielRel] of Object.entries(ziele)) {
     const repoDir = join(zielWurzel, repo)
@@ -90,6 +95,8 @@ for (const [paket, ziele] of Object.entries(ZIELE)) {
       const abw = []
       const mPfad = join(zielDir, 'MANIFEST.json')
       if (!existsSync(mPfad) || readFileSync(mPfad, 'utf8') !== manifestText) abw.push('MANIFEST.json')
+      const aPfad = join(zielDir, '.gitattributes')
+      if (!existsSync(aPfad) || readFileSync(aPfad, 'utf8') !== attributeText) abw.push('.gitattributes')
       for (const d of dateien) {
         const p = join(zielDir, d.rel)
         if (!existsSync(p) || readFileSync(p, 'utf8') !== d.text) abw.push(d.rel)
@@ -113,6 +120,7 @@ for (const [paket, ziele] of Object.entries(ZIELE)) {
       writeFileSync(p, d.text)
     }
     writeFileSync(join(zielDir, 'MANIFEST.json'), manifestText)
+    writeFileSync(join(zielDir, '.gitattributes'), attributeText)
     console.log(`→ ${paket} → ${repo}/${zielRel} (${dateien.length} Dateien)`)
   }
 }
