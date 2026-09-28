@@ -315,6 +315,18 @@ const UEBERSETZT = {
   ],
 }
 
+/**
+ * ADR-015: alles unter einem `avplan/`-Ordner des Planers ist die Kopie eines
+ * Suite-Pakets (`scripts/pakete-verteilen.mjs`). In der Suite ersetzt das
+ * Paket selbst diese Kopie — sie hier als `only-upstream` zu melden hiesse,
+ * die Konsolidierung als Drift zu zaehlen. Ein `Set` mit Praefix-Pruefung,
+ * damit neue Paketdateien nicht einzeln eingetragen werden muessen.
+ */
+function ersetztePfade(liste) {
+  const genau = new Set(liste)
+  return { has: (p) => genau.has(p) || /(^|\/)avplan\//.test(p) }
+}
+
 const DEAD_UPSTREAM = {
   'light-planner': [
     'components/MenuBar.tsx', // App.tsx nutzt TopBar
@@ -589,7 +601,7 @@ function uncarried(app, baseUpstreamSha) {
   const upDir = join(upstreamRoot, app)
   const upChanged = changedSince(upDir, baseUpstreamSha, TRACKED)
   if (upChanged === null) return { unknown: `Upstream-Stand ${baseUpstreamSha} lokal nicht bekannt` }
-  const replaced = new Set(REPLACED_BY_PACKAGE[app] ?? [])
+  const replaced = ersetztePfade(REPLACED_BY_PACKAGE[app] ?? [])
   const files = []
   const verlagert = []
   for (const f of upChanged) {
@@ -676,7 +688,7 @@ function analyseApp(app) {
   // Upstream gilt als vorhanden, sobald mindestens `src` da ist.
   if (!existsSync(join(upstreamRoot, app, 'src'))) return { app, missingUpstream: true, findings: [] }
 
-  const replaced = new Set(REPLACED_BY_PACKAGE[app] ?? [])
+  const replaced = ersetztePfade(REPLACED_BY_PACKAGE[app] ?? [])
   const dead = new Set(DEAD_UPSTREAM[app] ?? [])
   const overlay = new Set(SUITE_OVERLAY[app] ?? [])
   const findings = []

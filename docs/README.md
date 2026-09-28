@@ -23,6 +23,7 @@ Inhaltsverzeichnis; es verlinkte nur niemand.
 | Dokument | Was es ist |
 | --- | --- |
 | [`SCHNITTSTELLEN.md`](SCHNITTSTELLEN.md) | Wo Daten die Werkzeuggrenze überqueren: die sieben Dateiformate, der laufende `suite-seed`-Austausch, die erklärten Verknüpfungen und die Fremdsysteme — und der Abschnitt „Was es NICHT gibt", gemessen statt vermutet. |
+| [`gemeinsame-pakete.md`](gemeinsame-pakete.md) | Was in den Planern ähnlich ist, welche Fassung jeweils die beste ist, und in welcher Reihenfolge es zu gemeinsamen Paketen wird (ADR-015). |
 
 ## Architektur-Entscheidungen (ADR)
 
@@ -42,6 +43,7 @@ Jede ADR hält eine Entscheidung samt Befund fest, der sie ausgelöst hat.
 - [`ADR-012 — Eine Basis für alle Listen`](decisions/ADR-012-eine-basis-fuer-alle-listen.md)
 - [`ADR-013 — Verlustfrei durch alle Planer`](decisions/ADR-013-verlustfrei-durch-alle-planer.md)
 - [`ADR-014 — Ein selbst angelegtes Gerät ist ein Gerät`](decisions/ADR-014-selbst-angelegte-geraete.md)
+- [`ADR-015 — Ein Paket erreicht jeden Planer als geprüfte Kopie`](decisions/ADR-015-pakete-erreichen-die-planer.md)
 - [`Was von den ADRs steht — und was sich widerspricht`](adr-stand.md) — gemessener
   Umsetzungsstand aller elf ADRs und die sechs Widersprüche (2026-09-19)
 
