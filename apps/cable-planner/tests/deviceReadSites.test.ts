@@ -88,6 +88,10 @@ const GERAETE_DOMAENEN = [
  * darum geht es in diesem Test.
  */
 const SONSTIGE_DOMAENEN = [
+  // #871 — Cloud-Kopie des eigenen Plans. Kein Geraet: was zurueckkommt, ist
+  // der eigene Plan (eine Revision oder das dreiseitig Zusammengefuehrte,
+  // `lib/cloud.ts`), kein Befund einer Anlage.
+  'cloud',
   'collabDiscovery',
   // UEBERLAGERUNG DER SUITE: diese Kopie traegt zusaetzlich die
   // Lexware-Domaene (Belegerstellung, Buchhaltung). Sie ist ausdruecklich
@@ -101,6 +105,10 @@ const SONSTIGE_DOMAENEN = [
   // Shell gehoert. Solange der Handler hier noch steht, wird er
   // eingeordnet statt uebersehen — der Waechter faengt bewusst zu breit.
   'lexware',
+  // #946 — ein Standbild fuer die Vorschau-Kachel. Es kommt zwar von einem
+  // Geraet, landet aber nur im Komponenten-State der Kachel (mit Uhrzeit),
+  // nie im Plan — genau die Grenze, die dieser Test bewacht.
+  'streamPreview',
   'credentials',
   'documentLog',
   'graphml',
@@ -130,6 +138,9 @@ const SONSTIGE_DOMAENEN = [
   // genau das fest. Ohne ihn waere diese Zeile eine Behauptung.
   'showControl',
   'streamKey',
+  // Nachtrag #946 — Zugangsdaten der Geraete-Streams im Schluesselbund. Kein
+  // Geraete-Befund, und kein `get`: der Renderer bekommt nie den Klartext.
+  'streamCredential',
   'sync',
   'updater',
 ] as const

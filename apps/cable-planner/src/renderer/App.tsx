@@ -29,6 +29,7 @@ import { AtemAudioRouterDialog } from './components/Atem/AtemAudioRouterDialog'
 import { DrumMicingDialog } from './components/DrumMicing/DrumMicingDialog'
 import { WirelessRigDialog } from './components/Wireless/WirelessRigDialog'
 import { RundownDialog } from './components/Rundown/RundownDialog'
+import { SurveyDialog } from './components/Survey/SurveyDialog'
 import { LocationBomDialog } from './components/Project/LocationBomDialog'
 
 import { CableContextMenu } from './components/Canvas/CableContextMenu'
@@ -69,8 +70,10 @@ const AnnotationsPanelHost = () => {
   return <AnnotationsPanel open={open} onClose={() => setOpen(false)} />
 }
 import { MobileShareDialog } from './components/MobileShare/MobileShareDialog'
+import { CloudDialog } from './components/Cloud/CloudDialog'
 import { AboutDialog } from './components/About/AboutDialog'
 import { PatchListDialog } from './components/Patch/PatchListDialog'
+import { GeraeteDatenblattHost } from './components/Properties/GeraeteDatenblattDialog'
 import { InstallationDocsDialog } from './components/Export/InstallationDocsDialog'
 import { ModuleOnboardingDialog } from './components/Onboarding/ModuleOnboardingDialog'
 import { BandwidthCalculatorDialog, PowerCalculatorDialog } from './components/Calculators/CalculatorsDialog'
@@ -1575,6 +1578,7 @@ export default function App() {
       <DrumMicingDialog />
       <WirelessRigDialog />
       <RundownDialog />
+      <SurveyDialog />
       <DeliveryDialog />
       <AdernDialog />
       <BerichtEditorDialog />
@@ -1594,8 +1598,10 @@ export default function App() {
         </Suspense>
       )}
       <MobileShareDialog />
+      <CloudDialog />
       <AboutDialog />
       <PatchListDialog />
+      <GeraeteDatenblattHost />
       <InstallationDocsDialog />
       {/* NACH dem Willkommens-Dialog, nicht daneben (#864).
           Gemessen bei 390 px: beide standen gleichzeitig offen, sichtbar

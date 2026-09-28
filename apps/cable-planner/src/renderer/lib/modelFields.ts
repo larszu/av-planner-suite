@@ -242,6 +242,9 @@ export const INSTANCE_FIELDS = [
   // („dieser Port ist der Dante-Sekundaerweg") und steht deshalb unten bei den
   // Modell-Feldern.
   'networkInterfaces',
+  // #946 — Streams tragen Adressen DIESES Exemplars (rtsp://10.0.0.5/…); aus
+  // der Vorlage gezogen, zeigten zwei Kameras auf denselben Strom.
+  'streams',
 
   // Zustand dieses Exemplars
   'activeModeId',
@@ -270,6 +273,8 @@ export const INSTANCE_FIELDS = [
   'netboxSourceUrl',
   'rentmanId',
   'rentmanRemoved',
+  // #906 — vor Ort erfasst: gilt fuer DIESES Exemplar und seine Arbeitsliste.
+  'erfasst',
 
   // Oberflaechen-Zustand am Canvas
   'nodeColor',

@@ -22,6 +22,7 @@ import { PopoutApp } from './components/Layout/PopoutApp'
 import { initPanelPopoutSync, popoutPanel } from './lib/panelPopout'
 import { initSettingsSync } from './lib/settingsSync'
 import { startDeviceLibraryAutoSync } from './lib/deviceLibraryAuto'
+import { startCloudAutoSync } from './lib/cloudAutoSync'
 
 // In die Suite-Shell eingebettet? Dann folgt das Theme der Shell (No-op im
 // Standalone-/Desktop-Betrieb — window.parent === window). Die Palette der Shell
@@ -171,6 +172,7 @@ initSettingsSync()
 const popout = popoutPanel()
 // Geraetebibliothek: eigene Vorlagen hoch, Katalog runter — nur im Hauptfenster.
 if (!popout) startDeviceLibraryAutoSync()
+if (!popout) startCloudAutoSync()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>{popout ? <PopoutApp panel={popout} /> : <App />}</ErrorBoundary>

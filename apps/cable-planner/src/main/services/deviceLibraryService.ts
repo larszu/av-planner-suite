@@ -5,13 +5,13 @@ import {
   propose,
   signIn,
   signOut,
-  sync,
+  syncFrom,
   upload,
   verifySecondFactor,
   type LibraryErrorCode,
   type LibraryUser,
   type ProposalCore,
-  type SyncResponse,
+  type SyncResult,
   type UploadItem,
   type UploadResult,
 } from './deviceLibraryClient.js'
@@ -63,7 +63,8 @@ export const checkServerUrl = (server: unknown): string | null => {
   }
 }
 
-const tokenStore = {
+/** Auch fuer die Cloud-Projekte (`cloudService`): dasselbe Konto, dasselbe Token. */
+export const tokenStore = {
   get: () => keytar.getPassword(SERVICE_NAME, ACCOUNT_NAME),
   set: (token: string) => keytar.setPassword(SERVICE_NAME, ACCOUNT_NAME, token),
   clear: () => keytar.deletePassword(SERVICE_NAME, ACCOUNT_NAME),
@@ -134,9 +135,9 @@ export const deviceLibraryService = {
     await tokenStore.clear()
   },
 
-  sync(server: unknown, after: unknown): Promise<DeviceLibraryResult<SyncResponse>> {
+  sync(server: unknown, after: unknown): Promise<DeviceLibraryResult<SyncResult>> {
     const n = typeof after === 'number' && Number.isFinite(after) ? after : 0
-    return mitToken(server, (url, token) => sync(url, token, 'cable', n))
+    return mitToken(server, (url, token) => syncFrom(url, token, 'cable', n))
   },
 
   propose(
