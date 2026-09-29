@@ -3,6 +3,26 @@
   "private": true,
   "version": "1.0.0",
   "description": "LZ Planner Suite — Monorepo fuer cable-planner, multicam-planner und light-planner plus geteilte Pakete",
+  "keywords": [
+    "broadcast",
+    "av-production",
+    "live-production",
+    "event-technology",
+    "stage-lighting",
+    "camera-planning",
+    "cable-management",
+    "production-planning",
+    "monorepo",
+    "electron",
+    "react",
+    "typescript",
+    "threejs",
+    "desktop-app",
+    "cross-platform",
+    "offline-first",
+    "design-system",
+    "ob-van"
+  ],
   "author": {
     "name": "Lars Zumpe",
     "email": "lars@zumpe.dev"
